@@ -1,0 +1,118 @@
+syntax = "proto3";
+
+package wuzz.user.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/koobam/wuzz-backend/gen/wuzz/user/v1;userv1";
+
+// UserService is the command side of identity: it verifies a phone number by
+// SMS code, mints sessions, and owns the customer accounts table.
+//
+// There is no password or PIN — a phone number proved by a one-time code is
+// the entire credential, matching the app's actual sign-up/sign-in flow.
+service UserService {
+  // Register starts phone verification for a would-be account and stashes
+  // the submitted profile until VerifyOtp claims it. It does not create a row
+  // in `users` yet — an unverified phone number should not occupy a unique
+  // username before anyone has proven they own the number.
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+
+  // VerifyOtp checks the code, and on success either creates the account
+  // (first time) or signs in the existing one (the same number registering
+  // again), then issues a session. One call because the mobile app's login
+  // and signup are the same screen: enter a phone number, get a code.
+  rpc VerifyOtp(VerifyOtpRequest) returns (VerifyOtpResponse);
+
+  rpc SuggestUsername(SuggestUsernameRequest) returns (SuggestUsernameResponse);
+  rpc CheckUsername(CheckUsernameRequest) returns (CheckUsernameResponse);
+
+  // GetUser reads the caller's own profile. The caller is whoever the access
+  // token in the request's metadata names — there is no user id field to spoof.
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+
+  rpc Refresh(RefreshRequest) returns (RefreshResponse);
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+}
+
+message User {
+  string id = 1;
+  string username = 2;
+  string name = 3;
+  string phone = 4;
+  string email = 5;
+  int64 points = 6;
+  int64 streak = 7;
+  int64 xp = 8;
+  string date_of_birth = 9;
+  string status = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+message Session {
+  string access_token = 1;
+  string refresh_token = 2;
+  User user = 3;
+  google.protobuf.Timestamp access_token_expires_at = 4;
+}
+
+message RegisterRequest {
+  string username = 1;
+  string name = 2;
+  string phone = 3;
+  string email = 4;
+  string date_of_birth = 5;
+}
+
+message RegisterResponse {
+  string phone = 1;
+  google.protobuf.Timestamp expires_at = 2;
+}
+
+message VerifyOtpRequest {
+  string phone = 1;
+  string otp_code = 2;
+}
+
+message VerifyOtpResponse {
+  Session session = 1;
+}
+
+message SuggestUsernameRequest {
+  string name = 1;
+  string username = 2;
+  string birth_date = 3;
+}
+
+message SuggestUsernameResponse {
+  repeated string usernames = 1;
+}
+
+message CheckUsernameRequest {
+  string username = 1;
+}
+
+message CheckUsernameResponse {
+  bool available = 1;
+}
+
+message GetUserRequest {}
+
+message GetUserResponse {
+  User user = 1;
+}
+
+message RefreshRequest {
+  string refresh_token = 1;
+}
+
+message RefreshResponse {
+  Session session = 1;
+}
+
+message LogoutRequest {
+  string refresh_token = 1;
+}
+
+message LogoutResponse {}

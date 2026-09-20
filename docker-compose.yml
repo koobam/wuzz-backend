@@ -1,0 +1,90 @@
+# Local development. Single-node and disposable.
+name: wuzz-backend
+
+x-service-env: &service-env
+  APP_ENV: dev
+  LOG_FORMAT: text
+  LOG_LEVEL: debug
+  # No JWT keys here on purpose — see authn/keys.go: every service falls back
+  # to the same fixed development keypair with nothing configured.
+  REDIS_ADDR: redis:6379
+  HTTP_ADDR: ":8080"
+  GRPC_ADDR: ":9090"
+  TWILIO_DEV_MODE: "true"
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: wuzz
+      POSTGRES_PASSWORD: wuzz
+      POSTGRES_DB: wuzz
+    # Host port 5433, not 5432 — something else on dev machines here already
+    # listens on 5432 (an SSH tunnel to a remote Postgres, going by `lsof`).
+    ports: ["5433:5432"]
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wuzz"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    # Host port 6380, not 6379 — the reddog-backend stack's redis is already
+    # on 6379 on this machine.
+    ports: ["6380:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  migrate-user:
+    build:
+      context: .
+      args: {SERVICE: migrate}
+    entrypoint: ["/app/service"]
+    environment:
+      <<: *service-env
+      MIGRATE_SERVICE: user
+      POSTGRES_DSN: postgres://wuzz:wuzz@postgres:5432/wuzz?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  user:
+    build:
+      context: .
+      args: {SERVICE: user}
+    environment:
+      <<: *service-env
+      POSTGRES_DSN: postgres://wuzz:wuzz@postgres:5432/wuzz?sslmode=disable
+    # Host port 8091, not 8081 — reddog-backend's user service is already on
+    # 8081 on this machine.
+    ports: ["8091:8080", "9090:9090"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate-user:
+        condition: service_completed_successfully
+
+  gateway:
+    build:
+      context: .
+      args: {SERVICE: gateway}
+    environment:
+      <<: *service-env
+      USER_ADDR: user:9090
+      CORS_ORIGINS: http://localhost:5174
+      COOKIE_SECURE: "false"
+    # Host port 8092, not 8080 — reddog-backend's gateway is already on 8080
+    # on this machine.
+    ports: ["8092:8080"]
+    depends_on: [user]
+
+volumes:
+  postgres-data:
