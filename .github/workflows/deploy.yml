@@ -1,15 +1,26 @@
 name: Deploy
 
-# By hand only: pick the environment and the image tag (a short commit that
-# publish.yml has already pushed). It points the VM's env file at that tag and
-# restarts the stack. Migrations run before the services start, as in deploy.sh.
+# Rolls an environment's stack on the VM to an image tag that publish.yml has
+# already pushed (a short commit, or "latest").
 #
-# Needs these repository secrets:
+#   By hand   Actions > Deploy > Run workflow: pick the environment and the tag.
+#   Staging   Automatically after "Publish images" succeeds on main, when the
+#             repository variable AUTO_DEPLOY_STAGING is "true". Off by default.
+#
+# Repository secrets (Settings > Secrets and variables > Actions):
 #   DEPLOY_HOST      the VM, e.g. 72.60.79.59
 #   DEPLOY_USER      the SSH user
-#   DEPLOY_SSH_KEY   a private key dedicated to deploys (not anyone's personal key)
-# and the first deploy done once with wuzz-deployments/vm/scripts/deploy.sh, which
+#   DEPLOY_SSH_KEY   a private key used only for deploys (not anyone's personal key)
+#
+# The first deploy is done once with wuzz-deployments/vm/scripts/deploy.sh, which
 # creates /opt/wuzz/<env> with the compose file and the env file.
+#
+# The images are private. The VM is not logged in to the registry: this job logs it
+# in with the run's own short-lived GITHUB_TOKEN for the pull and logs it out again,
+# so no long-lived registry credential ever sits on the VM.
+#
+# wuzz-support publishes its own image from its own repository and is not rolled
+# here; this job pulls and restarts the backend services only.
 on:
   workflow_dispatch:
     inputs:
@@ -19,37 +30,72 @@ on:
         options: [staging, production]
         default: staging
       tag:
-        description: Image tag (short commit) already published
+        description: Image tag (short commit, or latest) already published
         required: true
+        default: latest
+  workflow_run:
+    workflows: ["Publish images"]
+    types: [completed]
+    branches: [main]
 
 permissions:
   contents: read
+  packages: read
+
+concurrency:
+  group: deploy-${{ inputs.environment || 'staging' }}
+  cancel-in-progress: false
 
 jobs:
   deploy:
+    # A manual run always goes ahead; an automatic one needs the opt-in variable and
+    # a successful publish.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && vars.AUTO_DEPLOY_STAGING == 'true')
     runs-on: ubuntu-latest
     # Protect production with required reviewers in the repo's environment settings.
-    environment: ${{ inputs.environment }}
+    environment: ${{ inputs.environment || 'staging' }}
+    env:
+      ENV_NAME: ${{ inputs.environment || 'staging' }}
+      # publish.yml tags every image with the first 7 characters of the commit.
+      TAG: ${{ inputs.tag || '' }}
+      RUN_SHA: ${{ github.event.workflow_run.head_sha || '' }}
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Work out the tag
+        id: tag
+        run: |
+          tag="$TAG"
+          if [ -z "$tag" ]; then tag="${RUN_SHA::7}"; fi
+          if ! printf '%s' "$tag" | grep -Eq '^[A-Za-z0-9_.-]{1,64}$'; then
+            echo "::error::refusing odd image tag '$tag'"; exit 1
+          fi
+          echo "value=$tag" >> "$GITHUB_OUTPUT"
+
       - name: Install the deploy key
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
         run: |
           install -m 700 -d ~/.ssh
-          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_deploy
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
-          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
+          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+
       - name: Roll the stack to the tag
         env:
-          ENV_NAME: ${{ inputs.environment }}
-          TAG: ${{ inputs.tag }}
           TARGET: ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}
+          NEW_TAG: ${{ steps.tag.outputs.value }}
+          REGISTRY_USER: ${{ github.actor }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ssh -i ~/.ssh/id_deploy "$TARGET" bash -s -- "$ENV_NAME" "$TAG" <<'REMOTE'
-          set -euo pipefail
-          env_name="$1"; tag="$2"
-          dir="/opt/wuzz/$env_name"
-          cd "$dir"
-          sed -i "s/^TAG=.*/TAG=$tag/" "envs/$env_name.env"
-          docker compose --env-file "envs/$env_name.env" -p "wuzz-$env_name" --profile tunnel pull
-          docker compose --env-file "envs/$env_name.env" -p "wuzz-$env_name" --profile tunnel up -d --no-build --remove-orphans
-          docker compose --env-file "envs/$env_name.env" -p "wuzz-$env_name" ps
-          REMOTE
+          # stdin carries the registry token on its first line (never on a command
+          # line), then scripts/deploy-remote.sh for bash to run. The arguments are
+          # a choice input, a validated tag and the actor's login.
+          {
+            printf '%s\n' "$REGISTRY_TOKEN"
+            cat scripts/deploy-remote.sh
+          } | ssh -i ~/.ssh/id_deploy "$TARGET" \
+            "IFS= read -r REGISTRY_TOKEN; export REGISTRY_TOKEN; exec bash -s -- '$ENV_NAME' '$NEW_TAG' '$REGISTRY_USER'"
