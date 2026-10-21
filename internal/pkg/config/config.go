@@ -30,7 +30,6 @@ type Config struct {
 	HTTP      HTTP
 	GRPC      GRPC
 	Postgres  Postgres
-	Mongo     Mongo
 	Typesense Typesense
 	Redis     Redis
 	Kafka     Kafka
@@ -62,12 +61,6 @@ type Postgres struct {
 	MaxConns        int32
 	MinConns        int32
 	MaxConnLifetime time.Duration
-}
-
-// Mongo is the document store behind catalog's customer-facing outlet search.
-type Mongo struct {
-	URI      string
-	Database string
 }
 
 // Typesense is the optional search engine behind service search. With no URL the
@@ -154,12 +147,6 @@ func Load(service Service) (*Config, error) {
 			MaxConns:        int32(getenvInt("POSTGRES_MAX_CONNS", 10)),
 			MinConns:        int32(getenvInt("POSTGRES_MIN_CONNS", 1)),
 			MaxConnLifetime: time.Hour,
-		},
-		Mongo: Mongo{
-			// Port 27018: docker-compose maps the local dev mongo there so it stays
-			// clear of any Mongo already on the machine.
-			URI:      getenv("MONGO_URI", "mongodb://localhost:27018"),
-			Database: getenv("MONGO_DB", "wuzz_catalog"),
 		},
 		Typesense: Typesense{
 			// Empty by default: search then runs in memory, so nothing extra is

@@ -16,7 +16,6 @@ import (
 	"github.com/koobam/wuzz-backend/internal/pkg/run"
 	"github.com/koobam/wuzz-backend/internal/platform/kafkax"
 	"github.com/koobam/wuzz-backend/internal/platform/postgres"
-	catalogmongo "github.com/koobam/wuzz-backend/internal/services/catalog/adapters/mongo"
 	catalogpg "github.com/koobam/wuzz-backend/internal/services/catalog/adapters/postgres"
 	"github.com/koobam/wuzz-backend/internal/services/catalog/app"
 	cataloggrpc "github.com/koobam/wuzz-backend/internal/services/catalog/ports/grpc"
@@ -67,23 +66,12 @@ func realMain() error {
 		return err
 	}
 
-	discovery, err := catalogmongo.New(ctx, cfg.Mongo.URI, cfg.Mongo.Database)
-	if err != nil {
-		return err
-	}
-
-	application := app.New(catalogpg.NewStore(pool), discovery)
+	application := app.New(catalogpg.NewStore(pool), catalogpg.NewDiscovery(pool))
 
 	grpcServer := grpcx.NewServer(cfg, log, verifier)
 	cataloggrpc.Register(grpcServer.Registrar(), application)
 
-	ready := func(ctx context.Context) error {
-		if err := pool.Ping(ctx); err != nil {
-			return err
-		}
-		return discovery.Ping(ctx)
-	}
-	admin := observability.NewAdminServer(cfg.HTTP.Addr, cfg.Version, ready, log)
+	admin := observability.NewAdminServer(cfg.HTTP.Addr, cfg.Version, pool.Ping, log)
 
 	log.Info("catalog starting", slog.String("env", cfg.Env), slog.String("grpc", cfg.GRPC.Addr))
 
@@ -91,7 +79,6 @@ func realMain() error {
 		run.Component{Name: "telemetry", Start: run.Noop, Stop: shutdownTelemetry},
 		run.Component{Name: "postgres", Start: run.Noop,
 			Stop: func(context.Context) error { pool.Close(); return nil }},
-		run.Component{Name: "mongo", Start: run.Noop, Stop: discovery.Close},
 		run.Component{Name: "kafka", Start: run.Noop,
 			Stop: func(context.Context) error { producer.Close(); return nil }},
 		run.Component{Name: "outbox-relay",

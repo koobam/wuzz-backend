@@ -11,7 +11,7 @@ codes, Kafka via the transactional outbox, Ed25519 JWTs signed only by `user`.
 | --- | --- | --- |
 | `gateway` | REST edge | routes grouped by audience, see below |
 | `user` | accounts, sessions, staff roles | phone + SMS code, no passwords |
-| `catalog` | outlets, laundry services | public reads, admin writes |
+| `catalog` | outlets, laundry services, service areas | public reads (menu and areas cached 30 s), admin writes; all in Postgres |
 | `transaction` | orders | idempotent create, status lifecycle, outlet scoping |
 
 Chat and calls live in the sibling `wuzz-support` (Elixir/Phoenix + MongoDB).
