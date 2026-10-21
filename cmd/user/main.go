@@ -10,9 +10,12 @@ import (
 
 	"github.com/koobam/wuzz-backend/internal/pkg/authn"
 	"github.com/koobam/wuzz-backend/internal/pkg/config"
+	"github.com/koobam/wuzz-backend/internal/pkg/events"
 	"github.com/koobam/wuzz-backend/internal/pkg/grpcx"
 	"github.com/koobam/wuzz-backend/internal/pkg/observability"
+	"github.com/koobam/wuzz-backend/internal/pkg/outbox"
 	"github.com/koobam/wuzz-backend/internal/pkg/run"
+	"github.com/koobam/wuzz-backend/internal/platform/kafkax"
 	"github.com/koobam/wuzz-backend/internal/platform/postgres"
 	"github.com/koobam/wuzz-backend/internal/platform/redisx"
 	userpg "github.com/koobam/wuzz-backend/internal/services/user/adapters/postgres"
@@ -56,7 +59,22 @@ func realMain() error {
 		return err
 	}
 
+	producer, err := kafkax.NewProducer(cfg.Kafka)
+	if err != nil {
+		return err
+	}
+	// Topics are created here with a chosen partition count rather than left to
+	// a broker's auto-create default. A broker that is down at boot is not
+	// fatal: Append still commits to the outbox, and the relay catches up.
+	if err := producer.EnsureTopics(ctx, cfg.Kafka, events.Topic(events.AggregateUser)); err != nil {
+		log.Warn("kafka topics not ensured; events will queue in the outbox", slog.Any("error", err))
+	}
+	relay := outbox.NewRelay(pool, producer, cfg.Kafka, log)
+	relayCtx, stopRelay := context.WithCancel(ctx)
+	defer stopRelay()
+
 	users := userpg.NewUsers(pool)
+	members := userpg.NewMembers(pool)
 	sessions := userredis.NewSessions(rdb, cfg.Auth.RefreshTokenTTL)
 	pending := userredis.NewPendingRegistrations(rdb)
 
@@ -83,7 +101,14 @@ func realMain() error {
 		return err
 	}
 
-	application := app.New(users, pending, sessions, verifications, signer, cfg.Auth.AccessTokenTTL, cfg.Auth.VerificationCodeTTL)
+	application := app.New(users, members, pending, sessions, verifications, signer, cfg.Auth.AccessTokenTTL, cfg.Auth.VerificationCodeTTL)
+
+	// Development sign-in without a code: only in a dev environment that is
+	// already skipping SMS. Anywhere else the handler stays nil.
+	if cfg.Env == "dev" && cfg.Twilio.DevMode {
+		log.Warn("development sign-in is ENABLED (APP_ENV=dev): DevLogin signs in any customer by phone")
+		application.Commands.DevLogin = command.NewDevLoginHandler(users, sessions, signer, cfg.Auth.AccessTokenTTL)
+	}
 
 	grpcServer := grpcx.NewServer(cfg, log, verifier)
 	usergrpc.Register(grpcServer.Registrar(), application)
@@ -99,6 +124,11 @@ func realMain() error {
 			Stop: func(context.Context) error { pool.Close(); return nil }},
 		run.Component{Name: "redis", Start: run.Noop,
 			Stop: func(context.Context) error { return rdb.Close() }},
+		run.Component{Name: "kafka", Start: run.Noop,
+			Stop: func(context.Context) error { producer.Close(); return nil }},
+		run.Component{Name: "outbox-relay",
+			Start: func() error { return relay.Run(relayCtx) },
+			Stop:  func(context.Context) error { stopRelay(); return nil }},
 		run.Component{Name: "admin-http", Start: admin.Start, Stop: admin.Shutdown},
 		run.Component{Name: "grpc", Start: grpcServer.Start, Stop: grpcServer.Shutdown},
 	)

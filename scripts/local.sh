@@ -1,0 +1,111 @@
+#!/usr/bin/env bash
+# Run the whole Wuzz stack on this machine.
+#
+#   scripts/local.sh up       start infra, migrate, seed, then every service and app
+#   scripts/local.sh down     stop everything this script started
+#   scripts/local.sh status   what is listening where
+#   scripts/local.sh logs     tail every log
+#
+# Expects the sibling repos wuzz-support and wuzz-frontend next to wuzz-backend.
+set -euo pipefail
+
+BACKEND="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(dirname "$BACKEND")"
+SUPPORT="$ROOT/wuzz-support"
+FRONTEND="$ROOT/wuzz-frontend"
+RUN="${WUZZ_RUN_DIR:-/tmp/wuzz-local}"
+mkdir -p "$RUN"
+
+DSN="postgres://wuzz:wuzz@localhost:5433"
+PSQL=(docker compose -f "$BACKEND/docker-compose.yml" exec -T postgres psql -U wuzz -v ON_ERROR_STOP=1)
+
+# name:port  (ports are what the apps and gateway default to in dev)
+PORTS="user:9090 catalog:9091 transaction:9092 gateway:8092 support:4000 pos:5175 backoffice:5174 landing:5176"
+
+port_of() { for p in $PORTS; do [ "${p%%:*}" = "$1" ] && echo "${p##*:}"; done; }
+
+wait_port() { # name
+  local port; port="$(port_of "$1")"
+  for _ in $(seq 1 60); do nc -z localhost "$port" 2>/dev/null && return 0; sleep 1; done
+  echo "!! $1 did not open :$port (see $RUN/$1.log)"; return 1
+}
+
+start() { # name, command...
+  local name="$1"; shift
+  if nc -z localhost "$(port_of "$name")" 2>/dev/null; then echo "   $name already up"; return; fi
+  ( "$@" >"$RUN/$name.log" 2>&1 & echo $! >"$RUN/$name.pid" )
+  wait_port "$name" && echo "   $name :$(port_of "$name")"
+}
+
+up() {
+  echo "== infra"
+  (cd "$BACKEND" && docker compose up -d postgres redis kafka mongo >/dev/null)
+  until "${PSQL[@]}" -c 'select 1' >/dev/null 2>&1; do sleep 1; done
+  for db in wuzz_catalog wuzz_transaction; do
+    # Captured first: `grep -q` in a pipeline can SIGPIPE psql, which pipefail reports as "not found".
+    exists="$("${PSQL[@]}" -tAc "select 1 from pg_database where datname='$db'")"
+    [ "$exists" = "1" ] || "${PSQL[@]}" -c "create database $db" >/dev/null
+  done
+
+  echo "== migrate + seed"
+  for svc in user catalog transaction; do
+    (cd "$BACKEND" && MIGRATE_SERVICE=$svc go run ./cmd/migrate 2>&1 | grep -E "migrated|no migrations|ERROR" || true)
+  done
+  "${PSQL[@]}" -d wuzz_catalog <"$BACKEND/scripts/seed-local.sql" >/dev/null
+  "${PSQL[@]}" -d wuzz <"$BACKEND/scripts/seed-member-local.sql" >/dev/null
+  # Customer-app outlet discovery lives in MongoDB (catalog's Discovery adapter).
+  until docker compose -f "$BACKEND/docker-compose.yml" exec -T mongo mongosh --quiet --eval 'db.adminCommand("ping").ok' >/dev/null 2>&1; do sleep 1; done
+  docker compose -f "$BACKEND/docker-compose.yml" exec -T mongo mongosh --quiet <"$BACKEND/scripts/seed-local-mongo.js" >/dev/null
+  (cd "$BACKEND" \
+    && go run ./cmd/staff -phone 081234500099 -name "Admin Ani" -roles admin >/dev/null \
+    && go run ./cmd/staff -phone 081234500098 -name "Kasir Budi" -roles outlet:1 >/dev/null)
+  echo "   staff: admin 081234500099 (backoffice+pos), kasir 081234500098 (pos). Code is printed in $RUN/user.log"
+
+  echo "== go services"
+  (cd "$BACKEND" && go build -o "$RUN/bin-user" ./cmd/user && go build -o "$RUN/bin-catalog" ./cmd/catalog \
+    && go build -o "$RUN/bin-transaction" ./cmd/transaction && go build -o "$RUN/bin-gateway" ./cmd/gateway)
+  export CORS_ORIGINS="http://localhost:5174,http://localhost:5175,http://localhost:5176"
+  start user "$RUN/bin-user"
+  start catalog "$RUN/bin-catalog"
+  start transaction "$RUN/bin-transaction"
+  start gateway "$RUN/bin-gateway"
+
+  echo "== support (docker)"
+  docker rm -f wuzz-support >/dev/null 2>&1 || true
+  if nc -z localhost 4000 2>/dev/null; then echo "   :4000 busy, skipping support"; else
+    docker run -d --name wuzz-support -v "$SUPPORT":/app -w /app -p 4000:4000 \
+      hexpm/elixir:1.17.3-erlang-27.1.2-debian-bookworm-20241016-slim \
+      sh -c "mix local.hex --force >/dev/null && mix local.rebar --force >/dev/null && mix deps.get >/dev/null && mix phx.server" >/dev/null
+    wait_port support && echo "   support :4000"
+  fi
+
+  echo "== frontends"
+  for app in pos backoffice landing; do
+    start "$app" bash -c "cd '$FRONTEND/apps/$app' && exec pnpm dev --host localhost"
+  done
+
+  echo
+  echo "POS        http://localhost:5175"
+  echo "Backoffice http://localhost:5174"
+  echo "Landing    http://localhost:5176"
+  echo "API        http://localhost:8092   Chat http://localhost:4000"
+}
+
+down() {
+  for f in "$RUN"/*.pid; do [ -e "$f" ] || continue; pkill -P "$(cat "$f")" 2>/dev/null || true; kill "$(cat "$f")" 2>/dev/null || true; rm -f "$f"; done
+  for name in user catalog transaction gateway pos backoffice landing; do
+    for pid in $(lsof -tiTCP:"$(port_of "$name")" -sTCP:LISTEN 2>/dev/null); do kill "$pid" 2>/dev/null || true; done
+  done
+  docker rm -f wuzz-support >/dev/null 2>&1 || true
+  (cd "$BACKEND" && docker compose stop >/dev/null) && echo "stopped (data kept; 'make reset' wipes it)"
+}
+
+status() { for p in $PORTS; do printf '%-12s :%-5s %s\n' "${p%%:*}" "${p##*:}" "$(nc -z localhost "${p##*:}" 2>/dev/null && echo up || echo down)"; done; }
+
+case "${1:-}" in
+  up) up ;;
+  down) down ;;
+  status) status ;;
+  logs) tail -n 20 -F "$RUN"/*.log ;;
+  *) echo "usage: $0 up|down|status|logs"; exit 1 ;;
+esac

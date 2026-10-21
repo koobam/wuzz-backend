@@ -1,0 +1,55 @@
+name: Deploy
+
+# By hand only: pick the environment and the image tag (a short commit that
+# publish.yml has already pushed). It points the VM's env file at that tag and
+# restarts the stack. Migrations run before the services start, as in deploy.sh.
+#
+# Needs these repository secrets:
+#   DEPLOY_HOST      the VM, e.g. 72.60.79.59
+#   DEPLOY_USER      the SSH user
+#   DEPLOY_SSH_KEY   a private key dedicated to deploys (not anyone's personal key)
+# and the first deploy done once with wuzz-deployments/vm/scripts/deploy.sh, which
+# creates /opt/wuzz/<env> with the compose file and the env file.
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to deploy
+        type: choice
+        options: [staging, production]
+        default: staging
+      tag:
+        description: Image tag (short commit) already published
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Protect production with required reviewers in the repo's environment settings.
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Install the deploy key
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
+      - name: Roll the stack to the tag
+        env:
+          ENV_NAME: ${{ inputs.environment }}
+          TAG: ${{ inputs.tag }}
+          TARGET: ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}
+        run: |
+          ssh -i ~/.ssh/id_deploy "$TARGET" bash -s -- "$ENV_NAME" "$TAG" <<'REMOTE'
+          set -euo pipefail
+          env_name="$1"; tag="$2"
+          dir="/opt/wuzz/$env_name"
+          cd "$dir"
+          sed -i "s/^TAG=.*/TAG=$tag/" "envs/$env_name.env"
+          docker compose --env-file "envs/$env_name.env" -p "wuzz-$env_name" --profile tunnel pull
+          docker compose --env-file "envs/$env_name.env" -p "wuzz-$env_name" --profile tunnel up -d --no-build --remove-orphans
+          docker compose --env-file "envs/$env_name.env" -p "wuzz-$env_name" ps
+          REMOTE

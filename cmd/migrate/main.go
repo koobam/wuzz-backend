@@ -13,6 +13,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 
+	"github.com/koobam/wuzz-backend/internal/pkg/config"
 	"github.com/koobam/wuzz-backend/migrations"
 )
 
@@ -30,7 +31,10 @@ func run() error {
 	}
 	dsn := os.Getenv("POSTGRES_DSN")
 	if dsn == "" {
-		return fmt.Errorf("migrate: POSTGRES_DSN is required")
+		if os.Getenv("APP_ENV") != "" && os.Getenv("APP_ENV") != "dev" {
+			return fmt.Errorf("migrate: POSTGRES_DSN is required")
+		}
+		dsn = config.DefaultDSN(config.Service(service))
 	}
 
 	db, err := sql.Open("pgx", dsn)

@@ -94,6 +94,8 @@ func (h *RegisterHandler) Handle(ctx context.Context, cmd Register) (RegisterRes
 type VerifyOtp struct {
 	Phone string
 	Code  string
+	// Audience is empty for the customer app; see domain.User.MayUse.
+	Audience string
 }
 
 type VerifyOtpHandler struct {
@@ -134,6 +136,10 @@ func (h *VerifyOtpHandler) Handle(ctx context.Context, cmd VerifyOtp) (Session, 
 		if err != nil {
 			return Session{}, err
 		}
+	}
+
+	if !user.MayUse(cmd.Audience) {
+		return Session{}, apperr.Forbidden("This account cannot sign in here")
 	}
 
 	if !user.CanSignIn() {
@@ -217,6 +223,7 @@ func issueSession(ctx context.Context, sessions Sessions, signer *authn.Signer, 
 		UserID: user.ID,
 		Email:  user.Email,
 		Name:   user.Name,
+		Roles:  user.Roles,
 	})
 	if err != nil {
 		return Session{}, err

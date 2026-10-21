@@ -28,9 +28,9 @@ const defaultCountryCode = "62"
 var usernamePattern = regexp.MustCompile(`^[a-z0-9._]{3,20}$`)
 
 type User struct {
-	ID        string
-	Username  string
-	Name      string
+	ID       string
+	Username string
+	Name     string
 	// E.164 digits, no leading plus: country code and subscriber number
 	// together, e.g. "6281234567890". See NormalisePhone.
 	Phone     string
@@ -40,8 +40,51 @@ type User struct {
 	XP        int64
 	Birthdate *time.Time
 	Status    string
+	// Roles is empty for a customer; see migrations/user/*_add_user_roles.sql.
+	Roles     []string
 	CreatedAt time.Time
 	UpdatedAt time.Time
+}
+
+// IsStaff reports whether the account has any staff role.
+func (u User) IsStaff() bool { return len(u.Roles) > 0 }
+
+// Audiences a staff sign-in can ask for.
+const (
+	AudienceBackoffice = "backoffice"
+	AudiencePOS        = "pos"
+)
+
+// MayUse reports whether the account may sign in to the given audience.
+// An empty audience is the customer app, open to every account.
+func (u User) MayUse(audience string) bool {
+	switch audience {
+	case "":
+		return true
+	case AudienceBackoffice:
+		return u.hasRole("admin")
+	case AudiencePOS:
+		if u.hasRole("admin") {
+			return true
+		}
+		for _, r := range u.Roles {
+			if strings.HasPrefix(r, "outlet:") {
+				return true
+			}
+		}
+		return false
+	default:
+		return false
+	}
+}
+
+func (u User) hasRole(role string) bool {
+	for _, r := range u.Roles {
+		if r == role {
+			return true
+		}
+	}
+	return false
 }
 
 func (u User) IsBanned() bool  { return u.Status == StatusBanned }

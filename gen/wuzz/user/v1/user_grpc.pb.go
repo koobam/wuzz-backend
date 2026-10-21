@@ -19,13 +19,18 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	UserService_Register_FullMethodName        = "/wuzz.user.v1.UserService/Register"
-	UserService_VerifyOtp_FullMethodName       = "/wuzz.user.v1.UserService/VerifyOtp"
-	UserService_SuggestUsername_FullMethodName = "/wuzz.user.v1.UserService/SuggestUsername"
-	UserService_CheckUsername_FullMethodName   = "/wuzz.user.v1.UserService/CheckUsername"
-	UserService_GetUser_FullMethodName         = "/wuzz.user.v1.UserService/GetUser"
-	UserService_Refresh_FullMethodName         = "/wuzz.user.v1.UserService/Refresh"
-	UserService_Logout_FullMethodName          = "/wuzz.user.v1.UserService/Logout"
+	UserService_Register_FullMethodName         = "/wuzz.user.v1.UserService/Register"
+	UserService_VerifyOtp_FullMethodName        = "/wuzz.user.v1.UserService/VerifyOtp"
+	UserService_DevLogin_FullMethodName         = "/wuzz.user.v1.UserService/DevLogin"
+	UserService_SuggestUsername_FullMethodName  = "/wuzz.user.v1.UserService/SuggestUsername"
+	UserService_CheckUsername_FullMethodName    = "/wuzz.user.v1.UserService/CheckUsername"
+	UserService_GetUser_FullMethodName          = "/wuzz.user.v1.UserService/GetUser"
+	UserService_GetMemberSummary_FullMethodName = "/wuzz.user.v1.UserService/GetMemberSummary"
+	UserService_SendLoginCode_FullMethodName    = "/wuzz.user.v1.UserService/SendLoginCode"
+	UserService_ListUsers_FullMethodName        = "/wuzz.user.v1.UserService/ListUsers"
+	UserService_SetUserStatus_FullMethodName    = "/wuzz.user.v1.UserService/SetUserStatus"
+	UserService_Refresh_FullMethodName          = "/wuzz.user.v1.UserService/Refresh"
+	UserService_Logout_FullMethodName           = "/wuzz.user.v1.UserService/Logout"
 )
 
 // UserServiceClient is the client API for UserService service.
@@ -48,11 +53,23 @@ type UserServiceClient interface {
 	// again), then issues a session. One call because the mobile app's login
 	// and signup are the same screen: enter a phone number, get a code.
 	VerifyOtp(ctx context.Context, in *VerifyOtpRequest, opts ...grpc.CallOption) (*VerifyOtpResponse, error)
+	// DEVELOPMENT ONLY: signs an existing customer in by phone with no code. The
+	// service answers NotFound unless it runs with APP_ENV=dev and TWILIO_DEV_MODE.
+	DevLogin(ctx context.Context, in *DevLoginRequest, opts ...grpc.CallOption) (*DevLoginResponse, error)
 	SuggestUsername(ctx context.Context, in *SuggestUsernameRequest, opts ...grpc.CallOption) (*SuggestUsernameResponse, error)
 	CheckUsername(ctx context.Context, in *CheckUsernameRequest, opts ...grpc.CallOption) (*CheckUsernameResponse, error)
 	// GetUser reads the caller's own profile. The caller is whoever the access
 	// token in the request's metadata names — there is no user id field to spoof.
 	GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*GetUserResponse, error)
+	// The caller's level, points, usable voucher count and wallet balance.
+	GetMemberSummary(ctx context.Context, in *GetMemberSummaryRequest, opts ...grpc.CallOption) (*GetMemberSummaryResponse, error)
+	// SendLoginCode starts sign-in for an EXISTING staff account (one with roles).
+	// It never reveals whether the number is known: it succeeds either way, and
+	// only sends a code when there is a staff account to sign in to.
+	SendLoginCode(ctx context.Context, in *SendLoginCodeRequest, opts ...grpc.CallOption) (*SendLoginCodeResponse, error)
+	// ListUsers and SetUserStatus are admin-only (the `admin` role in the token).
+	ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error)
+	SetUserStatus(ctx context.Context, in *SetUserStatusRequest, opts ...grpc.CallOption) (*SetUserStatusResponse, error)
 	Refresh(ctx context.Context, in *RefreshRequest, opts ...grpc.CallOption) (*RefreshResponse, error)
 	Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*LogoutResponse, error)
 }
@@ -85,6 +102,16 @@ func (c *userServiceClient) VerifyOtp(ctx context.Context, in *VerifyOtpRequest,
 	return out, nil
 }
 
+func (c *userServiceClient) DevLogin(ctx context.Context, in *DevLoginRequest, opts ...grpc.CallOption) (*DevLoginResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DevLoginResponse)
+	err := c.cc.Invoke(ctx, UserService_DevLogin_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *userServiceClient) SuggestUsername(ctx context.Context, in *SuggestUsernameRequest, opts ...grpc.CallOption) (*SuggestUsernameResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SuggestUsernameResponse)
@@ -109,6 +136,46 @@ func (c *userServiceClient) GetUser(ctx context.Context, in *GetUserRequest, opt
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetUserResponse)
 	err := c.cc.Invoke(ctx, UserService_GetUser_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) GetMemberSummary(ctx context.Context, in *GetMemberSummaryRequest, opts ...grpc.CallOption) (*GetMemberSummaryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetMemberSummaryResponse)
+	err := c.cc.Invoke(ctx, UserService_GetMemberSummary_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) SendLoginCode(ctx context.Context, in *SendLoginCodeRequest, opts ...grpc.CallOption) (*SendLoginCodeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SendLoginCodeResponse)
+	err := c.cc.Invoke(ctx, UserService_SendLoginCode_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListUsersResponse)
+	err := c.cc.Invoke(ctx, UserService_ListUsers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) SetUserStatus(ctx context.Context, in *SetUserStatusRequest, opts ...grpc.CallOption) (*SetUserStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetUserStatusResponse)
+	err := c.cc.Invoke(ctx, UserService_SetUserStatus_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -155,11 +222,23 @@ type UserServiceServer interface {
 	// again), then issues a session. One call because the mobile app's login
 	// and signup are the same screen: enter a phone number, get a code.
 	VerifyOtp(context.Context, *VerifyOtpRequest) (*VerifyOtpResponse, error)
+	// DEVELOPMENT ONLY: signs an existing customer in by phone with no code. The
+	// service answers NotFound unless it runs with APP_ENV=dev and TWILIO_DEV_MODE.
+	DevLogin(context.Context, *DevLoginRequest) (*DevLoginResponse, error)
 	SuggestUsername(context.Context, *SuggestUsernameRequest) (*SuggestUsernameResponse, error)
 	CheckUsername(context.Context, *CheckUsernameRequest) (*CheckUsernameResponse, error)
 	// GetUser reads the caller's own profile. The caller is whoever the access
 	// token in the request's metadata names — there is no user id field to spoof.
 	GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error)
+	// The caller's level, points, usable voucher count and wallet balance.
+	GetMemberSummary(context.Context, *GetMemberSummaryRequest) (*GetMemberSummaryResponse, error)
+	// SendLoginCode starts sign-in for an EXISTING staff account (one with roles).
+	// It never reveals whether the number is known: it succeeds either way, and
+	// only sends a code when there is a staff account to sign in to.
+	SendLoginCode(context.Context, *SendLoginCodeRequest) (*SendLoginCodeResponse, error)
+	// ListUsers and SetUserStatus are admin-only (the `admin` role in the token).
+	ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error)
+	SetUserStatus(context.Context, *SetUserStatusRequest) (*SetUserStatusResponse, error)
 	Refresh(context.Context, *RefreshRequest) (*RefreshResponse, error)
 	Logout(context.Context, *LogoutRequest) (*LogoutResponse, error)
 	mustEmbedUnimplementedUserServiceServer()
@@ -178,6 +257,9 @@ func (UnimplementedUserServiceServer) Register(context.Context, *RegisterRequest
 func (UnimplementedUserServiceServer) VerifyOtp(context.Context, *VerifyOtpRequest) (*VerifyOtpResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method VerifyOtp not implemented")
 }
+func (UnimplementedUserServiceServer) DevLogin(context.Context, *DevLoginRequest) (*DevLoginResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DevLogin not implemented")
+}
 func (UnimplementedUserServiceServer) SuggestUsername(context.Context, *SuggestUsernameRequest) (*SuggestUsernameResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SuggestUsername not implemented")
 }
@@ -186,6 +268,18 @@ func (UnimplementedUserServiceServer) CheckUsername(context.Context, *CheckUsern
 }
 func (UnimplementedUserServiceServer) GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetUser not implemented")
+}
+func (UnimplementedUserServiceServer) GetMemberSummary(context.Context, *GetMemberSummaryRequest) (*GetMemberSummaryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetMemberSummary not implemented")
+}
+func (UnimplementedUserServiceServer) SendLoginCode(context.Context, *SendLoginCodeRequest) (*SendLoginCodeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SendLoginCode not implemented")
+}
+func (UnimplementedUserServiceServer) ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListUsers not implemented")
+}
+func (UnimplementedUserServiceServer) SetUserStatus(context.Context, *SetUserStatusRequest) (*SetUserStatusResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetUserStatus not implemented")
 }
 func (UnimplementedUserServiceServer) Refresh(context.Context, *RefreshRequest) (*RefreshResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Refresh not implemented")
@@ -250,6 +344,24 @@ func _UserService_VerifyOtp_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserService_DevLogin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DevLoginRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).DevLogin(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_DevLogin_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).DevLogin(ctx, req.(*DevLoginRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _UserService_SuggestUsername_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SuggestUsernameRequest)
 	if err := dec(in); err != nil {
@@ -300,6 +412,78 @@ func _UserService_GetUser_Handler(srv interface{}, ctx context.Context, dec func
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(UserServiceServer).GetUser(ctx, req.(*GetUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_GetMemberSummary_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetMemberSummaryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).GetMemberSummary(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_GetMemberSummary_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).GetMemberSummary(ctx, req.(*GetMemberSummaryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_SendLoginCode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SendLoginCodeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).SendLoginCode(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_SendLoginCode_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).SendLoginCode(ctx, req.(*SendLoginCodeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_ListUsers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListUsersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).ListUsers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_ListUsers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).ListUsers(ctx, req.(*ListUsersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_SetUserStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetUserStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).SetUserStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_SetUserStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).SetUserStatus(ctx, req.(*SetUserStatusRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -356,6 +540,10 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _UserService_VerifyOtp_Handler,
 		},
 		{
+			MethodName: "DevLogin",
+			Handler:    _UserService_DevLogin_Handler,
+		},
+		{
 			MethodName: "SuggestUsername",
 			Handler:    _UserService_SuggestUsername_Handler,
 		},
@@ -366,6 +554,22 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUser",
 			Handler:    _UserService_GetUser_Handler,
+		},
+		{
+			MethodName: "GetMemberSummary",
+			Handler:    _UserService_GetMemberSummary_Handler,
+		},
+		{
+			MethodName: "SendLoginCode",
+			Handler:    _UserService_SendLoginCode_Handler,
+		},
+		{
+			MethodName: "ListUsers",
+			Handler:    _UserService_ListUsers_Handler,
+		},
+		{
+			MethodName: "SetUserStatus",
+			Handler:    _UserService_SetUserStatus_Handler,
 		},
 		{
 			MethodName: "Refresh",

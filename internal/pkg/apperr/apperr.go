@@ -13,13 +13,13 @@ import (
 type Kind string
 
 const (
-	KindInvalid     Kind = "INVALID"
+	KindInvalid      Kind = "INVALID"
 	KindUnauthorized Kind = "UNAUTHORIZED"
-	KindForbidden   Kind = "FORBIDDEN"
-	KindNotFound    Kind = "NOT_FOUND"
-	KindConflict    Kind = "CONFLICT"
-	KindRateLimited Kind = "RATE_LIMITED"
-	KindInternal    Kind = "INTERNAL"
+	KindForbidden    Kind = "FORBIDDEN"
+	KindNotFound     Kind = "NOT_FOUND"
+	KindConflict     Kind = "CONFLICT"
+	KindRateLimited  Kind = "RATE_LIMITED"
+	KindInternal     Kind = "INTERNAL"
 )
 
 // Error is the app-wide error value. Code defaults to Kind's string form but
@@ -102,13 +102,13 @@ func newErr(kind Kind, message string) *Error {
 	return &Error{Kind: kind, Code: string(kind), Message: message}
 }
 
-func Invalid(message string) *Error     { return newErr(KindInvalid, message) }
+func Invalid(message string) *Error      { return newErr(KindInvalid, message) }
 func Unauthorized(message string) *Error { return newErr(KindUnauthorized, message) }
-func Forbidden(message string) *Error   { return newErr(KindForbidden, message) }
-func NotFound(message string) *Error    { return newErr(KindNotFound, message) }
-func Conflict(message string) *Error    { return newErr(KindConflict, message) }
-func RateLimited(message string) *Error { return newErr(KindRateLimited, message) }
-func Internal(message string) *Error    { return newErr(KindInternal, message) }
+func Forbidden(message string) *Error    { return newErr(KindForbidden, message) }
+func NotFound(message string) *Error     { return newErr(KindNotFound, message) }
+func Conflict(message string) *Error     { return newErr(KindConflict, message) }
+func RateLimited(message string) *Error  { return newErr(KindRateLimited, message) }
+func Internal(message string) *Error     { return newErr(KindInternal, message) }
 
 // From coerces any error into *Error, defaulting to Internal so a bug two
 // layers down never leaks its message to a client.

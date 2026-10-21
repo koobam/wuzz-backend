@@ -44,11 +44,25 @@ func (s *Server) VerifyOtp(ctx context.Context, req *userv1.VerifyOtpRequest) (*
 	session, err := s.app.Commands.VerifyOtp.Handle(ctx, command.VerifyOtp{
 		Phone: req.GetPhone(),
 		Code:  req.GetOtpCode(),
+
+		Audience: req.GetAudience(),
 	})
 	if err != nil {
 		return nil, err
 	}
 	return &userv1.VerifyOtpResponse{Session: toProtoSession(session)}, nil
+}
+
+func (s *Server) DevLogin(ctx context.Context, req *userv1.DevLoginRequest) (*userv1.DevLoginResponse, error) {
+	if s.app.Commands.DevLogin == nil {
+		// Indistinguishable from a method that does not exist.
+		return nil, apperr.NotFound("Not found")
+	}
+	session, err := s.app.Commands.DevLogin.Handle(ctx, command.DevLogin{Phone: req.GetPhone()})
+	if err != nil {
+		return nil, err
+	}
+	return &userv1.DevLoginResponse{Session: toProtoSession(session)}, nil
 }
 
 func (s *Server) SuggestUsername(ctx context.Context, req *userv1.SuggestUsernameRequest) (*userv1.SuggestUsernameResponse, error) {
@@ -84,6 +98,24 @@ func (s *Server) GetUser(ctx context.Context, req *userv1.GetUserRequest) (*user
 	return &userv1.GetUserResponse{User: toProtoUser(user)}, nil
 }
 
+func (s *Server) GetMemberSummary(ctx context.Context, _ *userv1.GetMemberSummaryRequest) (*userv1.GetMemberSummaryResponse, error) {
+	identity, err := authn.Require(ctx)
+	if err != nil {
+		return nil, err
+	}
+	m, err := s.app.Queries.MemberSummary.Handle(ctx, query.GetMemberSummary{UserID: identity.UserID})
+	if err != nil {
+		return nil, err
+	}
+	out := &userv1.MemberSummary{
+		Name: m.Name, Points: m.Points, Xp: m.XP, VoucherCount: m.VoucherCount, WalletBalance: m.WalletBalance, FriendCount: m.FriendCount,
+	}
+	if m.Level != nil {
+		out.Level = &userv1.MemberLevel{Name: m.Level.Name, NextLevel: m.Level.NextLevel, NextLevelXp: m.Level.NextLevelXP}
+	}
+	return &userv1.GetMemberSummaryResponse{Summary: out}, nil
+}
+
 func (s *Server) Refresh(ctx context.Context, req *userv1.RefreshRequest) (*userv1.RefreshResponse, error) {
 	session, err := s.app.Commands.Refresh.Handle(ctx, command.Refresh{RefreshToken: req.GetRefreshToken()})
 	if err != nil {
@@ -110,6 +142,7 @@ func toProtoUser(u domain.User) *userv1.User {
 		Streak:    u.Streak,
 		Xp:        u.XP,
 		Status:    u.Status,
+		Roles:     u.Roles,
 		CreatedAt: timestamppb.New(u.CreatedAt),
 		UpdatedAt: timestamppb.New(u.UpdatedAt),
 	}
@@ -126,4 +159,54 @@ func toProtoSession(s command.Session) *userv1.Session {
 		User:                 toProtoUser(s.User),
 		AccessTokenExpiresAt: timestamppb.New(s.AccessTokenExpiresAt),
 	}
+}
+
+func (s *Server) SendLoginCode(ctx context.Context, req *userv1.SendLoginCodeRequest) (*userv1.SendLoginCodeResponse, error) {
+	expires, err := s.app.Commands.SendLoginCode.Handle(ctx, command.SendLoginCode{Phone: req.GetPhone()})
+	if err != nil {
+		return nil, err
+	}
+	return &userv1.SendLoginCodeResponse{ExpiresAt: timestamppb.New(expires)}, nil
+}
+
+// requireAdmin gates the account-management RPCs on the `admin` role in the
+// verified token — the role is the credential, not anything on the request.
+func requireAdmin(ctx context.Context) error {
+	identity, err := authn.Require(ctx)
+	if err != nil {
+		return err
+	}
+	if !identity.HasRole("admin") {
+		return apperr.Forbidden("Administrator access is required")
+	}
+	return nil
+}
+
+func (s *Server) ListUsers(ctx context.Context, req *userv1.ListUsersRequest) (*userv1.ListUsersResponse, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return nil, err
+	}
+	users, total, err := s.app.Queries.ListUsers.Handle(ctx, command.ListUsers{
+		Query: req.GetQuery(), Status: req.GetStatus(),
+		Limit: int(req.GetLimit()), Offset: int(req.GetOffset()),
+	})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*userv1.User, 0, len(users))
+	for _, u := range users {
+		out = append(out, toProtoUser(u))
+	}
+	return &userv1.ListUsersResponse{Users: out, Total: total}, nil
+}
+
+func (s *Server) SetUserStatus(ctx context.Context, req *userv1.SetUserStatusRequest) (*userv1.SetUserStatusResponse, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return nil, err
+	}
+	u, err := s.app.Commands.SetUserStatus.Handle(ctx, command.SetUserStatus{UserID: req.GetUserId(), Status: req.GetStatus()})
+	if err != nil {
+		return nil, err
+	}
+	return &userv1.SetUserStatusResponse{User: toProtoUser(u)}, nil
 }

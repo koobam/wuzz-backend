@@ -14,6 +14,14 @@ type Users interface {
 	ByID(ctx context.Context, id string) (domain.User, error)
 	ExistsUsername(ctx context.Context, username string) (bool, error)
 	Create(ctx context.Context, u domain.User) (domain.User, error)
+	List(ctx context.Context, f ListFilter) ([]domain.User, int64, error)
+	SetStatus(ctx context.Context, id, status string) (domain.User, error)
+}
+
+// ListFilter narrows and pages an account listing.
+type ListFilter struct {
+	Query, Status string
+	Limit, Offset int
 }
 
 // Sessions issues and revokes refresh tokens. Backed by Redis: a refresh

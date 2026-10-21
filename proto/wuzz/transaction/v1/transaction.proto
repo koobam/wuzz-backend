@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package wuzz.transaction.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/koobam/wuzz-backend/gen/wuzz/transaction/v1;transactionv1";
+
+// TransactionService owns orders. Staff create and advance them at an outlet;
+// who may touch which outlet's orders comes from the `outlet:<id>` roles in the
+// access token (admins may touch every outlet).
+service TransactionService {
+  // CreateOrder is idempotent on order.id: the POS creates orders offline with a
+  // client-generated id and retries until it hears back, so a second call with
+  // the same id returns the order that already exists instead of making another.
+  rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
+  rpc GetOrder(GetOrderRequest) returns (GetOrderResponse);
+  rpc ListOrders(ListOrdersRequest) returns (ListOrdersResponse);
+  rpc UpdateOrderStatus(UpdateOrderStatusRequest) returns (UpdateOrderStatusResponse);
+}
+
+message OrderLine {
+  int64 item_id = 1;
+  string name = 2;
+  string unit = 3;
+  // Price per unit at the time of sale, whole rupiah. Taken from the POS's
+  // cached catalog, so an order rung up offline keeps the price the customer saw.
+  int64 price = 4;
+  double qty = 5;
+}
+
+message Order {
+  string id = 1;
+  int64 outlet_id = 2;
+  string customer_name = 3;
+  string customer_phone = 4;
+  repeated OrderLine lines = 5;
+  int64 total = 6;
+  // created | processing | ready | fulfilled | cancelled
+  string status = 7;
+  string created_by = 8;
+  int64 version = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+message CreateOrderRequest {
+  string id = 1;
+  int64 outlet_id = 2;
+  string customer_name = 3;
+  string customer_phone = 4;
+  repeated OrderLine lines = 5;
+}
+message CreateOrderResponse {
+  Order order = 1;
+  // False when the id already existed and the stored order was returned.
+  bool created = 2;
+}
+
+message GetOrderRequest { string id = 1; }
+message GetOrderResponse { Order order = 1; }
+
+message ListOrdersRequest {
+  int64 outlet_id = 1; // 0 = every outlet the caller may see
+  string status = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}
+message ListOrdersResponse {
+  repeated Order orders = 1;
+  int64 total = 2;
+}
+
+message UpdateOrderStatusRequest {
+  string id = 1;
+  string status = 2;
+}
+message UpdateOrderStatusResponse { Order order = 1; }

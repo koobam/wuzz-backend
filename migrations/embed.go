@@ -5,5 +5,5 @@ package migrations
 
 import "embed"
 
-//go:embed user/*.sql
+//go:embed user/*.sql catalog/*.sql transaction/*.sql
 var FS embed.FS

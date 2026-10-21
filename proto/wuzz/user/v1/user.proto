@@ -23,6 +23,9 @@ service UserService {
   // again), then issues a session. One call because the mobile app's login
   // and signup are the same screen: enter a phone number, get a code.
   rpc VerifyOtp(VerifyOtpRequest) returns (VerifyOtpResponse);
+  // DEVELOPMENT ONLY: signs an existing customer in by phone with no code. The
+  // service answers NotFound unless it runs with APP_ENV=dev and TWILIO_DEV_MODE.
+  rpc DevLogin(DevLoginRequest) returns (DevLoginResponse);
 
   rpc SuggestUsername(SuggestUsernameRequest) returns (SuggestUsernameResponse);
   rpc CheckUsername(CheckUsernameRequest) returns (CheckUsernameResponse);
@@ -30,6 +33,17 @@ service UserService {
   // GetUser reads the caller's own profile. The caller is whoever the access
   // token in the request's metadata names — there is no user id field to spoof.
   rpc GetUser(GetUserRequest) returns (GetUserResponse);
+  // The caller's level, points, usable voucher count and wallet balance.
+  rpc GetMemberSummary(GetMemberSummaryRequest) returns (GetMemberSummaryResponse);
+
+  // SendLoginCode starts sign-in for an EXISTING staff account (one with roles).
+  // It never reveals whether the number is known: it succeeds either way, and
+  // only sends a code when there is a staff account to sign in to.
+  rpc SendLoginCode(SendLoginCodeRequest) returns (SendLoginCodeResponse);
+
+  // ListUsers and SetUserStatus are admin-only (the `admin` role in the token).
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+  rpc SetUserStatus(SetUserStatusRequest) returns (SetUserStatusResponse);
 
   rpc Refresh(RefreshRequest) returns (RefreshResponse);
   rpc Logout(LogoutRequest) returns (LogoutResponse);
@@ -48,6 +62,7 @@ message User {
   string status = 10;
   google.protobuf.Timestamp created_at = 11;
   google.protobuf.Timestamp updated_at = 12;
+  repeated string roles = 13;
 }
 
 message Session {
@@ -73,6 +88,39 @@ message RegisterResponse {
 message VerifyOtpRequest {
   string phone = 1;
   string otp_code = 2;
+  // Empty for the customer app. "backoffice" requires the admin role; "pos"
+  // requires an outlet role (or admin). A signed-in customer asking for either
+  // gets 403 instead of a token that merely would not authorise anything.
+  string audience = 3;
+}
+
+message SendLoginCodeRequest {
+  string phone = 1;
+}
+
+message SendLoginCodeResponse {
+  google.protobuf.Timestamp expires_at = 1;
+}
+
+message ListUsersRequest {
+  string query = 1;   // matches username, name or phone
+  string status = 2;  // active | inactive | banned, or empty
+  int32 limit = 3;
+  int32 offset = 4;
+}
+
+message ListUsersResponse {
+  repeated User users = 1;
+  int64 total = 2;
+}
+
+message SetUserStatusRequest {
+  string user_id = 1;
+  string status = 2;
+}
+
+message SetUserStatusResponse {
+  User user = 1;
 }
 
 message VerifyOtpResponse {
@@ -116,3 +164,32 @@ message LogoutRequest {
 }
 
 message LogoutResponse {}
+
+message GetMemberSummaryRequest {}
+
+message MemberLevel {
+  string name = 1;
+  // Empty when this is the top level.
+  string next_level = 2;
+  // Xp needed to reach next_level; 0 when there is none.
+  int64 next_level_xp = 3;
+}
+
+message MemberSummary {
+  string name = 1;
+  // Unset when no levels are configured.
+  MemberLevel level = 2;
+  int64 points = 3;
+  int64 xp = 4;
+  // Vouchers that are unused and not yet expired.
+  int64 voucher_count = 5;
+  // Rupiah, whole.
+  int64 wallet_balance = 6;
+  // Customers this one referred ("Teman").
+  int64 friend_count = 7;
+}
+
+message GetMemberSummaryResponse { MemberSummary summary = 1; }
+
+message DevLoginRequest { string phone = 1; }
+message DevLoginResponse { Session session = 1; }

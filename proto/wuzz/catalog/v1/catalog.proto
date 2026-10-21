@@ -1,0 +1,245 @@
+syntax = "proto3";
+
+package wuzz.catalog.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/koobam/wuzz-backend/gen/wuzz/catalog/v1;catalogv1";
+
+// CatalogService owns outlets and the laundry services they sell. Reads are
+// public (the customer app browses without signing in); writes need the
+// `admin` role in the access token.
+service CatalogService {
+  rpc ListOutlets(ListOutletsRequest) returns (ListOutletsResponse);
+  rpc GetOutlet(GetOutletRequest) returns (GetOutletResponse);
+  rpc CreateOutlet(CreateOutletRequest) returns (CreateOutletResponse);
+  rpc UpdateOutlet(UpdateOutletRequest) returns (UpdateOutletResponse);
+
+  // Customer-app discovery, served from MongoDB (geo index + search). Public.
+  rpc NearbyOutlets(NearbyOutletsRequest) returns (NearbyOutletsResponse);
+  // Which service area (e.g. "Jakarta Barat") a position falls in.
+  rpc ResolveCoverage(ResolveCoverageRequest) returns (ResolveCoverageResponse);
+  rpc BrowseServices(BrowseServicesRequest) returns (BrowseServicesResponse);
+  rpc GetServiceDetail(GetServiceDetailRequest) returns (GetServiceDetailResponse);
+
+  rpc ListServices(ListServicesRequest) returns (ListServicesResponse);
+  rpc CreateService(CreateServiceRequest) returns (CreateServiceResponse);
+  rpc UpdateService(UpdateServiceRequest) returns (UpdateServiceResponse);
+}
+
+message Outlet {
+  int64 id = 1;
+  string name = 2;
+  string address = 3;
+  string phone = 4;
+  double latitude = 5;
+  double longitude = 6;
+  bool active = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+message ServiceItem {
+  int64 id = 1;
+  string name = 2;
+  // "kg" or "pcs".
+  string unit = 3;
+  // Rupiah, whole.
+  int64 price = 4;
+  bool active = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+message ListOutletsRequest {
+  // Only outlets the caller may see are returned when ids is set.
+  repeated int64 ids = 1;
+  // Admins may ask for inactive outlets too.
+  bool include_inactive = 2;
+}
+message ListOutletsResponse { repeated Outlet outlets = 1; }
+
+message GetOutletRequest { int64 id = 1; }
+message GetOutletResponse { Outlet outlet = 1; }
+
+message CreateOutletRequest {
+  string name = 1;
+  string address = 2;
+  string phone = 3;
+  double latitude = 4;
+  double longitude = 5;
+}
+message CreateOutletResponse { Outlet outlet = 1; }
+
+message UpdateOutletRequest {
+  int64 id = 1;
+  string name = 2;
+  string address = 3;
+  string phone = 4;
+  double latitude = 5;
+  double longitude = 6;
+  bool active = 7;
+}
+message UpdateOutletResponse { Outlet outlet = 1; }
+
+message ListServicesRequest { bool include_inactive = 1; }
+message ListServicesResponse { repeated ServiceItem services = 1; }
+
+message CreateServiceRequest {
+  string name = 1;
+  string unit = 2;
+  int64 price = 3;
+}
+message CreateServiceResponse { ServiceItem service = 1; }
+
+message UpdateServiceRequest {
+  int64 id = 1;
+  string name = 2;
+  string unit = 3;
+  int64 price = 4;
+  bool active = 5;
+}
+message UpdateServiceResponse { ServiceItem service = 1; }
+
+// OutletView is an outlet as the customer app browses it: what Postgres holds
+// (name, address, position) plus the discovery-only fields kept in MongoDB.
+message OutletView {
+  int64 id = 1;
+  string name = 2;
+  string address = 3;
+  // "laundry", "caffe" or "all".
+  string category = 4;
+  double latitude = 5;
+  double longitude = 6;
+  repeated string images = 7;
+  // "quiet", "moderate" or "busy".
+  string current_status = 8;
+  // "pickup" and/or "delivery".
+  repeated string delivery_types = 9;
+  // Wall-clock "HH:MM".
+  string open_time = 10;
+  string close_time = 11;
+  // Only meaningful when the request carried a location.
+  bool has_distance = 12;
+  double distance_km = 13;
+}
+
+message NearbyOutletsRequest {
+  bool has_location = 1;
+  double latitude = 2;
+  double longitude = 3;
+  // 0 = default page size.
+  int32 limit = 4;
+  // Opaque; empty for the first page.
+  string cursor = 5;
+  // Pinned to the top of the first page when set.
+  int64 selected_outlet_id = 6;
+  // Case-insensitive match on name and address.
+  string query = 7;
+}
+message NearbyOutletsResponse {
+  repeated OutletView outlets = 1;
+  // Empty when there is no further page.
+  string next = 2;
+}
+
+message ResolveCoverageRequest {
+  double latitude = 1;
+  double longitude = 2;
+}
+
+message CoverageArea {
+  int64 id = 1;
+  string name = 2;
+}
+
+message ResolveCoverageResponse {
+  // False when the position is outside every service area; area is then unset.
+  bool covered = 1;
+  CoverageArea area = 2;
+}
+
+// ServiceView is a laundry service as the customer app browses it.
+message ServiceView {
+  int64 id = 1;
+  string name = 2;
+  string description = 3;
+  // Rupiah, whole.
+  int64 price = 4;
+  // "kg" or "pcs".
+  string unit = 5;
+  // "multiple" (priced by weight) or "single" (priced per piece).
+  string service_type = 6;
+  // "regular" or "alacarte".
+  string service_category = 7;
+  int32 min_kg = 8;
+  int32 max_kg = 9;
+  double discount = 10;
+  // "percentage" or "fixed"; empty when there is no discount.
+  string discount_type = 11;
+  // Name of an icon in the app's icon set.
+  string icon = 12;
+  string image = 13;
+}
+
+message BrowseServicesRequest {
+  // "regular" or "alacarte"; empty = both.
+  string service_category = 1;
+  // 0 = no cap.
+  int32 limit = 2;
+  // Free text. When set the services come back ranked by how well they match
+  // (typos tolerated); empty = the browse order.
+  string query = 3;
+}
+message BrowseServicesResponse { repeated ServiceView services = 1; }
+
+message ServiceTierPricing {
+  int64 id = 1;
+  int64 service_id = 2;
+  int64 tier_id = 3;
+  string sku = 4;
+  int32 estimated_time = 5;
+  string estimated_time_unit = 6;
+  int64 price = 7;
+  double discount = 8;
+  string discount_type = 9;
+  string unit = 10;
+}
+
+// A speed/quality tier of a service (e.g. Reguler, Express) with its pricing.
+message ServiceTier {
+  int64 id = 1;
+  string code = 2;
+  string name = 3;
+  int32 sort_order = 4;
+  ServiceTierPricing pricing = 5;
+}
+
+message ServiceAddon {
+  int64 id = 1;
+  string name = 2;
+  string description = 3;
+  int64 price = 4;
+  string unit = 5;
+  double discount = 6;
+  string discount_type = 7;
+  string icon = 8;
+}
+
+// A group of add-ons shown together in the service detail.
+message ServiceSection {
+  string title = 1;
+  string description = 2;
+  // "multiple" = pick many, "single" = pick one.
+  string type = 3;
+  repeated ServiceAddon addons = 4;
+}
+
+message ServiceDetail {
+  ServiceView service = 1;
+  repeated ServiceTier tiers = 2;
+  repeated ServiceSection sections = 3;
+}
+
+message GetServiceDetailRequest { int64 id = 1; }
+message GetServiceDetailResponse { ServiceDetail detail = 1; }

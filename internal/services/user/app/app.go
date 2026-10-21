@@ -16,12 +16,19 @@ type Commands struct {
 	VerifyOtp *command.VerifyOtpHandler
 	Refresh   *command.RefreshHandler
 	Logout    *command.LogoutHandler
+
+	SendLoginCode *command.SendLoginCodeHandler
+	// DevLogin is nil outside development; see cmd/user/main.go.
+	DevLogin      *command.DevLoginHandler
+	SetUserStatus *command.SetUserStatusHandler
 }
 
 type Queries struct {
 	GetUser         *query.GetUserHandler
+	MemberSummary   *query.GetMemberSummaryHandler
 	CheckUsername   *query.CheckUsernameHandler
 	SuggestUsername *query.SuggestUsernameHandler
+	ListUsers       *command.ListUsersHandler
 }
 
 type App struct {
@@ -31,6 +38,7 @@ type App struct {
 
 func New(
 	users command.Users,
+	members query.Members,
 	pending command.PendingRegistrations,
 	sessions command.Sessions,
 	verifications command.Verifications,
@@ -44,11 +52,16 @@ func New(
 			VerifyOtp: command.NewVerifyOtpHandler(users, pending, verifications, sessions, signer, accessTTL),
 			Refresh:   command.NewRefreshHandler(users, sessions, signer, accessTTL),
 			Logout:    command.NewLogoutHandler(sessions),
+
+			SendLoginCode: command.NewSendLoginCodeHandler(users, verifications, codeTTL),
+			SetUserStatus: command.NewSetUserStatusHandler(users),
 		},
 		Queries: Queries{
 			GetUser:         query.NewGetUserHandler(queryUsers{users}),
+			MemberSummary:   query.NewGetMemberSummaryHandler(members),
 			CheckUsername:   query.NewCheckUsernameHandler(queryUsers{users}),
 			SuggestUsername: query.NewSuggestUsernameHandler(queryUsers{users}),
+			ListUsers:       command.NewListUsersHandler(users),
 		},
 	}
 }

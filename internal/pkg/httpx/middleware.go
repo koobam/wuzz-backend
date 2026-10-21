@@ -50,6 +50,12 @@ func Logger(base *slog.Logger) gin.HandlerFunc {
 			slog.String("ip", c.ClientIP()),
 		}
 
+		// An unmatched route has no pattern to log; the path says what was asked for.
+		// (Path only: query strings can carry coordinates and tokens.)
+		if routeOf(c) == "" {
+			attrs = append(attrs, slog.String("path", c.Request.URL.Path))
+		}
+
 		switch {
 		case len(c.Errors) > 0:
 			log.ErrorContext(c.Request.Context(), "request failed",
@@ -225,4 +231,37 @@ func statusClass(status int) string {
 	default:
 		return "5xx"
 	}
+}
+
+// RequireIdentity admits only callers whose verified token satisfies allow.
+// Put it after Authenticate(verifier, true). This is the edge check; services
+// behind the gateway authorise again from the token they receive.
+func RequireIdentity(allow func(authn.Identity) bool) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id, ok := authn.FromContext(c.Request.Context())
+		if !ok {
+			Fail(c, apperr.Unauthorized("Authentication is required"))
+			return
+		}
+		if !allow(id) {
+			Fail(c, apperr.Forbidden("You do not have access to this resource"))
+			return
+		}
+		c.Next()
+	}
+}
+
+// IsAdmin and IsOutletStaff are the two staff audiences.
+func IsAdmin(id authn.Identity) bool { return id.HasRole("admin") }
+
+func IsOutletStaff(id authn.Identity) bool {
+	if id.HasRole("admin") {
+		return true
+	}
+	for _, r := range id.Roles {
+		if strings.HasPrefix(r, "outlet:") {
+			return true
+		}
+	}
+	return false
 }

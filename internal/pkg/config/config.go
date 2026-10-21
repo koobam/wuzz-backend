@@ -15,8 +15,10 @@ import (
 type Service string
 
 const (
-	ServiceGateway Service = "gateway"
-	ServiceUser    Service = "user"
+	ServiceGateway     Service = "gateway"
+	ServiceUser        Service = "user"
+	ServiceCatalog     Service = "catalog"
+	ServiceTransaction Service = "transaction"
 )
 
 type Config struct {
@@ -28,7 +30,10 @@ type Config struct {
 	HTTP      HTTP
 	GRPC      GRPC
 	Postgres  Postgres
+	Mongo     Mongo
+	Typesense Typesense
 	Redis     Redis
+	Kafka     Kafka
 	Auth      Auth
 	Twilio    Twilio
 	Upstreams Upstreams
@@ -59,18 +64,46 @@ type Postgres struct {
 	MaxConnLifetime time.Duration
 }
 
+// Mongo is the document store behind catalog's customer-facing outlet search.
+type Mongo struct {
+	URI      string
+	Database string
+}
+
+// Typesense is the optional search engine behind service search. With no URL the
+// catalog falls back to matching the service list in memory.
+type Typesense struct {
+	URL    string
+	APIKey string
+}
+
 type Redis struct {
 	Addr string
 }
 
 type Auth struct {
-	Issuer               string
-	JWTPrivateKey        string
-	JWTPublicKeys        string
-	AccessTokenTTL       time.Duration
-	RefreshTokenTTL      time.Duration
-	VerificationCodeTTL  time.Duration
-	VerifiedPhoneTTL     time.Duration
+	Issuer              string
+	JWTPrivateKey       string
+	JWTPublicKeys       string
+	AccessTokenTTL      time.Duration
+	RefreshTokenTTL     time.Duration
+	VerificationCodeTTL time.Duration
+	VerifiedPhoneTTL    time.Duration
+}
+
+type Kafka struct {
+	Brokers     []string
+	TopicPrefix string
+	// TopicPartitions is what EnsureTopics creates a topic with. Ordering holds
+	// only within a partition and events are keyed by aggregate id, so this is
+	// the consumers' parallelism: raising it later is possible, lowering it is not.
+	TopicPartitions int32
+	// TopicReplication of -1 means the broker's own default.
+	TopicReplication int16
+	// OutboxInterval is the backstop sweep of a command service's outbox;
+	// LISTEN/NOTIFY wakes the relay sooner in the normal case.
+	OutboxInterval time.Duration
+	OutboxBatch    int
 }
 
 type Twilio struct {
@@ -82,7 +115,9 @@ type Twilio struct {
 
 // Upstreams is where the gateway finds every backend service's gRPC address.
 type Upstreams struct {
-	User string
+	User        string
+	Catalog     string
+	Transaction string
 }
 
 type Telemetry struct {
@@ -99,7 +134,7 @@ func Load(service Service) (*Config, error) {
 		Env:         env,
 		Version:     "dev",
 		HTTP: HTTP{
-			Addr:            getenv("HTTP_ADDR", ":8080"),
+			Addr:            getenv("HTTP_ADDR", devAddr(env, service).http),
 			ReadTimeout:     10 * time.Second,
 			WriteTimeout:    10 * time.Second,
 			ShutdownTimeout: 15 * time.Second,
@@ -108,21 +143,41 @@ func Load(service Service) (*Config, error) {
 			CookieSecure:    getenvBool("COOKIE_SECURE", env != "dev"),
 		},
 		GRPC: GRPC{
-			Addr:            getenv("GRPC_ADDR", ":9090"),
+			Addr:            getenv("GRPC_ADDR", devAddr(env, service).grpc),
 			ShutdownTimeout: 15 * time.Second,
 		},
 		Postgres: Postgres{
 			// Port 5433: docker-compose maps the local dev postgres there, not
 			// 5432 — something else on dev machines here already listens on
 			// 5432 (an SSH tunnel to a remote Postgres).
-			DSN: getenv("POSTGRES_DSN", "postgres://wuzz:wuzz@localhost:5433/wuzz?sslmode=disable"),
+			DSN:             getenv("POSTGRES_DSN", DefaultDSN(service)),
 			MaxConns:        int32(getenvInt("POSTGRES_MAX_CONNS", 10)),
 			MinConns:        int32(getenvInt("POSTGRES_MIN_CONNS", 1)),
 			MaxConnLifetime: time.Hour,
 		},
+		Mongo: Mongo{
+			// Port 27018: docker-compose maps the local dev mongo there so it stays
+			// clear of any Mongo already on the machine.
+			URI:      getenv("MONGO_URI", "mongodb://localhost:27018"),
+			Database: getenv("MONGO_DB", "wuzz_catalog"),
+		},
+		Typesense: Typesense{
+			// Empty by default: search then runs in memory, so nothing extra is
+			// needed to run the service locally.
+			URL:    getenv("TYPESENSE_URL", ""),
+			APIKey: getenv("TYPESENSE_API_KEY", ""),
+		},
 		Redis: Redis{
 			// Port 6380: see the DSN comment above — same reason.
 			Addr: getenv("REDIS_ADDR", "localhost:6380"),
+		},
+		Kafka: Kafka{
+			Brokers:          splitCSV(getenv("KAFKA_BROKERS", "localhost:29092")),
+			TopicPrefix:      getenv("KAFKA_TOPIC_PREFIX", "wuzz"),
+			TopicPartitions:  int32(getenvInt("KAFKA_TOPIC_PARTITIONS", 3)),
+			TopicReplication: int16(getenvInt("KAFKA_TOPIC_REPLICATION", -1)),
+			OutboxInterval:   getenvDuration("OUTBOX_INTERVAL", 2*time.Second),
+			OutboxBatch:      getenvInt("OUTBOX_BATCH", 100),
 		},
 		Auth: Auth{
 			Issuer:              getenv("JWT_ISSUER", "wuzz-backend"),
@@ -140,7 +195,9 @@ func Load(service Service) (*Config, error) {
 			DevMode:    getenvBool("TWILIO_DEV_MODE", env == "dev"),
 		},
 		Upstreams: Upstreams{
-			User: getenv("USER_ADDR", "localhost:9090"),
+			User:        getenv("USER_ADDR", "localhost:9090"),
+			Catalog:     getenv("CATALOG_ADDR", "localhost:9091"),
+			Transaction: getenv("TRANSACTION_ADDR", "localhost:9092"),
 		},
 		Telemetry: Telemetry{
 			LogLevel:  getenv("LOG_LEVEL", "info"),
@@ -151,8 +208,13 @@ func Load(service Service) (*Config, error) {
 	// Left empty outside dev is refused here; inside dev, authn.NewSigner and
 	// authn.NewVerifier fall back to a fixed development keypair themselves
 	// (see authn/keys.go) — config only enforces that production cannot.
-	if (cfg.Auth.JWTPrivateKey == "" || cfg.Auth.JWTPublicKeys == "") && env != "dev" {
-		return nil, fmt.Errorf("config: JWT_PRIVATE_KEY and JWT_PUBLIC_KEYS are required outside dev")
+	// Only `user` signs tokens, so only `user` may (and must) hold the private
+	// key. Every service verifies, so every service needs the public keys.
+	if cfg.Auth.JWTPublicKeys == "" && env != "dev" {
+		return nil, fmt.Errorf("config: JWT_PUBLIC_KEYS is required outside dev")
+	}
+	if service == ServiceUser && cfg.Auth.JWTPrivateKey == "" && env != "dev" {
+		return nil, fmt.Errorf("config: JWT_PRIVATE_KEY is required for the user service outside dev")
 	}
 
 	if service == ServiceUser && !cfg.Twilio.DevMode && cfg.Twilio.AccountSID == "" && env != "dev" {
@@ -160,6 +222,37 @@ func Load(service Service) (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+type addrs struct{ http, grpc string }
+
+// devAddr gives every service its own ports when running side by side on one
+// machine (APP_ENV=dev). Outside dev each service is its own container, so they
+// all use :8080 / :9090 and are told apart by their Service name.
+func devAddr(env string, service Service) addrs {
+	if env != "dev" {
+		return addrs{http: ":8080", grpc: ":9090"}
+	}
+	switch service {
+	case ServiceUser:
+		return addrs{http: ":8091", grpc: ":9090"}
+	case ServiceCatalog:
+		return addrs{http: ":8093", grpc: ":9091"}
+	case ServiceTransaction:
+		return addrs{http: ":8094", grpc: ":9092"}
+	default: // gateway
+		return addrs{http: ":8092", grpc: ":9090"}
+	}
+}
+
+// DefaultDSN is the local database for a service: one database per service,
+// all on the dev Postgres. (user keeps the original `wuzz` database.)
+func DefaultDSN(service Service) string {
+	name := "wuzz"
+	if service == ServiceCatalog || service == ServiceTransaction {
+		name = "wuzz_" + string(service)
+	}
+	return "postgres://wuzz:wuzz@localhost:5433/" + name + "?sslmode=disable"
 }
 
 func getenv(key, fallback string) string {

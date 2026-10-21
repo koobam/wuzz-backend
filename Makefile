@@ -1,4 +1,4 @@
-SERVICES := gateway user
+SERVICES := gateway user catalog transaction
 GOBIN    := $(shell go env GOPATH)/bin
 VERSION  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo dev)
 
@@ -45,7 +45,7 @@ up: ## Start the whole stack locally
 
 .PHONY: dev
 dev: ## Start local dependencies (postgres, redis) and run migrations
-	docker compose up -d postgres redis
+	docker compose up -d postgres redis kafka mongo
 	docker compose up migrate-user
 
 .PHONY: run
@@ -68,7 +68,7 @@ reset: ## Stop the stack and delete its data
 
 .PHONY: logs
 logs: ## Tail the application services
-	docker compose logs -f gateway user
+	docker compose logs -f gateway user catalog transaction
 
 .PHONY: images
 images: ## Build an image per service. SERVICES=... to narrow it down.
@@ -76,3 +76,18 @@ images: ## Build an image per service. SERVICES=... to narrow it down.
 		docker build --build-arg SERVICE=$$service --build-arg VERSION=$(VERSION) \
 			-t wuzz-$$service:$(VERSION) . || exit 1; \
 	done
+
+.PHONY: staff
+staff: ## Create/update a staff account: make staff PHONE=0812... ROLES=admin NAME="Ani"
+	@test -n "$(PHONE)" || (echo 'usage: make staff PHONE=0812... ROLES=admin|outlet:1 [NAME=...]'; exit 1)
+	go run ./cmd/staff -phone "$(PHONE)" -roles "$(or $(ROLES),admin)" -name "$(NAME)"
+
+.PHONY: local local-down local-status
+local: ## Run the whole stack on this machine (infra, services, support, frontends)
+	./scripts/local.sh up
+
+local-down: ## Stop what `make local` started
+	./scripts/local.sh down
+
+local-status: ## What is listening where
+	./scripts/local.sh status
