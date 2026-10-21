@@ -30,3 +30,11 @@ FROM users me, users u
 WHERE me.phone = '6281299900001'
   AND u.phone IN ('6281234500001', '6281234500002', '6281234500003')
 ON CONFLICT DO NOTHING;
+
+-- Local staff, so the backoffice and POS can be opened. Phones are stored without
+-- the leading 0 (62...). Staff sign in with a code like anyone else; here it is
+-- printed in the user service's log. Safe to re-run.
+INSERT INTO users (username, name, phone, roles)
+VALUES ('staff34500099', 'Admin Ani', '6281234500099', ARRAY['admin']),
+       ('staff34500098', 'Kasir Budi', '6281234500098', ARRAY['outlet:1'])
+ON CONFLICT (phone) DO UPDATE SET roles = EXCLUDED.roles, updated_at = now();

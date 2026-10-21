@@ -49,11 +49,6 @@ The server recomputes totals from the lines; prices are the ones the POS sold at
 
 Staff sign in with phone + code like everyone else; roles come from the database.
 
-```
-make staff PHONE=081234500099 ROLES=admin NAME="Admin Ani"
-make staff PHONE=081234500098 ROLES=outlet:1 NAME="Kasir Budi"
-```
-
 Roles ride in the access token (`roles` claim): `admin`, `outlet:<id>`. wuzz-support
 authorises chat against the same claim.
 
@@ -91,6 +86,19 @@ Needs Docker, Go, pnpm, and the sibling repos `wuzz-support` and `wuzz-frontend`
 
 By hand: `make dev` (postgres, redis, kafka, mongo + migrations), then
 `make run SERVICE=<user|catalog|transaction|gateway>` in separate terminals.
+
+`make run` and `make migrate` read `.env` first (gitignored; copy
+`.env.example`), so a value there wins over the defaults in `internal/pkg/config`.
+What you export in your shell still wins over the file. To run a service on this
+machine against another environment's addresses:
+
+```
+ENV_FILE=.env.staging make run SERVICE=gateway
+```
+
+`.env` is for local, `.env.staging` and `.env.production` are for those
+environments (the VM reads them through Docker Compose), and neither of those is
+ever committed.
 Or the whole stack in containers: `make up` (then `make down` / `make reset`).
 
 ## Regenerating gRPC code after editing a `.proto`

@@ -1,5 +1,10 @@
 /bin/
 .env
 .env.local
+# Real staging/production env files hold secrets: never committed. The
+# .example templates are.
+.env.*
+!.env.example
+!.env.*.example
 *.log
 .DS_Store

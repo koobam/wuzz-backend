@@ -56,9 +56,6 @@ up() {
   # Customer-app outlet discovery lives in MongoDB (catalog's Discovery adapter).
   until docker compose -f "$BACKEND/docker-compose.yml" exec -T mongo mongosh --quiet --eval 'db.adminCommand("ping").ok' >/dev/null 2>&1; do sleep 1; done
   docker compose -f "$BACKEND/docker-compose.yml" exec -T mongo mongosh --quiet <"$BACKEND/scripts/seed-local-mongo.js" >/dev/null
-  (cd "$BACKEND" \
-    && go run ./cmd/staff -phone 081234500099 -name "Admin Ani" -roles admin >/dev/null \
-    && go run ./cmd/staff -phone 081234500098 -name "Kasir Budi" -roles outlet:1 >/dev/null)
   echo "   staff: admin 081234500099 (backoffice+pos), kasir 081234500098 (pos). Code is printed in $RUN/user.log"
 
   echo "== go services"

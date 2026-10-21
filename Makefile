@@ -51,12 +51,12 @@ dev: ## Start local dependencies (postgres, redis) and run migrations
 .PHONY: run
 run: ## Run one service on the host: make run SERVICE=gateway
 	@test -n "$(SERVICE)" || (echo "usage: make run SERVICE=<$(SERVICES)>"; exit 1)
-	go run ./cmd/$(SERVICE)
+	@scripts/dev-env.sh go run ./cmd/$(SERVICE)
 
 .PHONY: migrate
 migrate: ## Apply migrations for one service: make migrate SERVICE=user
 	@test -n "$(SERVICE)" || (echo "usage: make migrate SERVICE=<name>"; exit 1)
-	MIGRATE_SERVICE=$(SERVICE) go run ./cmd/migrate
+	MIGRATE_SERVICE=$(SERVICE) scripts/dev-env.sh go run ./cmd/migrate
 
 .PHONY: down
 down: ## Stop the stack (keeps the database volume)
@@ -76,11 +76,6 @@ images: ## Build an image per service. SERVICES=... to narrow it down.
 		docker build --build-arg SERVICE=$$service --build-arg VERSION=$(VERSION) \
 			-t wuzz-$$service:$(VERSION) . || exit 1; \
 	done
-
-.PHONY: staff
-staff: ## Create/update a staff account: make staff PHONE=0812... ROLES=admin NAME="Ani"
-	@test -n "$(PHONE)" || (echo 'usage: make staff PHONE=0812... ROLES=admin|outlet:1 [NAME=...]'; exit 1)
-	go run ./cmd/staff -phone "$(PHONE)" -roles "$(or $(ROLES),admin)" -name "$(NAME)"
 
 .PHONY: local local-down local-status
 local: ## Run the whole stack on this machine (infra, services, support, frontends)
