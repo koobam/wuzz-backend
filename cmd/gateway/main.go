@@ -8,6 +8,7 @@ import (
 
 	"github.com/koobam/wuzz-backend/internal/pkg/authn"
 	"github.com/koobam/wuzz-backend/internal/pkg/config"
+	"github.com/koobam/wuzz-backend/internal/pkg/errtrack"
 	"github.com/koobam/wuzz-backend/internal/pkg/httpx"
 	"github.com/koobam/wuzz-backend/internal/pkg/observability"
 	"github.com/koobam/wuzz-backend/internal/pkg/run"
@@ -35,6 +36,13 @@ func realMain() error {
 	cfg.SetBuildVersion(version)
 
 	log := observability.NewLogger(cfg.Telemetry.LogLevel, cfg.Telemetry.LogFormat, cfg.ServiceName, cfg.Version)
+
+	// Off unless SENTRY_DSN is set; then every ERROR log also becomes a Sentry issue.
+	flushErrors, err := errtrack.Init(cfg)
+	if err != nil {
+		return err
+	}
+	log = errtrack.Wrap(log)
 	shutdownTelemetry, err := observability.Setup(ctx, cfg.ServiceName)
 	if err != nil {
 		return err
@@ -70,6 +78,7 @@ func realMain() error {
 
 	return run.Run(ctx, log, cfg.HTTP.ShutdownTimeout,
 		run.Component{Name: "telemetry", Start: run.Noop, Stop: shutdownTelemetry},
+		run.Component{Name: "errtrack", Start: run.Noop, Stop: flushErrors},
 		run.Component{Name: "upstream-clients", Start: run.Noop,
 			Stop: func(context.Context) error { return upstreams.Close() }},
 		run.Component{Name: "redis", Start: run.Noop,

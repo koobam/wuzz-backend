@@ -37,6 +37,7 @@ type Config struct {
 	Twilio    Twilio
 	Upstreams Upstreams
 	Telemetry Telemetry
+	Sentry    Sentry
 }
 
 func (c *Config) SetBuildVersion(v string) { c.Version = v }
@@ -111,6 +112,11 @@ type Upstreams struct {
 	User        string
 	Catalog     string
 	Transaction string
+}
+
+// Sentry turns on error reporting when a DSN is set (see package errtrack).
+type Sentry struct {
+	DSN string
 }
 
 type Telemetry struct {
@@ -190,6 +196,7 @@ func Load(service Service) (*Config, error) {
 			LogLevel:  getenv("LOG_LEVEL", "info"),
 			LogFormat: getenv("LOG_FORMAT", "text"),
 		},
+		Sentry: Sentry{DSN: getenv("SENTRY_DSN", "")},
 	}
 
 	// Left empty outside dev is refused here; inside dev, authn.NewSigner and
