@@ -18,12 +18,18 @@ import (
 	"github.com/koobam/wuzz-backend/internal/services/gateway/rest/auth"
 	"github.com/koobam/wuzz-backend/internal/services/gateway/rest/backoffice"
 	"github.com/koobam/wuzz-backend/internal/services/gateway/rest/catalogapi"
+	"github.com/koobam/wuzz-backend/internal/services/gateway/rest/docs"
 	"github.com/koobam/wuzz-backend/internal/services/gateway/rest/orders"
 	"github.com/koobam/wuzz-backend/internal/services/gateway/rest/staff"
 )
 
 func Register(engine *gin.Engine, upstreams *clients.Clients, verifier *authn.Verifier, rdb *redisx.Client, cfg *config.Config) {
 	auth.Register(engine, upstreams.User, verifier, rdb, cfg.Env == "dev")
+
+	// The spec lists staff routes too, so production does not serve it.
+	if cfg.Env != "production" {
+		docs.Register(engine)
+	}
 
 	authed := httpx.Authenticate(verifier, true)
 	catalog := &catalogapi.Handler{Catalog: upstreams.Catalog}

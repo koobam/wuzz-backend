@@ -1,0 +1,424 @@
+openapi: 3.0.3
+info:
+  title: Wuzz API
+  version: "1.0"
+  description: |
+    Public REST edge of Wuzz. Every response uses one envelope:
+    `{ "success": bool, "message": str, "data": ... }`.
+
+    Sign in with phone + one-time code. On staging the code is written to the `user`
+    service log, not sent by SMS. Send the access token as `Authorization: Bearer <token>`.
+servers:
+  - url: https://api-stg.wuzz.care
+tags:
+  - name: App auth
+  - name: App catalog
+  - name: Staff auth
+  - name: POS
+  - name: Backoffice
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+    OrderId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, default: 25 }
+    Offset:
+      name: offset
+      in: query
+      schema: { type: integer, default: 0 }
+  schemas:
+    Envelope:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        data: {}
+    Phone:
+      type: object
+      required: [phone]
+      properties:
+        phone: { type: string, example: "081234500099" }
+    Verify:
+      type: object
+      required: [phone, otp_code]
+      properties:
+        phone: { type: string, example: "081234500099" }
+        otp_code: { type: string, example: "123456" }
+    Register:
+      type: object
+      required: [username, name, phone]
+      properties:
+        username: { type: string }
+        name: { type: string }
+        date_of_birth: { type: string, example: "1998-04-21" }
+        phone: { type: string }
+        email: { type: string }
+    AppRefresh:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken: { type: string }
+    StaffRefresh:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token: { type: string }
+    OutletBody:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        address: { type: string }
+        phone: { type: string }
+        latitude: { type: number }
+        longitude: { type: number }
+        active: { type: boolean }
+    ServiceBody:
+      type: object
+      required: [name, unit]
+      properties:
+        name: { type: string }
+        unit: { type: string, example: kg }
+        price: { type: integer, format: int64 }
+        active: { type: boolean }
+    OrderLine:
+      type: object
+      required: [name]
+      properties:
+        item_id: { type: integer, format: int64 }
+        name: { type: string }
+        unit: { type: string }
+        price: { type: integer, format: int64 }
+        qty: { type: number }
+    CreateOrder:
+      type: object
+      required: [id, outlet_id, customer_name, lines]
+      properties:
+        id: { type: string, description: Client-generated id; the call is idempotent on it. }
+        outlet_id: { type: integer, format: int64 }
+        customer_name: { type: string }
+        customer_phone: { type: string }
+        lines:
+          type: array
+          minItems: 1
+          items: { $ref: "#/components/schemas/OrderLine" }
+    UserStatus:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [active, inactive, banned]
+    OrderStatus:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [created, processing, ready, fulfilled, cancelled]
+  responses:
+    Ok:
+      description: Envelope
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Envelope" }
+paths:
+  /app/v1/register:
+    post:
+      tags: [App auth]
+      summary: Start sign-up and send a one-time code
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/Register" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /app/v1/verify-otp:
+    post:
+      tags: [App auth]
+      summary: Exchange the code for tokens
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/Verify" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /app/v1/suggest-username:
+    get:
+      tags: [App auth]
+      parameters:
+        - { name: name, in: query, schema: { type: string } }
+        - { name: birth_date, in: query, schema: { type: string } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /app/v1/check-username:
+    get:
+      tags: [App auth]
+      parameters:
+        - { name: username, in: query, required: true, schema: { type: string } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /app/v1/me:
+    get:
+      tags: [App auth]
+      security: [{ bearer: [] }]
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /app/v1/me/summary:
+    get:
+      tags: [App auth]
+      summary: Membership summary
+      security: [{ bearer: [] }]
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /app/v1/refresh:
+    post:
+      tags: [App auth]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/AppRefresh" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /app/v1/logout:
+    post:
+      tags: [App auth]
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /app/v1/outlets:
+    get:
+      tags: [App catalog]
+      summary: All active outlets (plain list)
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /app/v1/outlets/nearby:
+    get:
+      tags: [App catalog]
+      summary: Outlets nearest a position, with distance
+      parameters:
+        - { name: lat, in: query, schema: { type: number } }
+        - { name: long, in: query, schema: { type: number } }
+        - { name: num, in: query, schema: { type: integer } }
+        - { name: search, in: query, schema: { type: string } }
+        - { name: cursor, in: query, schema: { type: string } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /app/v1/coverage:
+    get:
+      tags: [App catalog]
+      summary: Service area a position falls in
+      parameters:
+        - { name: lat, in: query, schema: { type: number } }
+        - { name: long, in: query, schema: { type: number } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /app/v1/services:
+    get:
+      tags: [App catalog]
+      summary: Services the app browses
+      parameters:
+        - { name: service_category, in: query, schema: { type: string } }
+        - { name: selected_outlet_id, in: query, schema: { type: integer } }
+        - { name: query, in: query, schema: { type: string } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /app/v1/services/{id}:
+    get:
+      tags: [App catalog]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+
+  /pos/v1/auth/send-code:
+    post:
+      tags: [Staff auth]
+      summary: Send a staff sign-in code (POS)
+      description: A customer's number also gets 200, with no SMS sent.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/Phone" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /pos/v1/auth/verify-otp:
+    post:
+      tags: [Staff auth]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/Verify" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /pos/v1/auth/refresh:
+    post:
+      tags: [Staff auth]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/StaffRefresh" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /pos/v1/auth/logout:
+    post:
+      tags: [Staff auth]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/StaffRefresh" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /pos/v1/auth/me:
+    get:
+      tags: [Staff auth]
+      security: [{ bearer: [] }]
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /pos/v1/catalog:
+    get:
+      tags: [POS]
+      summary: Outlets and services, for offline caching
+      security: [{ bearer: [] }]
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /pos/v1/orders:
+    get:
+      tags: [POS]
+      security: [{ bearer: [] }]
+      parameters:
+        - { name: outlet_id, in: query, schema: { type: integer } }
+        - { name: status, in: query, schema: { type: string } }
+        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/Offset" }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+    post:
+      tags: [POS]
+      summary: Create an order (idempotent on id)
+      description: "201 for a new order, 200 when the id already exists."
+      security: [{ bearer: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CreateOrder" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" }, "201": { $ref: "#/components/responses/Ok" } }
+  /pos/v1/orders/{id}:
+    get:
+      tags: [POS]
+      security: [{ bearer: [] }]
+      parameters: [{ $ref: "#/components/parameters/OrderId" }]
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /pos/v1/orders/{id}/status:
+    patch:
+      tags: [POS]
+      security: [{ bearer: [] }]
+      parameters: [{ $ref: "#/components/parameters/OrderId" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/OrderStatus" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+
+  /backoffice/v1/auth/send-code:
+    post:
+      tags: [Staff auth]
+      summary: Send a staff sign-in code (backoffice)
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/Phone" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/auth/verify-otp:
+    post:
+      tags: [Staff auth]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/Verify" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/auth/refresh:
+    post:
+      tags: [Staff auth]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/StaffRefresh" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/auth/logout:
+    post:
+      tags: [Staff auth]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/StaffRefresh" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/auth/me:
+    get:
+      tags: [Staff auth]
+      security: [{ bearer: [] }]
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/users:
+    get:
+      tags: [Backoffice]
+      security: [{ bearer: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/Offset" }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/users/{id}/status:
+    patch:
+      tags: [Backoffice]
+      security: [{ bearer: [] }]
+      parameters: [{ $ref: "#/components/parameters/OrderId" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UserStatus" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/outlets:
+    get:
+      tags: [Backoffice]
+      security: [{ bearer: [] }]
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+    post:
+      tags: [Backoffice]
+      security: [{ bearer: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/OutletBody" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/outlets/{id}:
+    patch:
+      tags: [Backoffice]
+      security: [{ bearer: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/OutletBody" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/services:
+    get:
+      tags: [Backoffice]
+      security: [{ bearer: [] }]
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+    post:
+      tags: [Backoffice]
+      security: [{ bearer: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/ServiceBody" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/services/{id}:
+    patch:
+      tags: [Backoffice]
+      security: [{ bearer: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/ServiceBody" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/orders:
+    get:
+      tags: [Backoffice]
+      security: [{ bearer: [] }]
+      parameters:
+        - { name: outlet_id, in: query, schema: { type: integer } }
+        - { name: status, in: query, schema: { type: string } }
+        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/Offset" }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/orders/{id}:
+    get:
+      tags: [Backoffice]
+      security: [{ bearer: [] }]
+      parameters: [{ $ref: "#/components/parameters/OrderId" }]
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/orders/{id}/status:
+    patch:
+      tags: [Backoffice]
+      security: [{ bearer: [] }]
+      parameters: [{ $ref: "#/components/parameters/OrderId" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/OrderStatus" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
