@@ -48,6 +48,10 @@ dev: ## Start local dependencies (postgres, redis) and run migrations
 	docker compose up -d postgres redis kafka mongo
 	docker compose up migrate-user
 
+.PHONY: seed
+seed: ## Load the demo catalog (outlets, services, areas) into a migrated database
+	@scripts/seed.sh $(WHAT)
+
 .PHONY: run
 run: ## Run one service on the host: make run SERVICE=gateway
 	@test -n "$(SERVICE)" || (echo "usage: make run SERVICE=<$(SERVICES)>"; exit 1)
