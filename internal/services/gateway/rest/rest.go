@@ -26,8 +26,9 @@ import (
 func Register(engine *gin.Engine, upstreams *clients.Clients, verifier *authn.Verifier, rdb *redisx.Client, cfg *config.Config) {
 	auth.Register(engine, upstreams.User, verifier, rdb, cfg.Env == "dev")
 
-	// The spec lists staff routes too, so production does not serve it.
-	if cfg.Env != "production" {
+	// Staging only. An allow-list rather than "not production": APP_ENV defaults to
+	// dev, so a deploy that forgot to set it would otherwise publish the spec.
+	if cfg.Env == "staging" {
 		docs.Register(engine)
 	}
 

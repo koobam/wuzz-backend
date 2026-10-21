@@ -31,7 +31,7 @@ const page = `<!doctype html>
 </html>`
 
 // Register mounts /docs and /openapi.yaml. Callers decide whether to: the spec
-// describes staff routes, so production leaves it off.
+// describes staff routes, so only staging turns it on.
 func Register(engine *gin.Engine) {
 	engine.GET("/docs", func(c *gin.Context) {
 		c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(page))
