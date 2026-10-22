@@ -4,6 +4,14 @@ VERSION  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo dev)
 
 export PATH := $(GOBIN):$(PATH)
 
+# ENV picks the env file the host-side targets read, so one checkout can be pointed at
+# another environment: `make run SERVICE=gateway ENV=staging` reads .env.staging; with no
+# ENV it reads .env. Applies to run, migrate and local.
+ENV      ?=
+ENV_FILE ?= $(if $(ENV),.env.$(ENV),.env)
+export ENV
+export ENV_FILE
+
 .DEFAULT_GOAL := help
 
 .PHONY: help
@@ -49,14 +57,14 @@ dev: ## Start local dependencies (postgres, redis) and run migrations
 	docker compose up migrate-user
 
 .PHONY: run
-run: ## Run one service on the host: make run SERVICE=gateway
-	@test -n "$(SERVICE)" || (echo "usage: make run SERVICE=<$(SERVICES)>"; exit 1)
-	@scripts/dev-env.sh go run ./cmd/$(SERVICE)
+run: ## Run on the host: make run SERVICE=gateway, or no SERVICE for all four in one terminal
+	@if [ -n "$(SERVICE)" ]; then scripts/dev-env.sh go run ./cmd/$(SERVICE); else scripts/run-all.sh; fi
 
 .PHONY: migrate
-migrate: ## Apply migrations for one service: make migrate SERVICE=user
-	@test -n "$(SERVICE)" || (echo "usage: make migrate SERVICE=<name>"; exit 1)
-	MIGRATE_SERVICE=$(SERVICE) scripts/dev-env.sh go run ./cmd/migrate
+migrate: ## Apply migrations: make migrate SERVICE=user, or no SERVICE for user, catalog and transaction
+	@for svc in $(if $(SERVICE),$(SERVICE),user catalog transaction); do \
+		MIGRATE_SERVICE=$$svc scripts/dev-env.sh go run ./cmd/migrate || exit 1; \
+	done
 
 .PHONY: down
 down: ## Stop the stack (keeps the database volume)

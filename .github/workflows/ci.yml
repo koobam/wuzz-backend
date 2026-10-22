@@ -96,8 +96,6 @@ jobs:
           MIGRATE_SERVICE=user        POSTGRES_DSN="$DSN_BASE/wuzz?sslmode=disable"             go run ./cmd/migrate
           MIGRATE_SERVICE=catalog     POSTGRES_DSN="$DSN_BASE/wuzz_catalog?sslmode=disable"     go run ./cmd/migrate
           MIGRATE_SERVICE=transaction POSTGRES_DSN="$DSN_BASE/wuzz_transaction?sslmode=disable" go run ./cmd/migrate
-      - name: Seed the demo catalog
-        run: psql -h localhost -U postgres -d wuzz_catalog -v ON_ERROR_STOP=1 -q -f scripts/seed-local.sql
       - name: Database-backed tests
         env:
           CATALOG_TEST_DSN: postgres://postgres:ci@localhost:5432/wuzz_catalog?sslmode=disable
