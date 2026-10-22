@@ -25,6 +25,7 @@ Responses use one envelope: `{ "success": bool, "message": str, "data": … }`.
 | `/app/v1` | customers (mobile app) | public catalog reads; `me` needs a token |
 | `/backoffice/v1` | administrators | role `admin` |
 | `/pos/v1` | outlet staff | role `outlet:<id>` (or `admin`) |
+| `/station/v1` | Wuzzers: the technician who is also the driver (station app) | role `wuzzer` (or `admin`) |
 
 `/app/register`, `/app/verify-otp`, … (unversioned) are the shipped mobile
 client's contract and stay as they are; `/app/v1/*` is the same API for new
@@ -49,8 +50,19 @@ The server recomputes totals from the lines; prices are the ones the POS sold at
 
 Staff sign in with phone + code like everyone else; roles come from the database.
 
-Roles ride in the access token (`roles` claim): `admin`, `outlet:<id>`. wuzz-support
-authorises chat against the same claim.
+Roles ride in the access token (`roles` claim): `admin`, `outlet:<id>`, `wuzzer`. wuzz-support
+authorises chat against the same claim (it does not know `wuzzer` yet: a Wuzzer is treated as a
+customer there).
+
+Whoever has signed in once can be given a role in the `users` table of the `wuzz` database:
+
+```sql
+UPDATE users SET roles = '{wuzzer}'    WHERE phone = '628...';   -- a Wuzzer (station app)
+UPDATE users SET roles = '{outlet:3}'  WHERE phone = '628...';   -- staff of outlet 3 (POS)
+UPDATE users SET roles = '{admin}'     WHERE phone = '628...';   -- back office (also allowed in POS and station)
+```
+
+The roles apply from the next sign-in, since they are written into the token.
 
 ## Events
 

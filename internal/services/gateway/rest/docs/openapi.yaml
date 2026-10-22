@@ -15,6 +15,7 @@ tags:
   - name: App catalog
   - name: Staff auth
   - name: POS
+  - name: Station
   - name: Backoffice
 components:
   securitySchemes:
@@ -302,6 +303,42 @@ paths:
       requestBody:
         required: true
         content: { application/json: { schema: { $ref: "#/components/schemas/OrderStatus" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+
+  /station/v1/auth/send-code:
+    post:
+      tags: [Staff auth]
+      summary: Send a staff sign-in code (station app, for Wuzzers)
+      description: Only accounts with the wuzzer role (or admin) can sign in here. A customer's number also gets 200, with no SMS sent.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/Phone" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /station/v1/auth/verify-otp:
+    post:
+      tags: [Staff auth]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/Verify" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /station/v1/auth/refresh:
+    post:
+      tags: [Staff auth]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/StaffRefresh" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /station/v1/auth/logout:
+    post:
+      tags: [Staff auth]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/StaffRefresh" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /station/v1/auth/me:
+    get:
+      tags: [Staff auth]
+      security: [{ bearer: [] }]
       responses: { "200": { $ref: "#/components/responses/Ok" } }
 
   /backoffice/v1/auth/send-code:

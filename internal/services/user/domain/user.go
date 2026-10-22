@@ -53,7 +53,12 @@ func (u User) IsStaff() bool { return len(u.Roles) > 0 }
 const (
 	AudienceBackoffice = "backoffice"
 	AudiencePOS        = "pos"
+	// AudienceStation is the Wuzzer app: the technician who is also the driver.
+	AudienceStation = "station"
 )
+
+// RoleWuzzer marks a Wuzzer account. Unlike outlet staff it belongs to no outlet.
+const RoleWuzzer = "wuzzer"
 
 // MayUse reports whether the account may sign in to the given audience.
 // An empty audience is the customer app, open to every account.
@@ -73,6 +78,8 @@ func (u User) MayUse(audience string) bool {
 			}
 		}
 		return false
+	case AudienceStation:
+		return u.hasRole("admin") || u.hasRole(RoleWuzzer)
 	default:
 		return false
 	}
