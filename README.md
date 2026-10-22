@@ -25,6 +25,7 @@ Responses use one envelope: `{ "success": bool, "message": str, "data": … }`.
 | `/app/v1` | customers (mobile app) | public catalog reads; `me` needs a token |
 | `/backoffice/v1` | administrators | role `admin` |
 | `/pos/v1` | outlet staff | role `outlet:<id>` (or `admin`) |
+| `/station/v1` | Wuzzers: the technician who is also the driver (station app) | role `wuzzer` (or `admin`) |
 
 `/app/register`, `/app/verify-otp`, … (unversioned) are the shipped mobile
 client's contract and stay as they are; `/app/v1/*` is the same API for new
@@ -49,8 +50,19 @@ The server recomputes totals from the lines; prices are the ones the POS sold at
 
 Staff sign in with phone + code like everyone else; roles come from the database.
 
-Roles ride in the access token (`roles` claim): `admin`, `outlet:<id>`. wuzz-support
-authorises chat against the same claim.
+Roles ride in the access token (`roles` claim): `admin`, `outlet:<id>`, `wuzzer`. wuzz-support
+authorises chat against the same claim (it does not know `wuzzer` yet: a Wuzzer is treated as a
+customer there).
+
+Whoever has signed in once can be given a role in the `users` table of the `wuzz` database:
+
+```sql
+UPDATE users SET roles = '{wuzzer}'    WHERE phone = '628...';   -- a Wuzzer (station app)
+UPDATE users SET roles = '{outlet:3}'  WHERE phone = '628...';   -- staff of outlet 3 (POS)
+UPDATE users SET roles = '{admin}'     WHERE phone = '628...';   -- back office (also allowed in POS and station)
+```
+
+The roles apply from the next sign-in, since they are written into the token.
 
 ## Events
 
@@ -65,7 +77,7 @@ Delivery is at-least-once; consumers dedupe on the envelope `id`.
 Everything on one machine, one command:
 
 ```
-make local          # infra, migrations, seed, staff, all Go services, support, POS/backoffice/landing
+make local          # infra, migrations, all Go services, support, POS/backoffice/landing
 make local-status
 make local-down
 ```
@@ -78,7 +90,8 @@ make local-down
 | Backoffice | http://localhost:5174 |
 | Landing | http://localhost:5176 |
 
-Seeded: outlet "Wuzz Pusat" (id 1), five services, admin `081234500099`, cashier `081234500098`.
+The catalog (outlets, the service menu, service areas) comes from migrations, so a migrated database already has it.
+Staff roles are set in the `users` table.
 No Twilio needed locally: the one-time code is logged by `user` (`/tmp/wuzz-local/user.log`,
 look for `verification code`). Logs for every process are in `/tmp/wuzz-local/`.
 
@@ -87,19 +100,64 @@ Needs Docker, Go, pnpm, and the sibling repos `wuzz-support` and `wuzz-frontend`
 By hand: `make dev` (postgres, redis, kafka, mongo + migrations), then
 `make run SERVICE=<user|catalog|transaction|gateway>` in separate terminals.
 
-`make run` and `make migrate` read `.env` first (gitignored; copy
+`make run`, `make migrate` and `make local` read `.env` first (gitignored; copy
 `.env.example`), so a value there wins over the defaults in `internal/pkg/config`.
-What you export in your shell still wins over the file. To run a service on this
-machine against another environment's addresses:
+What you export in your shell still wins over the file.
+
+### Several environments on one machine
+
+`ENV` picks the env file, so the same checkout can run as another environment:
 
 ```
-ENV_FILE=.env.staging make run SERVICE=gateway
+make run SERVICE=gateway                 # one service, reads .env
+make run SERVICE=gateway ENV=staging     # reads .env.staging
+make run                                 # no SERVICE: user, catalog, transaction and gateway in one terminal
+make migrate                             # no SERVICE: the user, catalog and transaction databases
+make migrate SERVICE=user ENV=staging
+make local ENV=staging                   # everything: infra, services, chat, web apps
 ```
+
+`make run` without `SERVICE` prefixes every line with the service name and stops all four on Ctrl+C.
+It needs the infrastructure already up (`make dev`); `make local` starts that too, plus the chat and
+the web apps.
+
+Each `ENV` has its own run directory (`/tmp/wuzz-local-staging`), so their pid files and logs do
+not mix. An `ENV` whose file does not exist is an error, not a silent fall back to the defaults.
+
+Every dependency is its own line in the file, so a file can mix: Postgres on this machine while
+Redis or Kafka point somewhere else is just two lines. A value you export in the shell still beats
+the file (`HTTP_ADDR=:9999 make run SERVICE=gateway ENV=staging`).
+
+Two environments at the same time need different ports, since the defaults are fixed
+(`HTTP_ADDR`, `GRPC_ADDR` and the infra ports in `docker-compose.yml`).
 
 `.env` is for local, `.env.staging` and `.env.production` are for those
 environments (the VM reads them through Docker Compose), and neither of those is
 ever committed.
 Or the whole stack in containers: `make up` (then `make down` / `make reset`).
+
+## Seeing a change on staging
+
+Same idea as the branch picker on reddog's jobs, with GitHub Actions:
+
+```
+feature branch -> PR to develop -> CI -> (Deploy workflow) -> staging runs it -> look at it -> merge
+```
+
+1. Work on a branch (`feature/<what>`), open a PR to `develop`. CI runs on the PR.
+2. To look at it on staging: **Actions > Deploy > Run workflow**. Under *Use workflow from*
+   pick your branch, environment `staging`, leave *tag* empty. It builds your branch's images
+   and rolls staging to them. API: https://api-stg.wuzz.care (Swagger at `/docs`).
+3. Staging keeps running that branch until the next deploy. Merging to `develop` puts develop
+   back (automatically after the publish when `AUTO_DEPLOY_STAGING=true`), and so does the
+   08:00 WIB weekday schedule.
+4. Production never builds. It deploys a tag you name, one staging has already run.
+
+Images are tagged with the commit and with the branch name (`feature-x`); only `develop` moves
+`:latest`. One staging runs one version at a time. To try something without taking staging, run it
+locally (below).
+
+Needs the repository secrets `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY` (see `deploy.yml`).
 
 ## Regenerating gRPC code after editing a `.proto`
 

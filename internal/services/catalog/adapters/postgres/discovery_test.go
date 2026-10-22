@@ -10,8 +10,8 @@ import (
 	"github.com/koobam/wuzz-backend/internal/services/catalog/domain"
 )
 
-// These need a catalog database that has been migrated and seeded with
-// scripts/seed-local.sql. Set CATALOG_TEST_DSN to run them; they are skipped
+// These need a catalog database with the migrations applied (the catalog data is
+// itself a migration). Set CATALOG_TEST_DSN to run them; they are skipped
 // otherwise, so a plain `go test ./...` needs no database.
 func testDiscovery(t *testing.T) *Discovery {
 	t.Helper()

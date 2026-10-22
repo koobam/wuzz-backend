@@ -251,7 +251,7 @@ func RequireIdentity(allow func(authn.Identity) bool) gin.HandlerFunc {
 	}
 }
 
-// IsAdmin and IsOutletStaff are the two staff audiences.
+// IsAdmin, IsOutletStaff and IsWuzzer are the staff audiences.
 func IsAdmin(id authn.Identity) bool { return id.HasRole("admin") }
 
 func IsOutletStaff(id authn.Identity) bool {
@@ -264,4 +264,9 @@ func IsOutletStaff(id authn.Identity) bool {
 		}
 	}
 	return false
+}
+
+// IsWuzzer admits the technician-drivers of the station app, and administrators.
+func IsWuzzer(id authn.Identity) bool {
+	return id.HasRole("admin") || id.HasRole("wuzzer")
 }

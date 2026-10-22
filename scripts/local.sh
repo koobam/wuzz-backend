@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Run the whole Wuzz stack on this machine.
 #
-#   scripts/local.sh up       start infra, migrate, seed, then every service and app
+#   scripts/local.sh up       start infra, migrate, then every service and app
 #   scripts/local.sh down     stop everything this script started
 #   scripts/local.sh status   what is listening where
 #   scripts/local.sh logs     tail every log
@@ -13,10 +13,10 @@ BACKEND="$(cd "$(dirname "$0")/.." && pwd)"
 ROOT="$(dirname "$BACKEND")"
 SUPPORT="$ROOT/wuzz-support"
 FRONTEND="$ROOT/wuzz-frontend"
-RUN="${WUZZ_RUN_DIR:-/tmp/wuzz-local}"
+# One run directory per ENV, so `make local ENV=staging` and the default do not share pid files.
+RUN="${WUZZ_RUN_DIR:-/tmp/wuzz-local${ENV:+-$ENV}}"
 mkdir -p "$RUN"
 
-DSN="postgres://wuzz:wuzz@localhost:5433"
 PSQL=(docker compose -f "$BACKEND/docker-compose.yml" exec -T postgres psql -U wuzz -v ON_ERROR_STOP=1)
 
 # name:port  (ports are what the apps and gateway default to in dev)
@@ -38,6 +38,7 @@ start() { # name, command...
 }
 
 up() {
+  echo "== env: ${ENV:-default} (${ENV_FILE:-.env})"
   echo "== infra"
   (cd "$BACKEND" && docker compose up -d postgres redis kafka mongo >/dev/null)
   until "${PSQL[@]}" -c 'select 1' >/dev/null 2>&1; do sleep 1; done
@@ -47,22 +48,24 @@ up() {
     [ "$exists" = "1" ] || "${PSQL[@]}" -c "create database $db" >/dev/null
   done
 
-  echo "== migrate + seed"
+  echo "== migrate"
   for svc in user catalog transaction; do
-    (cd "$BACKEND" && MIGRATE_SERVICE=$svc go run ./cmd/migrate 2>&1 | grep -E "migrated|no migrations|ERROR" || true)
+    (cd "$BACKEND" && MIGRATE_SERVICE=$svc scripts/dev-env.sh go run ./cmd/migrate 2>&1 | grep -E "env file|migrated|no migrations|ERROR" || true)
   done
-  "${PSQL[@]}" -d wuzz_catalog <"$BACKEND/scripts/seed-local.sql" >/dev/null
-  "${PSQL[@]}" -d wuzz <"$BACKEND/scripts/seed-member-local.sql" >/dev/null
   echo "   staff: admin 081234500099 (backoffice+pos), kasir 081234500098 (pos). Code is printed in $RUN/user.log"
 
   echo "== go services"
   (cd "$BACKEND" && go build -o "$RUN/bin-user" ./cmd/user && go build -o "$RUN/bin-catalog" ./cmd/catalog \
     && go build -o "$RUN/bin-transaction" ./cmd/transaction && go build -o "$RUN/bin-gateway" ./cmd/gateway)
-  export CORS_ORIGINS="http://localhost:5174,http://localhost:5175,http://localhost:5176"
-  start user "$RUN/bin-user"
-  start catalog "$RUN/bin-catalog"
-  start transaction "$RUN/bin-transaction"
-  start gateway "$RUN/bin-gateway"
+  # The local web apps' origins, unless the env file sets its own.
+  if ! grep -qs '^CORS_ORIGINS=' "$BACKEND/${ENV_FILE:-.env}"; then
+    export CORS_ORIGINS="http://localhost:5174,http://localhost:5175,http://localhost:5176"
+  fi
+  # Each service starts through dev-env.sh, so it reads the env file (.env, or
+  # .env.$ENV) exactly like `make run` does.
+  for svc in user catalog transaction gateway; do
+    start "$svc" bash -c "cd '$BACKEND' && exec scripts/dev-env.sh '$RUN/bin-$svc'"
+  done
 
   echo "== support (docker)"
   docker rm -f wuzz-support >/dev/null 2>&1 || true

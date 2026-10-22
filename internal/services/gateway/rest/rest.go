@@ -5,6 +5,7 @@
 //	/app/v1         customers (mobile app); /app/* is the shipped, unversioned contract
 //	/backoffice/v1  administrators
 //	/pos/v1         outlet staff and administrators
+//	/station/v1     Wuzzers (technician-drivers) and administrators
 package rest
 
 import (
@@ -69,4 +70,9 @@ func Register(engine *gin.Engine, upstreams *clients.Clients, verifier *authn.Ve
 	posStaff.GET("/orders", orderAPI.List)
 	posStaff.GET("/orders/:id", orderAPI.Get)
 	posStaff.PATCH("/orders/:id/status", orderAPI.SetStatus)
+
+	// The station app: the Wuzzer who picks up and delivers. Only sign-in so far; the
+	// jobs a Wuzzer works on come with the order lifecycle for pickup and delivery.
+	station := engine.Group("/station/v1")
+	staff.Register(station, upstreams.User, "station", httpx.IsWuzzer, verifier, rdb)
 }
