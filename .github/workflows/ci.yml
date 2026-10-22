@@ -30,6 +30,18 @@ jobs:
       - run: go vet ./...
       - run: go test -race -count=1 ./...
 
+  vulncheck:
+    # Known vulnerabilities in the Go standard library and in modules the code
+    # actually calls. Fails the build, so a fix is a go.mod bump away.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
   build:
     # An image that does not build is a broken deploy: catch it before merging.
     needs: test
