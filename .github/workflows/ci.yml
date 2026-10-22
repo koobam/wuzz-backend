@@ -61,3 +61,57 @@ jobs:
           build-args: SERVICE=${{ matrix.service }}
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+  integration:
+    # Migrations from scratch for every service, then the tests that need a real
+    # database (they skip themselves when CATALOG_TEST_DSN is unset).
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGPASSWORD: ci
+      DSN_BASE: postgres://postgres:ci@localhost:5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Create the service databases
+        run: |
+          for db in wuzz wuzz_catalog wuzz_transaction; do
+            psql -h localhost -U postgres -c "create database $db"
+          done
+      - name: Apply every migration from scratch
+        run: |
+          MIGRATE_SERVICE=user        POSTGRES_DSN="$DSN_BASE/wuzz?sslmode=disable"             go run ./cmd/migrate
+          MIGRATE_SERVICE=catalog     POSTGRES_DSN="$DSN_BASE/wuzz_catalog?sslmode=disable"     go run ./cmd/migrate
+          MIGRATE_SERVICE=transaction POSTGRES_DSN="$DSN_BASE/wuzz_transaction?sslmode=disable" go run ./cmd/migrate
+      - name: Seed the demo catalog
+        run: psql -h localhost -U postgres -d wuzz_catalog -v ON_ERROR_STOP=1 -q -f scripts/seed-local.sql
+      - name: Database-backed tests
+        env:
+          CATALOG_TEST_DSN: postgres://postgres:ci@localhost:5432/wuzz_catalog?sslmode=disable
+        run: go test -race -count=1 ./internal/services/catalog/...
+
+  secrets:
+    # The repository is public: a committed key or password is public too. Scans
+    # the whole history, not just the change.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks
+        run: |
+          docker run --rm -v "$PWD":/repo zricethezav/gitleaks:v8.21.2 \
+            detect --source /repo --no-banner --redact --verbose
