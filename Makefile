@@ -57,14 +57,14 @@ dev: ## Start local dependencies (postgres, redis) and run migrations
 	docker compose up migrate-user
 
 .PHONY: run
-run: ## Run one service on the host: make run SERVICE=gateway
-	@test -n "$(SERVICE)" || (echo "usage: make run SERVICE=<$(SERVICES)>"; exit 1)
-	@scripts/dev-env.sh go run ./cmd/$(SERVICE)
+run: ## Run on the host: make run SERVICE=gateway, or no SERVICE for all four in one terminal
+	@if [ -n "$(SERVICE)" ]; then scripts/dev-env.sh go run ./cmd/$(SERVICE); else scripts/run-all.sh; fi
 
 .PHONY: migrate
-migrate: ## Apply migrations for one service: make migrate SERVICE=user
-	@test -n "$(SERVICE)" || (echo "usage: make migrate SERVICE=<name>"; exit 1)
-	MIGRATE_SERVICE=$(SERVICE) scripts/dev-env.sh go run ./cmd/migrate
+migrate: ## Apply migrations: make migrate SERVICE=user, or no SERVICE for user, catalog and transaction
+	@for svc in $(if $(SERVICE),$(SERVICE),user catalog transaction); do \
+		MIGRATE_SERVICE=$$svc scripts/dev-env.sh go run ./cmd/migrate || exit 1; \
+	done
 
 .PHONY: down
 down: ## Stop the stack (keeps the database volume)

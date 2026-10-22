@@ -97,11 +97,17 @@ What you export in your shell still wins over the file.
 `ENV` picks the env file, so the same checkout can run as another environment:
 
 ```
-make run SERVICE=gateway                 # reads .env
+make run SERVICE=gateway                 # one service, reads .env
 make run SERVICE=gateway ENV=staging     # reads .env.staging
-make local ENV=staging                   # the whole stack from .env.staging
+make run                                 # no SERVICE: user, catalog, transaction and gateway in one terminal
+make migrate                             # no SERVICE: the user, catalog and transaction databases
 make migrate SERVICE=user ENV=staging
+make local ENV=staging                   # everything: infra, services, chat, web apps
 ```
+
+`make run` without `SERVICE` prefixes every line with the service name and stops all four on Ctrl+C.
+It needs the infrastructure already up (`make dev`); `make local` starts that too, plus the chat and
+the web apps.
 
 Each `ENV` has its own run directory (`/tmp/wuzz-local-staging`), so their pid files and logs do
 not mix. An `ENV` whose file does not exist is an error, not a silent fall back to the defaults.
