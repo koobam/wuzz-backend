@@ -116,6 +116,11 @@ type Upstreams struct {
 type Telemetry struct {
 	LogLevel  string
 	LogFormat string
+	// OTLPEndpoint is the collector's OTLP/gRPC address (host:port). Empty
+	// turns tracing off, which is the right default for tests and a bare `go run`.
+	OTLPEndpoint string
+	// TraceRatio is the share of new traces kept, 0..1.
+	TraceRatio float64
 }
 
 func Load(service Service) (*Config, error) {
@@ -189,6 +194,9 @@ func Load(service Service) (*Config, error) {
 		Telemetry: Telemetry{
 			LogLevel:  getenv("LOG_LEVEL", "info"),
 			LogFormat: getenv("LOG_FORMAT", "text"),
+
+			OTLPEndpoint: getenv("OTEL_EXPORTER_OTLP_ENDPOINT", ""),
+			TraceRatio:   getenvFloat("OTEL_TRACE_RATIO", 1),
 		},
 	}
 
@@ -253,6 +261,15 @@ func getenvInt(key string, fallback int) int {
 	if v := os.Getenv(key); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
 			return n
+		}
+	}
+	return fallback
+}
+
+func getenvFloat(key string, fallback float64) float64 {
+	if v := os.Getenv(key); v != "" {
+		if f, err := strconv.ParseFloat(v, 64); err == nil && f >= 0 && f <= 1 {
+			return f
 		}
 	}
 	return fallback

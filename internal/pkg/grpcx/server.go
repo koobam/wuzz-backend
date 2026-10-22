@@ -6,6 +6,7 @@ import (
 	"net"
 	"time"
 
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
@@ -29,6 +30,7 @@ type Server struct {
 // instead of an opaque Unknown.
 func NewServer(cfg *config.Config, log *slog.Logger, verifier *authn.Verifier) *Server {
 	server := grpc.NewServer(
+		grpc.StatsHandler(otelgrpc.NewServerHandler(otelgrpc.WithMessageEvents())),
 		grpc.ChainUnaryInterceptor(
 			authn.UnaryServerInterceptor(verifier),
 			recoveryInterceptor(log),
