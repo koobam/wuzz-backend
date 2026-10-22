@@ -6,6 +6,7 @@ func TestMayUse(t *testing.T) {
 	customer := User{}
 	cashier := User{Roles: []string{"outlet:3"}}
 	admin := User{Roles: []string{"admin"}}
+	wuzzer := User{Roles: []string{"wuzzer"}}
 
 	cases := []struct {
 		name     string
@@ -20,6 +21,12 @@ func TestMayUse(t *testing.T) {
 		{"cashier cannot use backoffice", cashier, AudienceBackoffice, false},
 		{"admin can use backoffice", admin, AudienceBackoffice, true},
 		{"admin can use pos", admin, AudiencePOS, true},
+		{"wuzzer can use station", wuzzer, AudienceStation, true},
+		{"wuzzer cannot use pos", wuzzer, AudiencePOS, false},
+		{"wuzzer cannot use backoffice", wuzzer, AudienceBackoffice, false},
+		{"cashier cannot use station", cashier, AudienceStation, false},
+		{"customer cannot use station", customer, AudienceStation, false},
+		{"admin can use station", admin, AudienceStation, true},
 		{"unknown audience is refused", admin, "nope", false},
 	}
 	for _, c := range cases {

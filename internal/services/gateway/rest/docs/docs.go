@@ -5,9 +5,12 @@ package docs
 
 import (
 	_ "embed"
+	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/goccy/go-yaml"
 )
 
 //go:embed openapi.yaml
@@ -39,4 +42,26 @@ func Register(engine *gin.Engine) {
 	engine.GET("/openapi.yaml", func(c *gin.Context) {
 		c.Data(http.StatusOK, "application/yaml; charset=utf-8", spec)
 	})
+}
+
+// Operations lists "METHOD /path" for every operation the spec documents (path parameters in
+// braces, as OpenAPI writes them). A test compares it with the router, so a route added
+// without a spec entry fails the build.
+func Operations() (map[string]bool, error) {
+	var doc struct {
+		Paths map[string]map[string]any `yaml:"paths"`
+	}
+	if err := yaml.Unmarshal(spec, &doc); err != nil {
+		return nil, fmt.Errorf("openapi.yaml: %w", err)
+	}
+	ops := map[string]bool{}
+	for path, item := range doc.Paths {
+		for method := range item {
+			switch method {
+			case "get", "post", "put", "patch", "delete":
+				ops[strings.ToUpper(method)+" "+path] = true
+			}
+		}
+	}
+	return ops, nil
 }
