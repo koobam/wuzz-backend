@@ -159,6 +159,32 @@ locally (below).
 
 Needs the repository secrets `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY` (see `deploy.yml`).
 
+## Backups, and trying a migration before it is real
+
+`scripts/vm-ops.sh` lives on the VM at `/opt/wuzz/bin/` (the deploy workflow installs it) and does
+three things, all with Postgres' own tools and no extra service:
+
+| | |
+| --- | --- |
+| `backup <env> [label]` | `pg_dump` of every database and a `mongodump` of the chat, gzipped into `/opt/wuzz/backups/<env>/`, each checked before it counts. Keeps the last 5 `pre-deploy` and 7 of every other label. |
+| `rehearse <env> [tag]` | Copies each database into a scratch one, runs the migrate image of that tag on the **copy**, reports, and drops the copy. (`CREATE DATABASE ... TEMPLATE` does not work on a live database: it needs the source to have no other connections.) |
+| `install-cron <env>` | A daily backup at 03:00 WIB (`/etc/cron.d/wuzz-backup-<env>`). |
+
+Every deploy runs them in order: **back up, pull, rehearse the migrations on a copy of the real data,
+and only then roll the services.** If the backup or the rehearsal fails, nothing running was touched.
+The rehearsal also catches a migration that works on an empty database and fails on real rows.
+
+To bring a backup back (a scratch database first, to look before you overwrite):
+
+```
+gunzip -c /opt/wuzz/backups/staging/pre-deploy-wuzz_catalog-<time>.sql.gz | \
+  docker compose -p wuzz-staging --env-file envs/staging.env exec -T postgres psql -U wuzz -d <scratch database>
+```
+
+The backups stay on the VM, so they do not survive losing it; copying them off the machine (to a
+private bucket, never the public media one) is the next step. Old backup files and unused Docker
+images (a week old) are pruned automatically.
+
 ## Regenerating gRPC code after editing a `.proto`
 
 ```
