@@ -100,6 +100,10 @@ jobs:
         env:
           CATALOG_TEST_DSN: postgres://postgres:ci@localhost:5432/wuzz_catalog?sslmode=disable
         run: go test -race -count=1 ./internal/services/catalog/...
+      - name: Every migration can be undone (up, down to nothing, up again)
+        env:
+          MIGRATIONS_TEST_DSN: postgres://postgres:ci@localhost:5432/postgres?sslmode=disable
+        run: go test -count=1 ./migrations/ ./cmd/migrate/
 
   secrets:
     # The repository is public: a committed key or password is public too. Scans

@@ -66,6 +66,16 @@ migrate: ## Apply migrations: make migrate SERVICE=user, or no SERVICE for user,
 		MIGRATE_SERVICE=$$svc scripts/dev-env.sh go run ./cmd/migrate || exit 1; \
 	done
 
+.PHONY: migrate-down
+migrate-down: ## Undo the last migration: make migrate-down SERVICE=user (STEPS=3, or STEPS=all)
+	@test -n "$(SERVICE)" || (echo "usage: make migrate-down SERVICE=<name> [STEPS=n|all]"; exit 1)
+	MIGRATE_SERVICE=$(SERVICE) MIGRATE_STEPS=$(STEPS) scripts/dev-env.sh go run ./cmd/migrate down
+
+.PHONY: migrate-status
+migrate-status: ## Which migrations ran: make migrate-status SERVICE=user
+	@test -n "$(SERVICE)" || (echo "usage: make migrate-status SERVICE=<name>"; exit 1)
+	MIGRATE_SERVICE=$(SERVICE) scripts/dev-env.sh go run ./cmd/migrate status
+
 .PHONY: down
 down: ## Stop the stack (keeps the database volume)
 	docker compose down

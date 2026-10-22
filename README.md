@@ -159,6 +159,30 @@ locally (below).
 
 Needs the repository secrets `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY` (see `deploy.yml`).
 
+## Migrations
+
+Every file in `migrations/<service>/` has an **Up** and a **Down** half (`-- +goose Up`,
+`-- +goose Down`), and Down really undoes Up. CI enforces both: a migration without a Down, or
+with an empty one, fails, and so does one whose Down leaves something behind (every service is
+applied, undone to nothing and applied again on a real Postgres).
+
+```
+make migrate                          # apply what is pending (all three services)
+make migrate-status SERVICE=user      # what ran
+make migrate-down SERVICE=user        # undo the last one
+make migrate-down SERVICE=user STEPS=3   # the last three, or STEPS=all
+```
+
+- **Never edit or delete a migration that has run.** Deleting the file does not undo it: the
+  database keeps the change and nothing complains. To take a feature back, add a new migration that
+  undoes it.
+- A deploy runs the migration while the previous version is still serving, so `up` refuses one that
+  drops or renames a table or column, truncates a table or changes a column's type
+  (`MIGRATE_ALLOW_DESTRUCTIVE=true` overrides, when you know the old code no longer uses it). Ship the code
+  that stops using it first, drop it in a later deploy.
+- `down` is refused when `APP_ENV=production` unless `MIGRATE_ALLOW_DOWN=yes`: it can drop data,
+  and the data does not come back.
+
 ## Regenerating gRPC code after editing a `.proto`
 
 ```
