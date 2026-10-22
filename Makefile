@@ -4,6 +4,14 @@ VERSION  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo dev)
 
 export PATH := $(GOBIN):$(PATH)
 
+# ENV picks the env file the host-side targets read, so one checkout can be pointed at
+# another environment: `make run SERVICE=gateway ENV=staging` reads .env.staging; with no
+# ENV it reads .env. Applies to run, migrate and local.
+ENV      ?=
+ENV_FILE ?= $(if $(ENV),.env.$(ENV),.env)
+export ENV
+export ENV_FILE
+
 .DEFAULT_GOAL := help
 
 .PHONY: help

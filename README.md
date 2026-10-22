@@ -88,14 +88,30 @@ Needs Docker, Go, pnpm, and the sibling repos `wuzz-support` and `wuzz-frontend`
 By hand: `make dev` (postgres, redis, kafka, mongo + migrations), then
 `make run SERVICE=<user|catalog|transaction|gateway>` in separate terminals.
 
-`make run` and `make migrate` read `.env` first (gitignored; copy
+`make run`, `make migrate` and `make local` read `.env` first (gitignored; copy
 `.env.example`), so a value there wins over the defaults in `internal/pkg/config`.
-What you export in your shell still wins over the file. To run a service on this
-machine against another environment's addresses:
+What you export in your shell still wins over the file.
+
+### Several environments on one machine
+
+`ENV` picks the env file, so the same checkout can run as another environment:
 
 ```
-ENV_FILE=.env.staging make run SERVICE=gateway
+make run SERVICE=gateway                 # reads .env
+make run SERVICE=gateway ENV=staging     # reads .env.staging
+make local ENV=staging                   # the whole stack from .env.staging
+make migrate SERVICE=user ENV=staging
 ```
+
+Each `ENV` has its own run directory (`/tmp/wuzz-local-staging`), so their pid files and logs do
+not mix. An `ENV` whose file does not exist is an error, not a silent fall back to the defaults.
+
+Every dependency is its own line in the file, so a file can mix: Postgres on this machine while
+Redis or Kafka point somewhere else is just two lines. A value you export in the shell still beats
+the file (`HTTP_ADDR=:9999 make run SERVICE=gateway ENV=staging`).
+
+Two environments at the same time need different ports, since the defaults are fixed
+(`HTTP_ADDR`, `GRPC_ADDR` and the infra ports in `docker-compose.yml`).
 
 `.env` is for local, `.env.staging` and `.env.production` are for those
 environments (the VM reads them through Docker Compose), and neither of those is
