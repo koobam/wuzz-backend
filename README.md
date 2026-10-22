@@ -65,7 +65,7 @@ Delivery is at-least-once; consumers dedupe on the envelope `id`.
 Everything on one machine, one command:
 
 ```
-make local          # infra, migrations, seed, staff, all Go services, support, POS/backoffice/landing
+make local          # infra, migrations, all Go services, support, POS/backoffice/landing
 make local-status
 make local-down
 ```
@@ -78,7 +78,8 @@ make local-down
 | Backoffice | http://localhost:5174 |
 | Landing | http://localhost:5176 |
 
-Seeded: outlet "Wuzz Pusat" (id 1), five services, admin `081234500099`, cashier `081234500098`.
+The catalog (outlets, the service menu, service areas) comes from migrations, so a migrated database already has it.
+Staff roles are set in the `users` table.
 No Twilio needed locally: the one-time code is logged by `user` (`/tmp/wuzz-local/user.log`,
 look for `verification code`). Logs for every process are in `/tmp/wuzz-local/`.
 

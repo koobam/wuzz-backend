@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Run the whole Wuzz stack on this machine.
 #
-#   scripts/local.sh up       start infra, migrate, seed, then every service and app
+#   scripts/local.sh up       start infra, migrate, then every service and app
 #   scripts/local.sh down     stop everything this script started
 #   scripts/local.sh status   what is listening where
 #   scripts/local.sh logs     tail every log
@@ -47,12 +47,10 @@ up() {
     [ "$exists" = "1" ] || "${PSQL[@]}" -c "create database $db" >/dev/null
   done
 
-  echo "== migrate + seed"
+  echo "== migrate"
   for svc in user catalog transaction; do
     (cd "$BACKEND" && MIGRATE_SERVICE=$svc go run ./cmd/migrate 2>&1 | grep -E "migrated|no migrations|ERROR" || true)
   done
-  "${PSQL[@]}" -d wuzz_catalog <"$BACKEND/scripts/seed-local.sql" >/dev/null
-  "${PSQL[@]}" -d wuzz <"$BACKEND/scripts/seed-member-local.sql" >/dev/null
   echo "   staff: admin 081234500099 (backoffice+pos), kasir 081234500098 (pos). Code is printed in $RUN/user.log"
 
   echo "== go services"
