@@ -1,19 +1,51 @@
 name: Publish images
 
 # Builds every service image for the VM (linux/amd64) and pushes it to GitHub's
-# container registry, tagged with the commit. Runs on main, or by hand.
-# Deploying is a separate, deliberate step: see deploy.yml.
+# container registry. Three ways in:
+#
+#   push to develop / main   builds that commit
+#   by hand, from any branch Actions > Publish images > "Use workflow from" picks the
+#                            branch, like the branch picker on reddog's jobs
+#   from deploy.yml          builds the branch it was started from, then deploys it
+#
+# Every image gets the commit as its tag (the first 7 characters) and the branch name
+# (made safe for a tag). Only develop also moves :latest, so building a feature branch
+# never changes what :latest means. Deploying is a separate step: see deploy.yml.
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   workflow_dispatch:
+  workflow_call:
+    outputs:
+      tag:
+        description: The commit tag the images were pushed with
+        value: ${{ jobs.meta.outputs.short }}
 
 permissions:
   contents: read
   packages: write
 
 jobs:
+  meta:
+    runs-on: ubuntu-latest
+    outputs:
+      short: ${{ steps.v.outputs.short }}
+      owner: ${{ steps.v.outputs.owner }}
+      branch: ${{ steps.v.outputs.branch }}
+      latest: ${{ steps.v.outputs.latest }}
+    steps:
+      - id: v
+        run: |
+          echo "short=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          # ghcr.io only accepts lower-case image names.
+          echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+          # A branch name as a Docker tag: feature/x -> feature-x
+          branch="$(printf '%s' "$GITHUB_REF_NAME" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9_.\n-' '-' | cut -c1-60)"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_REF_NAME" = develop ]; then echo "latest=true" >> "$GITHUB_OUTPUT"; else echo "latest=false" >> "$GITHUB_OUTPUT"; fi
+
   publish:
+    needs: meta
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -27,11 +59,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - id: meta
-        run: |
-          echo "short=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
-          # ghcr.io only accepts lower-case image names.
-          echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
       - uses: docker/build-push-action@v6
         with:
           context: .
@@ -39,11 +66,12 @@ jobs:
           push: true
           build-args: |
             SERVICE=${{ matrix.service }}
-            VERSION=${{ steps.meta.outputs.short }}
+            VERSION=${{ needs.meta.outputs.short }}
           # The compose file names images ${REGISTRY}/<service>:<TAG>, with the
           # registry lower-cased (ghcr.io requires it).
           tags: |
-            ghcr.io/${{ steps.meta.outputs.owner }}/wuzz/${{ matrix.service }}:${{ steps.meta.outputs.short }}
-            ghcr.io/${{ steps.meta.outputs.owner }}/wuzz/${{ matrix.service }}:latest
+            ghcr.io/${{ needs.meta.outputs.owner }}/wuzz/${{ matrix.service }}:${{ needs.meta.outputs.short }}
+            ghcr.io/${{ needs.meta.outputs.owner }}/wuzz/${{ matrix.service }}:${{ needs.meta.outputs.branch }}
+            ${{ needs.meta.outputs.latest == 'true' && format('ghcr.io/{0}/wuzz/{1}:latest', needs.meta.outputs.owner, matrix.service) || '' }}
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}

@@ -101,6 +101,29 @@ environments (the VM reads them through Docker Compose), and neither of those is
 ever committed.
 Or the whole stack in containers: `make up` (then `make down` / `make reset`).
 
+## Seeing a change on staging
+
+Same idea as the branch picker on reddog's jobs, with GitHub Actions:
+
+```
+feature branch -> PR to develop -> CI -> (Deploy workflow) -> staging runs it -> look at it -> merge
+```
+
+1. Work on a branch (`feature/<what>`), open a PR to `develop`. CI runs on the PR.
+2. To look at it on staging: **Actions > Deploy > Run workflow**. Under *Use workflow from*
+   pick your branch, environment `staging`, leave *tag* empty. It builds your branch's images
+   and rolls staging to them. API: https://api-stg.wuzz.care (Swagger at `/docs`).
+3. Staging keeps running that branch until the next deploy. Merging to `develop` puts develop
+   back (automatically after the publish when `AUTO_DEPLOY_STAGING=true`), and so does the
+   08:00 WIB weekday schedule.
+4. Production never builds. It deploys a tag you name, one staging has already run.
+
+Images are tagged with the commit and with the branch name (`feature-x`); only `develop` moves
+`:latest`. One staging runs one version at a time. To try something without taking staging, run it
+locally (below).
+
+Needs the repository secrets `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY` (see `deploy.yml`).
+
 ## Regenerating gRPC code after editing a `.proto`
 
 ```

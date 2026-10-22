@@ -1,26 +1,25 @@
 name: Deploy
 
-# Rolls an environment's stack on the VM to an image tag that publish.yml has
-# already pushed (a short commit, or "latest").
+# Puts a version of the backend on a VM environment.
 #
-#   By hand   Actions > Deploy > Run workflow: pick the environment and the tag.
-#   Staging   Automatically after "Publish images" succeeds on main, when the
-#             repository variable AUTO_DEPLOY_STAGING is "true". Off by default.
+#   See a branch on staging   Actions > Deploy > "Use workflow from": pick the branch,
+#                             environment staging, leave tag empty. It builds that branch
+#                             and deploys it. Staging then runs that branch until the next
+#                             deploy, so say so in the team channel.
+#   Deploy a published tag    Same, with the tag filled in (a short commit, or a branch
+#                             name, already pushed by publish.yml). Needed for production,
+#                             which never builds: it only promotes what staging already ran.
+#   Staging follows develop   Automatically after "Publish images" succeeds on develop, and
+#                             every weekday at 08:00 WIB so staging never stays on a debug
+#                             branch. Both need the repository variable AUTO_DEPLOY_STAGING=true.
 #
-# Repository secrets (Settings > Secrets and variables > Actions):
-#   DEPLOY_HOST      the VM, e.g. 72.60.79.59
-#   DEPLOY_USER      the SSH user
-#   DEPLOY_SSH_KEY   a private key used only for deploys (not anyone's personal key)
+# Repository secrets: DEPLOY_HOST (e.g. 72.60.79.59), DEPLOY_USER, DEPLOY_SSH_KEY (a key
+# used only for deploys). The first deploy is done once with wuzz-deployments/vm/scripts/
+# deploy.sh, which creates /opt/wuzz/<env> with the compose file and the env file.
 #
-# The first deploy is done once with wuzz-deployments/vm/scripts/deploy.sh, which
-# creates /opt/wuzz/<env> with the compose file and the env file.
-#
-# The images are private. The VM is not logged in to the registry: this job logs it
-# in with the run's own short-lived GITHUB_TOKEN for the pull and logs it out again,
-# so no long-lived registry credential ever sits on the VM.
-#
-# wuzz-support publishes its own image from its own repository and is not rolled
-# here; this job pulls and restarts the backend services only.
+# The images are private. The VM is not logged in to the registry: the deploy step logs it
+# in with this run's short-lived GITHUB_TOKEN for the pull and logs it out again.
+# wuzz-support publishes its own image from its own repository and is not rolled here.
 on:
   workflow_dispatch:
     inputs:
@@ -30,13 +29,15 @@ on:
         options: [staging, production]
         default: staging
       tag:
-        description: Image tag (short commit, or latest) already published
-        required: true
-        default: latest
+        description: Image tag. Empty = build the branch picked above and deploy it (staging only).
+        required: false
+        default: ""
   workflow_run:
     workflows: ["Publish images"]
     types: [completed]
-    branches: [main]
+    branches: [develop]
+  schedule:
+    - cron: "0 1 * * 1-5" # 08:00 WIB, weekdays
 
 permissions:
   contents: read
@@ -47,32 +48,55 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  build:
+    # Only a manual run with no tag builds anything.
+    if: github.event_name == 'workflow_dispatch' && inputs.tag == '' && inputs.environment == 'staging'
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/publish.yml
+
   deploy:
-    # A manual run always goes ahead; an automatic one needs the opt-in variable and
-    # a successful publish.
+    needs: build
+    # always(): this job must still run when build was skipped (a tag was given, or the
+    # run is automatic) but not when it failed.
     if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' && vars.AUTO_DEPLOY_STAGING == 'true')
+      always() && !failure() && !cancelled() && (
+        github.event_name == 'workflow_dispatch' ||
+        (vars.AUTO_DEPLOY_STAGING == 'true' &&
+          (github.event_name == 'schedule' ||
+           (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')))
+      )
     runs-on: ubuntu-latest
     # Protect production with required reviewers in the repo's environment settings.
     environment: ${{ inputs.environment || 'staging' }}
     env:
       ENV_NAME: ${{ inputs.environment || 'staging' }}
-      # publish.yml tags every image with the first 7 characters of the commit.
-      TAG: ${{ inputs.tag || '' }}
+      INPUT_TAG: ${{ inputs.tag || '' }}
+      BUILT_TAG: ${{ needs.build.outputs.tag || '' }}
       RUN_SHA: ${{ github.event.workflow_run.head_sha || '' }}
+      EVENT: ${{ github.event_name }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Work out the tag
         id: tag
         run: |
-          tag="$TAG"
-          if [ -z "$tag" ]; then tag="${RUN_SHA::7}"; fi
+          # publish.yml tags every image with the first 7 characters of the commit and
+          # with the branch name. A schedule puts develop's latest build back on staging.
+          tag="$INPUT_TAG"
+          [ -n "$tag" ] || tag="$BUILT_TAG"
+          [ -n "$tag" ] || { [ -z "$RUN_SHA" ] || tag="${RUN_SHA::7}"; }
+          [ -n "$tag" ] || { [ "$EVENT" != schedule ] || tag=develop; }
+          if [ -z "$tag" ]; then echo "::error::no image tag to deploy"; exit 1; fi
           if ! printf '%s' "$tag" | grep -Eq '^[A-Za-z0-9_.-]{1,64}$'; then
             echo "::error::refusing odd image tag '$tag'"; exit 1
           fi
+          if [ "$ENV_NAME" = production ] && [ -z "$INPUT_TAG" ]; then
+            echo "::error::production deploys a tag you name; it never builds"; exit 1
+          fi
           echo "value=$tag" >> "$GITHUB_OUTPUT"
+          echo "Deploying $tag to $ENV_NAME" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Install the deploy key
         env:
