@@ -44,7 +44,7 @@ if [ -z "${DEV_ENV_QUIET:-}" ]; then
 	printf '  app env   %s\n' "${APP_ENV:-dev}"
 	printf '  postgres  %s\n' "${POSTGRES_DSN:-per-service default (localhost:5433)}"
 	printf '  redis     %s\n' "${REDIS_ADDR:-localhost:6380}"
-	printf '  kafka     %s\n' "${KAFKA_BROKERS:-localhost:29092}"
+	printf '  kafka     %s\n' "${KAFKA_BROKERS:-localhost:29093}"
 	printf '\n'
 fi
 
