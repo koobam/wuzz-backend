@@ -2,6 +2,7 @@
 # Runs ON the VM; the deploy workflow installs it as /opt/wuzz/bin/vm-ops.sh.
 #
 #   vm-ops.sh deploy <env> <tag> <registry user>   roll the backend services to a tag
+#   vm-ops.sh migrate <env> <tag> <registry user> migrate only: back up, rehearse, apply; no service is touched
 #   vm-ops.sh backup <env> [label]                 dump every database (label: daily, pre-deploy, ...)
 #   vm-ops.sh rehearse <env> [tag]                 run the migrations of an image on a COPY of the data
 #   vm-ops.sh install-cron <env>                   daily backup at 03:00 WIB
@@ -13,7 +14,7 @@
 # the pull and logged out again, so no long-lived credential stays on it.
 set -euo pipefail
 
-cmd="${1:?usage: vm-ops.sh deploy|backup|rehearse|install-cron <env> ...}"
+cmd="${1:?usage: vm-ops.sh deploy|migrate|backup|rehearse|install-cron <env> ...}"
 env_name="${2:?environment}"
 shift 2
 
@@ -129,8 +130,30 @@ deploy() { # tag, registry user
 	docker image prune -af --filter "until=168h" | tail -1
 }
 
+migrate() { # tag, registry user
+	local tag="${1:?tag}" registry_user="${2:?registry user}" svc
+	: "${REGISTRY_TOKEN:?REGISTRY_TOKEN is required}"
+
+	echo "== 1. back up"
+	backup pre-migrate
+
+	echo "== 2. pull the migrate image $tag"
+	printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io -u "$registry_user" --password-stdin >/dev/null
+	trap 'docker logout ghcr.io >/dev/null 2>&1 || true; rm -f "$HOME/.docker/config.json"' EXIT
+	TAG="$tag" compose pull migrate-user migrate-catalog migrate-transaction
+
+	echo "== 3. rehearse on a copy of the real data"
+	rehearse "$tag"
+
+	echo "== 4. apply to the real databases"
+	for svc in user catalog transaction; do
+		TAG="$tag" compose run --rm --no-deps "migrate-$svc"
+	done
+}
+
 case "$cmd" in
 	deploy) deploy "$@" ;;
+	migrate) migrate "$@" ;;
 	backup) backup "$@" ;;
 	rehearse) rehearse "$@" ;;
 	install-cron)
