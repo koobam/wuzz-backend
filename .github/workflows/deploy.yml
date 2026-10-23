@@ -17,6 +17,10 @@ name: Deploy
 # used only for deploys). The first deploy is done once with wuzz-deployments/vm/scripts/
 # deploy.sh, which creates /opt/wuzz/<env> with the compose file and the env file.
 #
+# A deploy backs the databases up first and rehearses the new migrations on a copy of the real
+# data before it touches a running service (see scripts/vm-ops.sh); a failure in either stops it
+# with nothing changed.
+#
 # The images are private. The VM is not logged in to the registry: the deploy step logs it
 # in with this run's short-lived GITHUB_TOKEN for the pull and logs it out again.
 # wuzz-support publishes its own image from its own repository and is not rolled here.
@@ -115,11 +119,10 @@ jobs:
           REGISTRY_USER: ${{ github.actor }}
           REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # stdin carries the registry token on its first line (never on a command
-          # line), then scripts/deploy-remote.sh for bash to run. The arguments are
-          # a choice input, a validated tag and the actor's login.
-          {
-            printf '%s\n' "$REGISTRY_TOKEN"
-            cat scripts/deploy-remote.sh
-          } | ssh -i ~/.ssh/id_deploy "$TARGET" \
-            "IFS= read -r REGISTRY_TOKEN; export REGISTRY_TOKEN; exec bash -s -- '$ENV_NAME' '$NEW_TAG' '$REGISTRY_USER'"
+          # The script is installed on the VM first (it also runs from cron there: the daily
+          # backup), then run. stdin carries only the registry token, never a command line.
+          ssh -i ~/.ssh/id_deploy "$TARGET" \
+            'mkdir -p /opt/wuzz/bin && cat > /opt/wuzz/bin/vm-ops.sh && chmod 700 /opt/wuzz/bin/vm-ops.sh' \
+            < scripts/vm-ops.sh
+          printf '%s\n' "$REGISTRY_TOKEN" | ssh -i ~/.ssh/id_deploy "$TARGET" \
+            "IFS= read -r REGISTRY_TOKEN; export REGISTRY_TOKEN; exec /opt/wuzz/bin/vm-ops.sh deploy '$ENV_NAME' '$NEW_TAG' '$REGISTRY_USER'"

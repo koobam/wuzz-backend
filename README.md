@@ -159,29 +159,31 @@ locally (below).
 
 Needs the repository secrets `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY` (see `deploy.yml`).
 
-## Migrations
+## Backups, and trying a migration before it is real
 
-Every file in `migrations/<service>/` has an **Up** and a **Down** half (`-- +goose Up`,
-`-- +goose Down`), and Down really undoes Up. CI enforces both: a migration without a Down, or
-with an empty one, fails, and so does one whose Down leaves something behind (every service is
-applied, undone to nothing and applied again on a real Postgres).
+`scripts/vm-ops.sh` lives on the VM at `/opt/wuzz/bin/` (the deploy workflow installs it) and does
+three things, all with Postgres' own tools and no extra service:
+
+| | |
+| --- | --- |
+| `backup <env> [label]` | `pg_dump` of every database and a `mongodump` of the chat, gzipped into `/opt/wuzz/backups/<env>/`, each checked before it counts. Keeps the last 5 `pre-deploy` and 7 of every other label. |
+| `rehearse <env> [tag]` | Copies each database into a scratch one, runs the migrate image of that tag on the **copy**, reports, and drops the copy. (`CREATE DATABASE ... TEMPLATE` does not work on a live database: it needs the source to have no other connections.) |
+| `install-cron <env>` | A daily backup at 03:00 WIB (`/etc/cron.d/wuzz-backup-<env>`). |
+
+Every deploy runs them in order: **back up, pull, rehearse the migrations on a copy of the real data,
+and only then roll the services.** If the backup or the rehearsal fails, nothing running was touched.
+The rehearsal also catches a migration that works on an empty database and fails on real rows.
+
+To bring a backup back (a scratch database first, to look before you overwrite):
 
 ```
-make migrate                          # apply what is pending (all three services)
-make migrate-status SERVICE=user      # what ran
-make migrate-down SERVICE=user        # undo the last one
-make migrate-down SERVICE=user STEPS=3   # the last three, or STEPS=all
+gunzip -c /opt/wuzz/backups/staging/pre-deploy-wuzz_catalog-<time>.sql.gz | \
+  docker compose -p wuzz-staging --env-file envs/staging.env exec -T postgres psql -U wuzz -d <scratch database>
 ```
 
-- **Never edit or delete a migration that has run.** Deleting the file does not undo it: the
-  database keeps the change and nothing complains. To take a feature back, add a new migration that
-  undoes it.
-- A deploy runs the migration while the previous version is still serving, so `up` refuses one that
-  drops or renames a table or column, truncates a table or changes a column's type
-  (`MIGRATE_ALLOW_DESTRUCTIVE=true` overrides, when you know the old code no longer uses it). Ship the code
-  that stops using it first, drop it in a later deploy.
-- `down` is refused when `APP_ENV=production` unless `MIGRATE_ALLOW_DOWN=yes`: it can drop data,
-  and the data does not come back.
+The backups stay on the VM, so they do not survive losing it; copying them off the machine (to a
+private bucket, never the public media one) is the next step. Old backup files and unused Docker
+images (a week old) are pruned automatically.
 
 ## Regenerating gRPC code after editing a `.proto`
 
