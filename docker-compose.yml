@@ -57,16 +57,18 @@ services:
 
   kafka:
     image: apache/kafka:3.9.0
-    # 9092 is for services inside compose, 29092 for `make run` on the host. A
+    # 9092 is for services inside compose, 29093 for `make run` on the host. A
     # client reconnects to whatever address the broker advertises, so each side
-    # needs its own.
-    ports: ["29092:29092"]
+    # needs its own. Host port 29093, not 29092: the reddog-backend stack's kafka is
+    # already on 29092 on this machine (as postgres is on 5432 and redis on 6379), and
+    # sharing it would put wuzz's topics on reddog's broker.
+    ports: ["29093:29093"]
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
-      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:29092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:29092
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:29093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:29093
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT

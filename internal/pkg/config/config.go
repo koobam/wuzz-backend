@@ -159,7 +159,7 @@ func Load(service Service) (*Config, error) {
 			Addr: getenv("REDIS_ADDR", "localhost:6380"),
 		},
 		Kafka: Kafka{
-			Brokers:          splitCSV(getenv("KAFKA_BROKERS", "localhost:29092")),
+			Brokers:          splitCSV(getenv("KAFKA_BROKERS", "localhost:29093")),
 			TopicPrefix:      getenv("KAFKA_TOPIC_PREFIX", "wuzz"),
 			TopicPartitions:  int32(getenvInt("KAFKA_TOPIC_PARTITIONS", 3)),
 			TopicReplication: int16(getenvInt("KAFKA_TOPIC_REPLICATION", -1)),
