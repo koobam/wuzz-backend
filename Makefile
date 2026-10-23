@@ -66,6 +66,18 @@ migrate: ## Apply migrations: make migrate SERVICE=user, or no SERVICE for user,
 		MIGRATE_SERVICE=$$svc scripts/dev-env.sh go run ./cmd/migrate || exit 1; \
 	done
 
+# Staging's databases are only reachable from the VM, so this runs vm-ops.sh there over ssh: back up,
+# rehearse on a copy, apply. It runs the migrate image published for TAG (default: develop's latest),
+# so the migration must already be merged and its image built. No service is restarted.
+STAGING_HOST ?= root@72.60.79.59
+STAGING_KEY ?= $(HOME)/.ssh/wuzz_deploy
+.PHONY: migrate-staging
+migrate-staging: ## Apply the merged migrations to staging: make migrate-staging [TAG=<sha>]
+	@read -r -p "Apply migrations from $(or $(TAG),latest) to STAGING? [yes/N] " a; test "$$a" = yes
+	ssh -i $(STAGING_KEY) $(STAGING_HOST) 'mkdir -p /opt/wuzz/bin && cat > /opt/wuzz/bin/vm-ops.sh && chmod 700 /opt/wuzz/bin/vm-ops.sh' < scripts/vm-ops.sh
+	gh auth token | ssh -i $(STAGING_KEY) $(STAGING_HOST) \
+		"IFS= read -r REGISTRY_TOKEN; export REGISTRY_TOKEN; exec /opt/wuzz/bin/vm-ops.sh migrate staging '$(or $(TAG),latest)' '$$(gh api user -q .login)'"
+
 .PHONY: migrate-down
 migrate-down: ## Undo the last migration: make migrate-down SERVICE=user (STEPS=3, or STEPS=all)
 	@test -n "$(SERVICE)" || (echo "usage: make migrate-down SERVICE=<name> [STEPS=n|all]"; exit 1)
