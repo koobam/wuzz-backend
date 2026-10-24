@@ -26,15 +26,36 @@ type GetUser struct {
 	UserID string
 }
 
-type GetUserHandler struct{ users Users }
+// Accounts is the read side of the admin and staff tables.
+type Accounts interface {
+	ByID(ctx context.Context, id string) (domain.Account, error)
+}
 
-func NewGetUserHandler(users Users) *GetUserHandler { return &GetUserHandler{users: users} }
+type GetUserHandler struct {
+	users    Users
+	accounts Accounts
+}
 
-func (h *GetUserHandler) Handle(ctx context.Context, q GetUser) (domain.User, error) {
+func NewGetUserHandler(users Users, accounts Accounts) *GetUserHandler {
+	return &GetUserHandler{users: users, accounts: accounts}
+}
+
+// Profile is who the access token names: a customer, or an admin or staff member.
+type Profile struct {
+	User    domain.User
+	Account *domain.Account
+}
+
+func (h *GetUserHandler) Handle(ctx context.Context, q GetUser) (Profile, error) {
 	if q.UserID == "" {
-		return domain.User{}, apperr.Unauthorized("Authentication is required")
+		return Profile{}, apperr.Unauthorized("Authentication is required")
 	}
-	return h.users.ByID(ctx, q.UserID)
+	if _, _, isAccount := domain.ParseAccountID(q.UserID); isAccount {
+		a, err := h.accounts.ByID(ctx, q.UserID)
+		return Profile{Account: &a}, err
+	}
+	u, err := h.users.ByID(ctx, q.UserID)
+	return Profile{User: u}, err
 }
 
 // ---------- CheckUsername ----------

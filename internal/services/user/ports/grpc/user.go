@@ -91,11 +91,14 @@ func (s *Server) GetUser(ctx context.Context, req *userv1.GetUserRequest) (*user
 	if err != nil {
 		return nil, err
 	}
-	user, err := s.app.Queries.GetUser.Handle(ctx, query.GetUser{UserID: identity.UserID})
+	profile, err := s.app.Queries.GetUser.Handle(ctx, query.GetUser{UserID: identity.UserID})
 	if err != nil {
 		return nil, err
 	}
-	return &userv1.GetUserResponse{User: toProtoUser(user)}, nil
+	if profile.Account != nil {
+		return &userv1.GetUserResponse{User: toProtoAccount(*profile.Account)}, nil
+	}
+	return &userv1.GetUserResponse{User: toProtoUser(profile.User)}, nil
 }
 
 func (s *Server) GetMemberSummary(ctx context.Context, _ *userv1.GetMemberSummaryRequest) (*userv1.GetMemberSummaryResponse, error) {
@@ -142,7 +145,6 @@ func toProtoUser(u domain.User) *userv1.User {
 		Streak:    u.Streak,
 		Xp:        u.XP,
 		Status:    u.Status,
-		Roles:     u.Roles,
 		CreatedAt: timestamppb.New(u.CreatedAt),
 		UpdatedAt: timestamppb.New(u.UpdatedAt),
 	}
@@ -152,11 +154,28 @@ func toProtoUser(u domain.User) *userv1.User {
 	return out
 }
 
+// toProtoAccount shows an admin or staff member as a User, with the roles their token carries.
+func toProtoAccount(a domain.Account) *userv1.User {
+	return &userv1.User{
+		Id:        a.ID,
+		Name:      a.Name,
+		Phone:     a.Phone,
+		Status:    a.Status,
+		Roles:     a.Roles(),
+		CreatedAt: timestamppb.New(a.CreatedAt),
+		UpdatedAt: timestamppb.New(a.UpdatedAt),
+	}
+}
+
 func toProtoSession(s command.Session) *userv1.Session {
+	user := toProtoUser(s.User)
+	if s.Account != nil {
+		user = toProtoAccount(*s.Account)
+	}
 	return &userv1.Session{
 		AccessToken:          s.AccessToken,
 		RefreshToken:         s.RefreshToken,
-		User:                 toProtoUser(s.User),
+		User:                 user,
 		AccessTokenExpiresAt: timestamppb.New(s.AccessTokenExpiresAt),
 	}
 }

@@ -38,6 +38,7 @@ type App struct {
 
 func New(
 	users command.Users,
+	accounts command.Accounts,
 	members query.Members,
 	pending command.PendingRegistrations,
 	sessions command.Sessions,
@@ -49,15 +50,15 @@ func New(
 	return &App{
 		Commands: Commands{
 			Register:  command.NewRegisterHandler(users, pending, verifications, codeTTL),
-			VerifyOtp: command.NewVerifyOtpHandler(users, pending, verifications, sessions, signer, accessTTL),
-			Refresh:   command.NewRefreshHandler(users, sessions, signer, accessTTL),
+			VerifyOtp: command.NewVerifyOtpHandler(users, accounts, pending, verifications, sessions, signer, accessTTL),
+			Refresh:   command.NewRefreshHandler(users, accounts, sessions, signer, accessTTL),
 			Logout:    command.NewLogoutHandler(sessions),
 
-			SendLoginCode: command.NewSendLoginCodeHandler(users, verifications, codeTTL),
+			SendLoginCode: command.NewSendLoginCodeHandler(accounts, verifications, codeTTL),
 			SetUserStatus: command.NewSetUserStatusHandler(users),
 		},
 		Queries: Queries{
-			GetUser:         query.NewGetUserHandler(queryUsers{users}),
+			GetUser:         query.NewGetUserHandler(queryUsers{users}, accounts),
 			MemberSummary:   query.NewGetMemberSummaryHandler(members),
 			CheckUsername:   query.NewCheckUsernameHandler(queryUsers{users}),
 			SuggestUsername: query.NewSuggestUsernameHandler(queryUsers{users}),

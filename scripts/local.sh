@@ -48,11 +48,14 @@ up() {
     [ "$exists" = "1" ] || "${PSQL[@]}" -c "create database $db" >/dev/null
   done
 
+  # A fresh local database gets the seeded admin (see migrations/user/*_seed_staging_admin.sql).
+  "${PSQL[@]}" -d postgres -c "ALTER DATABASE wuzz SET wuzz.seed_admin = 'on'" >/dev/null
+
   echo "== migrate"
   for svc in user catalog transaction; do
     (cd "$BACKEND" && MIGRATE_SERVICE=$svc scripts/dev-env.sh go run ./cmd/migrate 2>&1 | grep -E "env file|migrated|no migrations|ERROR" || true)
   done
-  echo "   staff: admin 081234500099 (backoffice+pos), kasir 081234500098 (pos). Code is printed in $RUN/user.log"
+  echo "   admin: 081234500099 (backoffice, pos, station) on a fresh database. Code is printed in $RUN/user.log"
 
   echo "== go services"
   (cd "$BACKEND" && go build -o "$RUN/bin-user" ./cmd/user && go build -o "$RUN/bin-catalog" ./cmd/catalog \
