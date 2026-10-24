@@ -10,19 +10,19 @@ import (
 
 // ---------- SendLoginCode ----------
 
-// SendLoginCode starts sign-in for an existing staff account. It answers the
+// SendLoginCode starts sign-in for an existing admin or staff account. It answers the
 // same whether or not the number belongs to staff: a different answer would let
 // anyone probe which phone numbers are back-office accounts.
 type SendLoginCode struct{ Phone string }
 
 type SendLoginCodeHandler struct {
-	users         Users
+	accounts      Accounts
 	verifications Verifications
 	codeTTL       time.Duration
 }
 
-func NewSendLoginCodeHandler(users Users, verifications Verifications, codeTTL time.Duration) *SendLoginCodeHandler {
-	return &SendLoginCodeHandler{users: users, verifications: verifications, codeTTL: codeTTL}
+func NewSendLoginCodeHandler(accounts Accounts, verifications Verifications, codeTTL time.Duration) *SendLoginCodeHandler {
+	return &SendLoginCodeHandler{accounts: accounts, verifications: verifications, codeTTL: codeTTL}
 }
 
 func (h *SendLoginCodeHandler) Handle(ctx context.Context, cmd SendLoginCode) (time.Time, error) {
@@ -32,14 +32,14 @@ func (h *SendLoginCodeHandler) Handle(ctx context.Context, cmd SendLoginCode) (t
 	}
 	expires := time.Now().Add(h.codeTTL)
 
-	user, err := h.users.ByPhone(ctx, phone)
+	account, err := h.accounts.ByPhone(ctx, phone)
 	if err != nil {
 		if apperr.IsKind(err, apperr.KindNotFound) {
 			return expires, nil
 		}
 		return time.Time{}, err
 	}
-	if !user.IsStaff() || !user.CanSignIn() {
+	if !account.CanSignIn() {
 		return expires, nil
 	}
 	if err := h.verifications.Start(ctx, phone); err != nil {

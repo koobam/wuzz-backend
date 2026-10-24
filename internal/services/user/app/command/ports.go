@@ -18,6 +18,14 @@ type Users interface {
 	SetStatus(ctx context.Context, id, status string) (domain.User, error)
 }
 
+// Accounts is the persistence port for admins and staff, the two tables that are not
+// customers. Only sign-in reads them.
+type Accounts interface {
+	ByPhone(ctx context.Context, phone string) (domain.Account, error)
+	// ByID takes the prefixed id (see domain.AccountID).
+	ByID(ctx context.Context, id string) (domain.Account, error)
+}
+
 // ListFilter narrows and pages an account listing.
 type ListFilter struct {
 	Query, Status string

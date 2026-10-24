@@ -38,12 +38,7 @@ func (h *DevLoginHandler) Handle(ctx context.Context, cmd DevLogin) (Session, er
 	if err != nil {
 		return Session{}, err
 	}
-	// Customers only. A customer session carries the account's roles in its
-	// token, so signing a staff account in here would hand out its admin or
-	// outlet access with no proof at all.
-	if user.IsStaff() {
-		return Session{}, apperr.Forbidden("Staff accounts cannot use the development sign-in")
-	}
+	// Customers only: admins and staff live in their own tables, which this never reads.
 	if !user.CanSignIn() {
 		return Session{}, apperr.Forbidden("This account cannot sign in")
 	}

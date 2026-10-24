@@ -10,9 +10,11 @@ import (
 )
 
 type Session struct {
-	AccessToken          string
-	RefreshToken         string
+	AccessToken  string
+	RefreshToken string
+	// User is the customer; Account is set instead for an admin or staff session.
 	User                 domain.User
+	Account              *domain.Account
 	AccessTokenExpiresAt time.Time
 }
 
@@ -94,12 +96,14 @@ func (h *RegisterHandler) Handle(ctx context.Context, cmd Register) (RegisterRes
 type VerifyOtp struct {
 	Phone string
 	Code  string
-	// Audience is empty for the customer app; see domain.User.MayUse.
+	// Audience is empty for the customer app. For /backoffice, /pos and /station it names the
+	// staff audience, and the number is looked up among admins and staff instead of customers.
 	Audience string
 }
 
 type VerifyOtpHandler struct {
 	users         Users
+	accounts      Accounts
 	pending       PendingRegistrations
 	verifications Verifications
 	sessions      Sessions
@@ -107,8 +111,8 @@ type VerifyOtpHandler struct {
 	accessTTL     time.Duration
 }
 
-func NewVerifyOtpHandler(users Users, pending PendingRegistrations, verifications Verifications, sessions Sessions, signer *authn.Signer, accessTTL time.Duration) *VerifyOtpHandler {
-	return &VerifyOtpHandler{users: users, pending: pending, verifications: verifications, sessions: sessions, signer: signer, accessTTL: accessTTL}
+func NewVerifyOtpHandler(users Users, accounts Accounts, pending PendingRegistrations, verifications Verifications, sessions Sessions, signer *authn.Signer, accessTTL time.Duration) *VerifyOtpHandler {
+	return &VerifyOtpHandler{users: users, accounts: accounts, pending: pending, verifications: verifications, sessions: sessions, signer: signer, accessTTL: accessTTL}
 }
 
 func (h *VerifyOtpHandler) Handle(ctx context.Context, cmd VerifyOtp) (Session, error) {
@@ -127,6 +131,10 @@ func (h *VerifyOtpHandler) Handle(ctx context.Context, cmd VerifyOtp) (Session, 
 		return Session{}, apperr.Unauthorized("The code is incorrect or has expired")
 	}
 
+	if cmd.Audience != "" {
+		return h.signInAccount(ctx, phone, cmd.Audience)
+	}
+
 	user, err := h.users.ByPhone(ctx, phone)
 	if err != nil {
 		if !apperr.IsKind(err, apperr.KindNotFound) {
@@ -138,10 +146,6 @@ func (h *VerifyOtpHandler) Handle(ctx context.Context, cmd VerifyOtp) (Session, 
 		}
 	}
 
-	if !user.MayUse(cmd.Audience) {
-		return Session{}, apperr.Forbidden("This account cannot sign in here")
-	}
-
 	if !user.CanSignIn() {
 		if user.IsBanned() {
 			return Session{}, apperr.Forbidden("Your account has been disabled. Please contact Customer Service.")
@@ -150,6 +154,26 @@ func (h *VerifyOtpHandler) Handle(ctx context.Context, cmd VerifyOtp) (Session, 
 	}
 
 	return issueSession(ctx, h.sessions, h.signer, h.accessTTL, user)
+}
+
+// signInAccount signs an admin or staff member in to one of the staff audiences. An unknown number,
+// or one that may not use the audience, gets the same refusal, so the answer does not say which
+// numbers belong to staff.
+func (h *VerifyOtpHandler) signInAccount(ctx context.Context, phone, audience string) (Session, error) {
+	account, err := h.accounts.ByPhone(ctx, phone)
+	if err != nil {
+		if apperr.IsKind(err, apperr.KindNotFound) {
+			return Session{}, apperr.Forbidden("This account cannot sign in here")
+		}
+		return Session{}, err
+	}
+	if !account.MayUse(audience) {
+		return Session{}, apperr.Forbidden("This account cannot sign in here")
+	}
+	if !account.CanSignIn() {
+		return Session{}, apperr.Forbidden("This account is not active. Please contact support.")
+	}
+	return issueAccountSession(ctx, h.sessions, h.signer, h.accessTTL, account)
 }
 
 func (h *VerifyOtpHandler) createFromPending(ctx context.Context, phone string) (domain.User, error) {
@@ -179,19 +203,28 @@ type Refresh struct {
 
 type RefreshHandler struct {
 	users     Users
+	accounts  Accounts
 	sessions  Sessions
 	signer    *authn.Signer
 	accessTTL time.Duration
 }
 
-func NewRefreshHandler(users Users, sessions Sessions, signer *authn.Signer, accessTTL time.Duration) *RefreshHandler {
-	return &RefreshHandler{users: users, sessions: sessions, signer: signer, accessTTL: accessTTL}
+func NewRefreshHandler(users Users, accounts Accounts, sessions Sessions, signer *authn.Signer, accessTTL time.Duration) *RefreshHandler {
+	return &RefreshHandler{users: users, accounts: accounts, sessions: sessions, signer: signer, accessTTL: accessTTL}
 }
 
 func (h *RefreshHandler) Handle(ctx context.Context, cmd Refresh) (Session, error) {
 	userID, err := h.sessions.Consume(ctx, cmd.RefreshToken)
 	if err != nil {
 		return Session{}, err
+	}
+
+	if _, _, isAccount := domain.ParseAccountID(userID); isAccount {
+		account, err := h.accounts.ByID(ctx, userID)
+		if err != nil || !account.CanSignIn() {
+			return Session{}, apperr.Unauthorized("This session is no longer valid")
+		}
+		return issueAccountSession(ctx, h.sessions, h.signer, h.accessTTL, account)
 	}
 
 	user, err := h.users.ByID(ctx, userID)
@@ -219,17 +252,24 @@ func (h *LogoutHandler) Handle(ctx context.Context, cmd Logout) (struct{}, error
 }
 
 func issueSession(ctx context.Context, sessions Sessions, signer *authn.Signer, accessTTL time.Duration, user domain.User) (Session, error) {
-	accessToken, err := signer.Issue(authn.Identity{
-		UserID: user.ID,
-		Email:  user.Email,
-		Name:   user.Name,
-		Roles:  user.Roles,
-	})
+	s, err := issue(ctx, sessions, signer, accessTTL, authn.Identity{UserID: user.ID, Email: user.Email, Name: user.Name})
+	s.User = user
+	return s, err
+}
+
+func issueAccountSession(ctx context.Context, sessions Sessions, signer *authn.Signer, accessTTL time.Duration, account domain.Account) (Session, error) {
+	s, err := issue(ctx, sessions, signer, accessTTL, authn.Identity{UserID: account.ID, Name: account.Name, Roles: account.Roles()})
+	s.Account = &account
+	return s, err
+}
+
+func issue(ctx context.Context, sessions Sessions, signer *authn.Signer, accessTTL time.Duration, id authn.Identity) (Session, error) {
+	accessToken, err := signer.Issue(id)
 	if err != nil {
 		return Session{}, err
 	}
 
-	refreshToken, err := sessions.Issue(ctx, user.ID)
+	refreshToken, err := sessions.Issue(ctx, id.UserID)
 	if err != nil {
 		return Session{}, err
 	}
@@ -237,7 +277,6 @@ func issueSession(ctx context.Context, sessions Sessions, signer *authn.Signer, 
 	return Session{
 		AccessToken:          accessToken,
 		RefreshToken:         refreshToken,
-		User:                 user,
 		AccessTokenExpiresAt: time.Now().Add(accessTTL),
 	}, nil
 }

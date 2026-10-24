@@ -23,7 +23,7 @@ type Users struct{ pool *postgres.Pool }
 
 func NewUsers(pool *postgres.Pool) *Users { return &Users{pool: pool} }
 
-const userColumns = `id, username, name, phone, email, points, streak, xp, birthdate, status, created_at, updated_at, roles`
+const userColumns = `id, username, name, phone, email, points, streak, xp, birthdate, status, created_at, updated_at`
 
 func (r *Users) ByPhone(ctx context.Context, phone string) (domain.User, error) {
 	row := r.pool.QueryRow(ctx, `SELECT `+userColumns+` FROM users WHERE phone = $1`, phone)
@@ -135,7 +135,7 @@ func scanUser(r row) (domain.User, error) {
 		email     *string
 		birthdate *time.Time
 	)
-	err := r.Scan(&id, &u.Username, &u.Name, &u.Phone, &email, &u.Points, &u.Streak, &u.XP, &birthdate, &u.Status, &u.CreatedAt, &u.UpdatedAt, &u.Roles)
+	err := r.Scan(&id, &u.Username, &u.Name, &u.Phone, &email, &u.Points, &u.Streak, &u.XP, &birthdate, &u.Status, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.User{}, apperr.NotFound("User not found")

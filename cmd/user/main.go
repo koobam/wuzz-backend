@@ -74,6 +74,7 @@ func realMain() error {
 	defer stopRelay()
 
 	users := userpg.NewUsers(pool)
+	accounts := userpg.NewAccounts(pool)
 	members := userpg.NewMembers(pool)
 	sessions := userredis.NewSessions(rdb, cfg.Auth.RefreshTokenTTL)
 	pending := userredis.NewPendingRegistrations(rdb)
@@ -101,7 +102,7 @@ func realMain() error {
 		return err
 	}
 
-	application := app.New(users, members, pending, sessions, verifications, signer, cfg.Auth.AccessTokenTTL, cfg.Auth.VerificationCodeTTL)
+	application := app.New(users, accounts, members, pending, sessions, verifications, signer, cfg.Auth.AccessTokenTTL, cfg.Auth.VerificationCodeTTL)
 
 	// Development sign-in without a code: only in a dev environment that is
 	// already skipping SMS. Anywhere else the handler stays nil.
