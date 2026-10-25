@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 
 	"github.com/koobam/wuzz-backend/internal/pkg/config"
 	"github.com/koobam/wuzz-backend/internal/pkg/observability"
@@ -29,6 +30,15 @@ func NewEngine(cfg *config.Config, log *slog.Logger, ready observability.Readine
 	}
 
 	engine.Use(
+		// First, so the span covers everything below and Logger sees its ids.
+		// Probes and scrapes would otherwise be most of the traces.
+		otelgin.Middleware(cfg.ServiceName, otelgin.WithFilter(func(r *http.Request) bool {
+			switch r.URL.Path {
+			case "/healthz", "/readyz", "/metrics":
+				return false
+			}
+			return true
+		})),
 		RequestID(),
 		Logger(log),
 		Metrics(),

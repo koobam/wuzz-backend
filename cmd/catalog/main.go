@@ -40,7 +40,7 @@ func realMain() error {
 	cfg.SetBuildVersion(version)
 
 	log := observability.NewLogger(cfg.Telemetry.LogLevel, cfg.Telemetry.LogFormat, cfg.ServiceName, cfg.Version)
-	shutdownTelemetry, err := observability.Setup(ctx, cfg.ServiceName)
+	shutdownTelemetry, err := observability.Setup(ctx, cfg)
 	if err != nil {
 		return err
 	}
