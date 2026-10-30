@@ -24,11 +24,13 @@ type Commands struct {
 }
 
 type Queries struct {
-	GetUser         *query.GetUserHandler
-	MemberSummary   *query.GetMemberSummaryHandler
-	CheckUsername   *query.CheckUsernameHandler
-	SuggestUsername *query.SuggestUsernameHandler
-	ListUsers       *command.ListUsersHandler
+	GetUser          *query.GetUserHandler
+	MemberSummary    *query.GetMemberSummaryHandler
+	CheckUsername    *query.CheckUsernameHandler
+	SuggestUsername  *query.SuggestUsernameHandler
+	ListUsers        *query.ListUsersHandler
+	ListAccounts     *query.ListAccountsHandler
+	ResolveCustomers *query.ResolveCustomersHandler
 }
 
 type App struct {
@@ -36,8 +38,22 @@ type App struct {
 	Queries  Queries
 }
 
+// UserStore and AccountStore are what the Postgres adapters provide: the write-side port plus the listing the back office reads.
+type (
+	UserStore interface {
+		command.Users
+		query.UserList
+		query.UserResolver
+	}
+	AccountStore interface {
+		command.Accounts
+		query.AccountList
+	}
+)
+
 func New(
-	users command.Users,
+	users UserStore,
+	accounts AccountStore,
 	members query.Members,
 	pending command.PendingRegistrations,
 	sessions command.Sessions,
@@ -49,19 +65,21 @@ func New(
 	return &App{
 		Commands: Commands{
 			Register:  command.NewRegisterHandler(users, pending, verifications, codeTTL),
-			VerifyOtp: command.NewVerifyOtpHandler(users, pending, verifications, sessions, signer, accessTTL),
-			Refresh:   command.NewRefreshHandler(users, sessions, signer, accessTTL),
+			VerifyOtp: command.NewVerifyOtpHandler(users, accounts, pending, verifications, sessions, signer, accessTTL),
+			Refresh:   command.NewRefreshHandler(users, accounts, sessions, signer, accessTTL),
 			Logout:    command.NewLogoutHandler(sessions),
 
-			SendLoginCode: command.NewSendLoginCodeHandler(users, verifications, codeTTL),
+			SendLoginCode: command.NewSendLoginCodeHandler(accounts, verifications, codeTTL),
 			SetUserStatus: command.NewSetUserStatusHandler(users),
 		},
 		Queries: Queries{
-			GetUser:         query.NewGetUserHandler(queryUsers{users}),
-			MemberSummary:   query.NewGetMemberSummaryHandler(members),
-			CheckUsername:   query.NewCheckUsernameHandler(queryUsers{users}),
-			SuggestUsername: query.NewSuggestUsernameHandler(queryUsers{users}),
-			ListUsers:       command.NewListUsersHandler(users),
+			GetUser:          query.NewGetUserHandler(queryUsers{users}, accounts),
+			MemberSummary:    query.NewGetMemberSummaryHandler(members),
+			CheckUsername:    query.NewCheckUsernameHandler(queryUsers{users}),
+			SuggestUsername:  query.NewSuggestUsernameHandler(queryUsers{users}),
+			ListUsers:        query.NewListUsersHandler(users),
+			ListAccounts:     query.NewListAccountsHandler(accounts),
+			ResolveCustomers: query.NewResolveCustomersHandler(users),
 		},
 	}
 }

@@ -44,6 +44,12 @@ service UserService {
   // ListUsers and SetUserStatus are admin-only (the `admin` role in the token).
   rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
   rpc SetUserStatus(SetUserStatusRequest) returns (SetUserStatusResponse);
+  // ResolveCustomers finds customers by id or by phone number, in one call (admin-only). A number is matched after the same
+  // normalisation sign-up applies. What is not found is listed as unmatched.
+  rpc ResolveCustomers(ResolveCustomersRequest) returns (ResolveCustomersResponse);
+
+  // ListAccounts lists back-office admins or staff (not customers); admin-only like ListUsers.
+  rpc ListAccounts(ListAccountsRequest) returns (ListAccountsResponse);
 
   rpc Refresh(RefreshRequest) returns (RefreshResponse);
   rpc Logout(LogoutRequest) returns (LogoutResponse);
@@ -107,10 +113,55 @@ message ListUsersRequest {
   string status = 2;  // active | inactive | banned, or empty
   int32 limit = 3;
   int32 offset = 4;
+  // id, name, created_at or points. With neither sort field set, newest first (id desc); with a column and no direction, ascending.
+  string sort_by = 5;
+  string sort_dir = 6;
 }
 
 message ListUsersResponse {
   repeated User users = 1;
+  int64 total = 2;
+}
+
+message ResolveCustomersRequest {
+  repeated string ids = 1;
+  repeated string phones = 2;
+}
+
+message ResolveCustomersResponse {
+  repeated User users = 1;
+  // The ids and phone numbers, as they were asked for, that matched nobody.
+  repeated string unmatched = 2;
+}
+
+// An admin or a staff member. A customer is a User.
+message Account {
+  string id = 1;     // "a:7" for an admin, "s:3" for staff
+  string kind = 2;   // admin | staff
+  string name = 3;
+  string phone = 4;
+  string role = 5;   // admin: super, finance, support; staff: front, wuzzer
+  int64 outlet_id = 6; // 0 when not tied to an outlet
+  string status = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+message ListAccountsRequest {
+  string kind = 1;    // admin | staff
+  string query = 2;   // matches name or phone
+  string status = 3;  // active | inactive | banned, or empty
+  int32 limit = 4;
+  int32 offset = 5;
+  // Only the accounts tied to this outlet (0 = no filter).
+  int64 outlet_id = 6;
+  // id, name or created_at. With neither sort field set, newest first (id desc); with a column and no direction, ascending.
+  string sort_by = 7;
+  string sort_dir = 8;
+}
+
+message ListAccountsResponse {
+  repeated Account accounts = 1;
   int64 total = 2;
 }
 

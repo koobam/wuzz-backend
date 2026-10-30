@@ -1,122 +1,219 @@
-// Package app holds catalog's use cases. The Store port is implemented by
-// adapters/postgres and the Discovery port by adapters/mongo; nothing here
-// knows either database exists.
+// Package app wires catalog's use cases: a write side in app/command and a read side in app/query, one handler per
+// use case. Nothing here holds a rule of its own; the rules live in the handlers and in the domain.
+//
+// Handlers state the few repository methods they need as small ports (command.Outlets, query.Stock, ...). Store is
+// their union: the whole of what the Postgres adapter has to provide, so a missing method fails to compile here.
 package app
 
 import (
-	"context"
-
-	"github.com/koobam/wuzz-backend/internal/pkg/apperr"
-	"github.com/koobam/wuzz-backend/internal/services/catalog/domain"
+	"github.com/koobam/wuzz-backend/internal/services/catalog/app/command"
+	"github.com/koobam/wuzz-backend/internal/services/catalog/app/query"
 )
 
+// Store is every repository method the handlers use, implemented by adapters/postgres.
 type Store interface {
-	ListOutlets(ctx context.Context, ids []int64, includeInactive bool) ([]domain.Outlet, error)
-	GetOutlet(ctx context.Context, id int64) (domain.Outlet, error)
-	CreateOutlet(ctx context.Context, o domain.Outlet) (domain.Outlet, error)
-	UpdateOutlet(ctx context.Context, o domain.Outlet) (domain.Outlet, error)
+	command.Outlets
+	command.Services
+	command.VariantGroups
+	command.ModifierGroups
+	command.Materials
+	command.Recipes
+	command.Banners
+	command.Vouchers
+	command.Stock
 
-	ListServices(ctx context.Context, includeInactive bool) ([]domain.ServiceItem, error)
-	CreateService(ctx context.Context, s domain.ServiceItem) (domain.ServiceItem, error)
-	UpdateService(ctx context.Context, s domain.ServiceItem) (domain.ServiceItem, error)
+	query.Outlets
+	query.Services
+	query.VariantGroups
+	query.ModifierGroups
+	query.Materials
+	query.Recipes
+	query.Costing
+	query.Banners
+	query.Vouchers
+	query.Stock
 }
 
-// Discovery is the read side the customer app browses: geo and text search
-// over outlets, backed by MongoDB.
-type Discovery interface {
-	// Nearby returns up to q.Limit outlets and the cursor of the next page ("" if none).
-	Nearby(ctx context.Context, q domain.NearbyQuery) ([]domain.OutletView, string, error)
-	// Coverage returns the service area containing p; ok is false outside every area.
-	Coverage(ctx context.Context, p domain.Point) (area domain.CoverageArea, ok bool, err error)
-	// ByID returns one outlet; the distance is filled in when near is set.
-	ByID(ctx context.Context, id int64, near *domain.Point) (domain.OutletView, error)
-	// Services lists active services for the app; category "" means every category.
-	Services(ctx context.Context, category string, limit int) ([]domain.ServiceView, error)
-	ServiceDetail(ctx context.Context, id int64) (domain.ServiceDetail, error)
+type Commands struct {
+	CreateOutlet *command.CreateOutletHandler
+	UpdateOutlet *command.UpdateOutletHandler
+	DeleteOutlet *command.DeleteOutletHandler
+
+	CreateService *command.CreateServiceHandler
+	UpdateService *command.UpdateServiceHandler
+	DeleteService *command.DeleteServiceHandler
+
+	CreateVariantGroup *command.CreateVariantGroupHandler
+	UpdateVariantGroup *command.UpdateVariantGroupHandler
+	DeleteVariantGroup *command.DeleteVariantGroupHandler
+
+	CreateModifierGroup *command.CreateModifierGroupHandler
+	UpdateModifierGroup *command.UpdateModifierGroupHandler
+	DeleteModifierGroup *command.DeleteModifierGroupHandler
+
+	CreateMaterial *command.CreateMaterialHandler
+	UpdateMaterial *command.UpdateMaterialHandler
+	DeleteMaterial *command.DeleteMaterialHandler
+	SetRecipe      *command.SetRecipeHandler
+
+	CreateBanner    *command.CreateBannerHandler
+	UpdateBanner    *command.UpdateBannerHandler
+	SetBannerStatus *command.SetBannerStatusHandler
+	DeleteBanner    *command.DeleteBannerHandler
+	ReorderBanners  *command.ReorderBannersHandler
+
+	CreateVoucher    *command.CreateVoucherHandler
+	UpdateVoucher    *command.UpdateVoucherHandler
+	SetVoucherStatus *command.SetVoucherStatusHandler
+	DeleteVoucher    *command.DeleteVoucherHandler
+	InjectVoucher    *command.InjectVoucherHandler
+	ClaimVoucher     *command.ClaimVoucherHandler
+
+	ReceiveStock  *command.ReceiveStockHandler
+	WasteStock    *command.WasteStockHandler
+	CountStock    *command.CountStockHandler
+	TransferStock *command.TransferStockHandler
+	SetMinStock   *command.SetMinStockHandler
+	// ConsumeOrder and ReverseOrder are called by the order service, never by a person.
+	ConsumeOrder *command.ConsumeOrderHandler
+	ReverseOrder *command.ReverseOrderHandler
+}
+
+type Queries struct {
+	ListOutlets *query.ListOutletsHandler
+	PageOutlets *query.PageOutletsHandler
+	GetOutlet   *query.GetOutletHandler
+
+	// The customer app's side, read through Discovery.
+	NearbyOutlets    *query.NearbyOutletsHandler
+	ResolveCoverage  *query.ResolveCoverageHandler
+	BrowseServices   *query.BrowseServicesHandler
+	GetServiceDetail *query.GetServiceDetailHandler
+
+	ListServices          *query.ListServicesHandler
+	PageServices          *query.PageServicesHandler
+	ListServiceCategories *query.ListServiceCategoriesHandler
+	ListTaxRates          *query.ListTaxRatesHandler
+
+	ListVariantGroups  *query.ListVariantGroupsHandler
+	GetVariantGroup    *query.GetVariantGroupHandler
+	ListModifierGroups *query.ListModifierGroupsHandler
+	GetModifierGroup   *query.GetModifierGroupHandler
+
+	ListMaterials     *query.ListMaterialsHandler
+	GetMaterial       *query.GetMaterialHandler
+	GetRecipe         *query.GetRecipeHandler
+	GetServiceCosting *query.GetServiceCostingHandler
+	CalcCosting       *query.CalcCostingHandler
+
+	ListBanners     *query.ListBannersHandler
+	GetBanner       *query.GetBannerHandler
+	ListLiveBanners *query.ListLiveBannersHandler
+
+	ListVouchers      *query.ListVouchersHandler
+	GetVoucher        *query.GetVoucherHandler
+	ListVoucherGrants *query.ListVoucherGrantsHandler
+	ListInjections    *query.ListInjectionsHandler
+	ListWallet        *query.ListWalletHandler
+
+	ListStock     *query.ListStockHandler
+	ListMovements *query.ListMovementsHandler
 }
 
 type App struct {
-	Store
-	Discovery Discovery
+	Commands Commands
+	Queries  Queries
 }
 
-func New(store Store, discovery Discovery) *App { return &App{Store: store, Discovery: discovery} }
-
-// NearbyOutlets pages through active outlets. On the first page an explicitly
-// selected outlet is pinned to the top (unless a text query is narrowing the
-// list), so the picker shows what the user already chose.
-func (a *App) NearbyOutlets(ctx context.Context, q domain.NearbyQuery) ([]domain.OutletView, string, error) {
-	if q.Limit <= 0 {
-		q.Limit = domain.DefaultPageSize
-	}
-	if q.Limit > domain.MaxPageSize {
-		q.Limit = domain.MaxPageSize
-	}
-	outlets, next, err := a.Discovery.Nearby(ctx, q)
-	if err != nil {
-		return nil, "", err
-	}
-	if q.Cursor != "" || q.SelectedID <= 0 || q.Text != "" {
-		return outlets, next, nil
-	}
-	selected, err := a.Discovery.ByID(ctx, q.SelectedID, q.Near)
-	if err != nil {
-		// A stale or unknown selection must not break the list.
-		return outlets, next, nil
-	}
-	pinned := make([]domain.OutletView, 0, len(outlets)+1)
-	pinned = append(pinned, selected)
-	for _, o := range outlets {
-		if o.ID != selected.ID {
-			pinned = append(pinned, o)
-		}
-	}
-	if len(pinned) > q.Limit {
-		pinned = pinned[:q.Limit]
-	}
-	return pinned, next, nil
+// Discovery is what adapters/postgres provides for the customer app: outlets and the service menu.
+type Discovery interface {
+	query.OutletDiscovery
+	query.ServiceDiscovery
 }
 
-// CreateOutlet validates before it reaches the store.
-func (a *App) AddOutlet(ctx context.Context, o domain.Outlet) (domain.Outlet, error) {
-	o.Active = true
-	if err := o.Validate(); err != nil {
-		return domain.Outlet{}, err
-	}
-	return a.Store.CreateOutlet(ctx, o)
-}
+func New(store Store, discovery Discovery) *App {
+	return &App{
+		Commands: Commands{
+			CreateOutlet: command.NewCreateOutletHandler(store),
+			UpdateOutlet: command.NewUpdateOutletHandler(store),
+			DeleteOutlet: command.NewDeleteOutletHandler(store),
 
-func (a *App) ChangeOutlet(ctx context.Context, o domain.Outlet) (domain.Outlet, error) {
-	if err := o.Validate(); err != nil {
-		return domain.Outlet{}, err
-	}
-	return a.Store.UpdateOutlet(ctx, o)
-}
+			CreateService: command.NewCreateServiceHandler(store),
+			UpdateService: command.NewUpdateServiceHandler(store),
+			DeleteService: command.NewDeleteServiceHandler(store),
 
-func (a *App) AddService(ctx context.Context, s domain.ServiceItem) (domain.ServiceItem, error) {
-	s.Active = true
-	if err := s.Validate(); err != nil {
-		return domain.ServiceItem{}, err
-	}
-	return a.Store.CreateService(ctx, s)
-}
+			CreateVariantGroup: command.NewCreateVariantGroupHandler(store),
+			UpdateVariantGroup: command.NewUpdateVariantGroupHandler(store),
+			DeleteVariantGroup: command.NewDeleteVariantGroupHandler(store),
 
-func (a *App) ChangeService(ctx context.Context, s domain.ServiceItem) (domain.ServiceItem, error) {
-	if err := s.Validate(); err != nil {
-		return domain.ServiceItem{}, err
-	}
-	return a.Store.UpdateService(ctx, s)
-}
+			CreateModifierGroup: command.NewCreateModifierGroupHandler(store),
+			UpdateModifierGroup: command.NewUpdateModifierGroupHandler(store),
+			DeleteModifierGroup: command.NewDeleteModifierGroupHandler(store),
 
-// BrowseServices lists the services the app shows, optionally for one category.
-func (a *App) BrowseServices(ctx context.Context, category string, limit int) ([]domain.ServiceView, error) {
-	if category != "" && category != domain.ServiceCategoryRegular && category != domain.ServiceCategoryAlacarte {
-		return nil, apperr.Invalid("service_category must be regular or alacarte")
-	}
-	return a.Discovery.Services(ctx, category, limit)
-}
+			CreateMaterial: command.NewCreateMaterialHandler(store),
+			UpdateMaterial: command.NewUpdateMaterialHandler(store),
+			DeleteMaterial: command.NewDeleteMaterialHandler(store),
+			SetRecipe:      command.NewSetRecipeHandler(store),
 
-// ResolveCoverage says which service area a position is in, if any.
-func (a *App) ResolveCoverage(ctx context.Context, p domain.Point) (domain.CoverageArea, bool, error) {
-	return a.Discovery.Coverage(ctx, p)
+			CreateBanner:    command.NewCreateBannerHandler(store),
+			UpdateBanner:    command.NewUpdateBannerHandler(store),
+			SetBannerStatus: command.NewSetBannerStatusHandler(store),
+			DeleteBanner:    command.NewDeleteBannerHandler(store),
+			ReorderBanners:  command.NewReorderBannersHandler(store),
+
+			CreateVoucher:    command.NewCreateVoucherHandler(store),
+			UpdateVoucher:    command.NewUpdateVoucherHandler(store),
+			SetVoucherStatus: command.NewSetVoucherStatusHandler(store),
+			DeleteVoucher:    command.NewDeleteVoucherHandler(store),
+			InjectVoucher:    command.NewInjectVoucherHandler(store),
+			ClaimVoucher:     command.NewClaimVoucherHandler(store),
+
+			ReceiveStock:  command.NewReceiveStockHandler(store),
+			WasteStock:    command.NewWasteStockHandler(store),
+			CountStock:    command.NewCountStockHandler(store),
+			TransferStock: command.NewTransferStockHandler(store),
+			SetMinStock:   command.NewSetMinStockHandler(store),
+			ConsumeOrder:  command.NewConsumeOrderHandler(store),
+			ReverseOrder:  command.NewReverseOrderHandler(store),
+		},
+		Queries: Queries{
+			ListOutlets: query.NewListOutletsHandler(store),
+			PageOutlets: query.NewPageOutletsHandler(store),
+			GetOutlet:   query.NewGetOutletHandler(store),
+
+			NearbyOutlets:    query.NewNearbyOutletsHandler(discovery),
+			ResolveCoverage:  query.NewResolveCoverageHandler(discovery),
+			BrowseServices:   query.NewBrowseServicesHandler(discovery),
+			GetServiceDetail: query.NewGetServiceDetailHandler(discovery),
+
+			ListServices:          query.NewListServicesHandler(store),
+			PageServices:          query.NewPageServicesHandler(store),
+			ListServiceCategories: query.NewListServiceCategoriesHandler(store),
+			ListTaxRates:          query.NewListTaxRatesHandler(store),
+
+			ListVariantGroups:  query.NewListVariantGroupsHandler(store),
+			GetVariantGroup:    query.NewGetVariantGroupHandler(store),
+			ListModifierGroups: query.NewListModifierGroupsHandler(store),
+			GetModifierGroup:   query.NewGetModifierGroupHandler(store),
+
+			ListMaterials:     query.NewListMaterialsHandler(store),
+			GetMaterial:       query.NewGetMaterialHandler(store),
+			GetRecipe:         query.NewGetRecipeHandler(store),
+			GetServiceCosting: query.NewGetServiceCostingHandler(store),
+			CalcCosting:       query.NewCalcCostingHandler(store),
+
+			ListBanners:     query.NewListBannersHandler(store),
+			GetBanner:       query.NewGetBannerHandler(store),
+			ListLiveBanners: query.NewListLiveBannersHandler(store),
+
+			ListVouchers:      query.NewListVouchersHandler(store),
+			GetVoucher:        query.NewGetVoucherHandler(store),
+			ListVoucherGrants: query.NewListVoucherGrantsHandler(store),
+			ListInjections:    query.NewListInjectionsHandler(store),
+			ListWallet:        query.NewListWalletHandler(store),
+
+			ListStock:     query.NewListStockHandler(store),
+			ListMovements: query.NewListMovementsHandler(store),
+		},
+	}
 }

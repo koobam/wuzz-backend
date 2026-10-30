@@ -37,7 +37,7 @@ clients.
   A customer's number gets `200` on `send-code` (no SMS is sent, so staff numbers cannot be probed)
   and `403` on `verify-otp`.
 - **`/app/v1`**: `GET /outlets`, `GET /services`, plus the auth routes above.
-- **`/pos/v1`**: `GET /catalog` (outlets + services for offline caching), `POST /orders`
+- **`/pos/v1`**: `GET /catalog` (outlets + services to ring up an order), `POST /orders`
   (idempotent on `id`: `201` new, `200` already there), `GET /orders`, `GET /orders/:id`,
   `PATCH /orders/:id/status`.
 - **`/backoffice/v1`**: `GET /users`, `PATCH /users/:id/status`; `GET|POST /outlets`, `PATCH /outlets/:id`;
@@ -63,6 +63,63 @@ UPDATE users SET roles = '{admin}'     WHERE phone = '628...';   -- back office 
 ```
 
 The roles apply from the next sign-in, since they are written into the token.
+
+## Activity log
+
+Every state-changing call made through `/backoffice/v1` or `/pos/v1` (create, update or delete of an outlet, service, variant or modifier group, material or recipe; stock receipts, waste, counts, transfers and reorder levels; an order made or moved on; a user's status; signing in and out) leaves one row in the gateway's own database, `wuzz_gateway`, table `activity_log`. The table is append-only (a trigger refuses UPDATE and DELETE). The list of what is logged, and how each route is described, is the table in `internal/services/gateway/activity/rules.go`: a new state-changing route is not logged until it is added there.
+
+The gateway writes it after the response, off the request's path, so the log never slows or fails a call. An entry that cannot be stored (queue full, database down through three retries) is logged at ERROR as `ACTIVITY LOG ENTRY LOST` with its full content and counted in `wuzz_activity_lost_total{reason}`: alert on that counter. Request bodies are kept with secrets removed (any key with token, password, secret, otp, pin, refresh or authorization in it) and long strings cut; sign-in bodies are not kept at all.
+
+`GET /backoffice/v1/activity` (admins) reads it back: `entity_type`, `entity_id`, `actor_id`, `action`, `outcome` (`ok` or `failed`), `audience`, `q` (actor name, entity id or summary), `from` / `to` (days, `YYYY-MM-DD`, Asia/Jakarta, both included), `sort_by` (`created_at`, `action`, `entity_type`, `actor_name`, `outcome`; newest first by default), `sort_dir`, `limit` (25, at most 100), `offset`. The answer is `{items, total}`.
+
+The gateway now needs `POSTGRES_DSN` (its own database, created like the other services' and migrated with `MIGRATE_SERVICE=gateway`; `migrate-gateway` in docker-compose does it).
+
+## Pictures (uploads)
+
+`POST /backoffice/v1/uploads` (admin) takes one picture as `multipart/form-data` in the field `file` (optional `folder`, only `outlets`
+for now) and answers, in the usual envelope, `{url, key, file_name, content_type, size, width, height}`. Put the `url` in an outlet's `images`.
+
+- **What is accepted** is decided by the bytes, never by the file name or the declared type: JPEG, PNG, WebP, AVIF; at most 5 MB
+  (`MEDIA_MAX_UPLOAD_BYTES`), 8000 pixels on a side and 25 megapixels (the size is read from the header before anything is decoded, so a
+  small file cannot unpack into gigabytes). Refused with 400 (empty, damaged, too many pixels, bad folder), 413 (too big), 415 (not a picture).
+- **Metadata:** a JPEG is re-encoded with its orientation applied and EXIF/GPS left out; a PNG is re-encoded (text and profile chunks drop).
+  WebP and AVIF are stored as sent (the standard library cannot decode them), so their metadata stays.
+- **Keys** are `outlets/<yyyy>/<mm>/<32 random hex>.<ext>`: nothing the client sent is in them. Objects are served with
+  `Cache-Control: public, max-age=31536000, immutable`.
+- **Where they go:** an S3-compatible bucket (`MEDIA_ENDPOINT`, `MEDIA_BUCKET`, `MEDIA_ACCESS_KEY_ID`, `MEDIA_SECRET_ACCESS_KEY`,
+  `MEDIA_REGION`, `MEDIA_PUBLIC_BASE_URL`; requests are signed with AWS Signature V4 by the standard library). Cloudflare R2 and Google
+  Cloud Storage's S3 interoperability API (HMAC keys) both work; staging and production use the GCS buckets the assets worker serves
+  (`assets-stg.wuzz.care`, `assets.wuzz.care`; see `wuzz-deployments/cloudflare`). Nothing set means 503 "Uploads are not configured";
+  a half-set bucket stops the gateway at start. There is no quiet fallback.
+- **Locally** no cloud account is needed: `MEDIA_LOCAL_DIR=.data/media` (dev only, refused in staging and production) keeps the files
+  on disk and the gateway serves them read-only at `http://localhost:8092/media/...` (`MEDIA_PUBLIC_BASE_URL`). A MinIO container
+  would be the closer copy of a real bucket, but its images are no longer published to Docker Hub.
+- **Outlet pictures** must be `https` addresses, except `http` on `localhost`/`127.0.0.1`/`::1`, so the local `/media` addresses are
+  accepted by the outlet validation (a loopback address is never reachable by a customer).
+- The upload is written to the activity log (`media` / `create`, with the file name, type and size, never the bytes).
+
+## Search (Typesense)
+
+The list endpoints that take a search, a sort and filters are answered by Typesense: orders (transaction service), and outlets, services,
+materials, variant groups and modifier groups (catalog service). **Postgres stays the source of truth.** Typesense is a derived copy: a
+search returns only the ids of the page and the total, and the rows are read back from Postgres in that order, so a row never drifts from
+the database.
+
+- **Config**: `TYPESENSE_URL`, `TYPESENSE_API_KEY` on the catalog and transaction services (local: `http://localhost:8109`, key in `.env.example`;
+  `TYPESENSE_RECONCILE_INTERVAL`, default 5m). With no URL the lists read Postgres directly, as before. With a URL, a service starts only once Typesense
+  answers, and **a search that cannot reach it is a 503** ("Search is temporarily unavailable") — it never falls back to Postgres.
+- **Consistency**: after every create/update/delete the row is re-read and written to the index right after the commit, so a list shows a
+  just-saved record at once (a service change also refreshes the groups it links, whose "used by" is part of their document). A failed write is
+  logged loudly (`search index write failed`) and repaired by the reconcile, which every few minutes upserts every row and drops documents whose row is gone.
+- **Rebuild**: a service fills any collection that is missing, empty or at an older schema version when it starts. By hand:
+  `make reindex SERVICE=catalog [COLLECTIONS="outlets services"]`, `make reindex SERVICE=transaction`. A rebuild fills a new collection, moves the alias
+  (`catalog_outlets` -> `catalog_outlets_v1`) and drops the old one, so searches keep working. Changing a collection's fields means bumping
+  `SchemaVersion` in `adapters/searchindex`.
+- **Matching**: text is matched inside words, ignoring case, with one typo forgiven in words of five letters or more (`detergen` finds `Deterjen`).
+  An order summary that has a text search counts the orders the index found, so it always agrees with the list.
+- **Outlets and services**: `GET /backoffice/v1/outlets` and `/services` return the whole list as a bare array (the dashboard map and the pickers read it)
+  until `limit` is given; then they return `{items, total}` and take `q`, `sort_by`, `sort_dir`, `limit`, `offset`, `active=true|false`, and for services
+  `category_id` and `unit`. `sort_by` is `id, name, address, phone, active` for outlets and `id, name, unit, price, category_id, active` for services.
 
 ## Events
 

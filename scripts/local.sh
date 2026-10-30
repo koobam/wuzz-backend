@@ -20,7 +20,7 @@ mkdir -p "$RUN"
 PSQL=(docker compose -f "$BACKEND/docker-compose.yml" exec -T postgres psql -U wuzz -v ON_ERROR_STOP=1)
 
 # name:port  (ports are what the apps and gateway default to in dev)
-PORTS="user:9090 catalog:9091 transaction:9092 gateway:8092 support:4000 pos:5175 backoffice:5174 landing:5176"
+PORTS="typesense:8109 user:9090 catalog:9091 transaction:9092 gateway:8092 support:4000 pos:5175 backoffice:5174 landing:5176"
 
 port_of() { for p in $PORTS; do [ "${p%%:*}" = "$1" ] && echo "${p##*:}"; done; }
 
@@ -40,19 +40,19 @@ start() { # name, command...
 up() {
   echo "== env: ${ENV:-default} (${ENV_FILE:-.env})"
   echo "== infra"
-  (cd "$BACKEND" && docker compose up -d postgres redis kafka mongo >/dev/null)
+  (cd "$BACKEND" && docker compose up -d postgres redis kafka mongo typesense >/dev/null)
   until "${PSQL[@]}" -c 'select 1' >/dev/null 2>&1; do sleep 1; done
-  for db in wuzz_catalog wuzz_transaction; do
+  for db in wuzz_catalog wuzz_transaction wuzz_gateway; do
     # Captured first: `grep -q` in a pipeline can SIGPIPE psql, which pipefail reports as "not found".
     exists="$("${PSQL[@]}" -tAc "select 1 from pg_database where datname='$db'")"
     [ "$exists" = "1" ] || "${PSQL[@]}" -c "create database $db" >/dev/null
   done
 
   echo "== migrate"
-  for svc in user catalog transaction; do
+  for svc in user catalog transaction gateway; do
     (cd "$BACKEND" && MIGRATE_SERVICE=$svc scripts/dev-env.sh go run ./cmd/migrate 2>&1 | grep -E "env file|migrated|no migrations|ERROR" || true)
   done
-  echo "   staff: admin 081234500099 (backoffice+pos), kasir 081234500098 (pos). Code is printed in $RUN/user.log"
+  echo "   admin 081234500099 (backoffice, pos, station), kasir 081234500098 (pos), wuzzer 081234500097 (station). Code is printed in $RUN/user.log"
 
   echo "== go services"
   (cd "$BACKEND" && go build -o "$RUN/bin-user" ./cmd/user && go build -o "$RUN/bin-catalog" ./cmd/catalog \

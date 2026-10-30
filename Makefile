@@ -53,7 +53,7 @@ up: ## Start the whole stack locally
 
 .PHONY: dev
 dev: ## Start local dependencies (postgres, redis) and run migrations
-	docker compose up -d postgres redis kafka mongo
+	docker compose up -d postgres redis kafka mongo typesense
 	docker compose up migrate-user
 
 .PHONY: run
@@ -65,6 +65,11 @@ migrate: ## Apply migrations: make migrate SERVICE=user, or no SERVICE for user,
 	@for svc in $(if $(SERVICE),$(SERVICE),user catalog transaction); do \
 		MIGRATE_SERVICE=$$svc scripts/dev-env.sh go run ./cmd/migrate || exit 1; \
 	done
+
+.PHONY: reindex
+reindex: ## Rebuild the Typesense collections from Postgres: make reindex SERVICE=catalog|transaction [COLLECTIONS="outlets services"]
+	@test -n "$(SERVICE)" || (echo "usage: make reindex SERVICE=catalog|transaction [COLLECTIONS=...]"; exit 1)
+	scripts/dev-env.sh go run ./cmd/reindex $(SERVICE) $(COLLECTIONS)
 
 .PHONY: migrate-down
 migrate-down: ## Undo the last migration: make migrate-down SERVICE=user (STEPS=3, or STEPS=all)

@@ -15,7 +15,6 @@ import (
 	"github.com/koobam/wuzz-backend/internal/pkg/events"
 	"github.com/koobam/wuzz-backend/internal/pkg/outbox"
 	"github.com/koobam/wuzz-backend/internal/platform/postgres"
-	"github.com/koobam/wuzz-backend/internal/services/user/app/command"
 	"github.com/koobam/wuzz-backend/internal/services/user/domain"
 )
 
@@ -23,7 +22,7 @@ type Users struct{ pool *postgres.Pool }
 
 func NewUsers(pool *postgres.Pool) *Users { return &Users{pool: pool} }
 
-const userColumns = `id, username, name, phone, email, points, streak, xp, birthdate, status, created_at, updated_at, roles`
+const userColumns = `id, username, name, phone, email, points, streak, xp, birthdate, status, created_at, updated_at`
 
 func (r *Users) ByPhone(ctx context.Context, phone string) (domain.User, error) {
 	row := r.pool.QueryRow(ctx, `SELECT `+userColumns+` FROM users WHERE phone = $1`, phone)
@@ -53,7 +52,10 @@ func (r *Users) ExistsUsername(ctx context.Context, username string) (bool, erro
 // about an account that does not exist, nor missed one that does.
 // List returns a page of accounts, newest first, and the total matching the
 // filter. query matches username, name or phone, case-insensitively.
-func (r *Users) List(ctx context.Context, f command.ListFilter) ([]domain.User, int64, error) {
+// userOrder maps a whitelisted sort name to its SQL; ties are broken by id.
+var userOrder = map[string]string{"id": "id", "name": "lower(name)", "created_at": "created_at", "points": "points"}
+
+func (r *Users) List(ctx context.Context, f domain.ListFilter) ([]domain.User, int64, error) {
 	const where = `
 		WHERE ($1 = '' OR status = $1)
 		  AND ($2 = '' OR username ILIKE '%' || $2 || '%' OR name ILIKE '%' || $2 || '%' OR phone LIKE '%' || $2 || '%')`
@@ -64,7 +66,7 @@ func (r *Users) List(ctx context.Context, f command.ListFilter) ([]domain.User, 
 	}
 
 	rows, err := r.pool.Query(ctx,
-		`SELECT `+userColumns+` FROM users`+where+` ORDER BY id DESC LIMIT $3 OFFSET $4`,
+		`SELECT `+userColumns+` FROM users`+where+` ORDER BY `+orderBy(userOrder, f.SortBy, f.SortDir)+` LIMIT $3 OFFSET $4`,
 		f.Status, f.Query, f.Limit, f.Offset)
 	if err != nil {
 		return nil, 0, apperr.Internal("Could not list accounts").WithCause(err)
@@ -80,6 +82,24 @@ func (r *Users) List(ctx context.Context, f command.ListFilter) ([]domain.User, 
 		out = append(out, u)
 	}
 	return out, total, rows.Err()
+}
+
+// Resolve finds the customers with these ids or these phone numbers (already normalised), each once, oldest account first.
+func (r *Users) Resolve(ctx context.Context, ids []int64, phones []string) ([]domain.User, error) {
+	rows, err := r.pool.Query(ctx, `SELECT `+userColumns+` FROM users WHERE id = ANY($1::bigint[]) OR phone = ANY($2::text[]) ORDER BY id`, ids, phones)
+	if err != nil {
+		return nil, apperr.Internal("Could not look up the customers").WithCause(err)
+	}
+	defer rows.Close()
+	out := []domain.User{}
+	for rows.Next() {
+		u, err := scanUser(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, u)
+	}
+	return out, rows.Err()
 }
 
 func (r *Users) SetStatus(ctx context.Context, id, status string) (domain.User, error) {
@@ -135,7 +155,7 @@ func scanUser(r row) (domain.User, error) {
 		email     *string
 		birthdate *time.Time
 	)
-	err := r.Scan(&id, &u.Username, &u.Name, &u.Phone, &email, &u.Points, &u.Streak, &u.XP, &birthdate, &u.Status, &u.CreatedAt, &u.UpdatedAt, &u.Roles)
+	err := r.Scan(&id, &u.Username, &u.Name, &u.Phone, &email, &u.Points, &u.Streak, &u.XP, &birthdate, &u.Status, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.User{}, apperr.NotFound("User not found")

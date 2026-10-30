@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"strconv"
 	"strings"
@@ -47,8 +46,15 @@ func NewDiscovery(pool *postgres.Pool) *Discovery {
 	}
 }
 
+// outletViewCols reads an outlet as the customer app browses it. The hours are today's row of outlet_hours, on the outlet's own clock
+// (weekday 0 is Monday; isodow is 1 for Monday). A day the outlet is closed gives empty times, which the app shows as no hours; a day
+// it is open 24 hours gives 00:00 to 23:59, the closest single range the app can show.
 const outletViewCols = `id, name, address, category, latitude, longitude, images,
-	current_status, delivery_types, open_time, close_time`
+	current_status, delivery_types,
+	COALESCE((SELECT CASE WHEN h.open_24h THEN '00:00' ELSE h.open_time END FROM outlet_hours h WHERE h.outlet_id = outlets.id AND NOT h.closed
+	          AND h.weekday = extract(isodow FROM (now() AT TIME ZONE outlets.timezone))::int - 1), ''),
+	COALESCE((SELECT CASE WHEN h.open_24h THEN '23:59' ELSE h.close_time END FROM outlet_hours h WHERE h.outlet_id = outlets.id AND NOT h.closed
+	          AND h.weekday = extract(isodow FROM (now() AT TIME ZONE outlets.timezone))::int - 1), '')`
 
 func scanOutletView(r pgx.Row, near *domain.Point, withDistance bool) (domain.OutletView, error) {
 	var v domain.OutletView
@@ -192,7 +198,7 @@ func (d *Discovery) loadAreas(ctx context.Context) ([]area, error) {
 }
 
 const serviceViewCols = `id, name, description, price, unit, service_type, service_category,
-	min_kg, max_kg, discount, discount_type, icon, image`
+	min_kg, max_kg, discount_kind, discount_value, icon, image, tax_type`
 
 // Services lists the active menu, in display order. category "" means all.
 func (d *Discovery) Services(ctx context.Context, category string, limit int) ([]domain.ServiceView, error) {
@@ -213,74 +219,50 @@ func (d *Discovery) Services(ctx context.Context, category string, limit int) ([
 	for rows.Next() {
 		var cat *string
 		var v domain.ServiceView
+		var kind string
+		var value int64
 		if err := rows.Scan(&v.ID, &v.Name, &v.Description, &v.Price, &v.Unit, &v.ServiceType, &cat,
-			&v.MinKg, &v.MaxKg, &v.Discount, &v.DiscountType, &v.Icon, &v.Image); err != nil {
+			&v.MinKg, &v.MaxKg, &kind, &value, &v.Icon, &v.Image, &v.TaxType); err != nil {
 			return nil, apperr.Internal("Could not read services").WithCause(err)
 		}
 		if cat != nil {
 			v.ServiceCategory = *cat
 		}
+		v.DiscountAmount = domain.DiscountAmountOf(v.Price, kind, value)
+		v.Discount, v.DiscountType = appDiscount(kind, value)
 		out = append(out, v)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, apperr.Internal("Could not read services").WithCause(err)
 	}
+	rows.Close()
+	rates, err := loadTaxRates(ctx, d.pool)
+	if err != nil {
+		return nil, err
+	}
+	for i := range out {
+		priceView(&out[i], rates)
+	}
 	d.menu.set(key, out)
 	return append([]domain.ServiceView(nil), out...), nil
 }
 
-// The shapes tiers and sections are stored in (JSON on the service row).
-type tierJSON struct {
-	ID        int64        `json:"id"`
-	Code      string       `json:"code"`
-	Name      string       `json:"name"`
-	SortOrder int32        `json:"sort_order"`
-	Pricing   *pricingJSON `json:"pricing"`
-}
-
-type pricingJSON struct {
-	ID                int64   `json:"id"`
-	ServiceID         int64   `json:"service_id"`
-	TierID            int64   `json:"tier_id"`
-	SKU               string  `json:"sku"`
-	EstimatedTime     int32   `json:"estimated_time"`
-	EstimatedTimeUnit string  `json:"estimated_time_unit"`
-	Price             int64   `json:"price"`
-	Discount          float64 `json:"discount"`
-	DiscountType      string  `json:"discount_type"`
-	Unit              string  `json:"unit"`
-}
-
-type addonJSON struct {
-	ID           int64   `json:"id"`
-	Name         string  `json:"name"`
-	Description  string  `json:"description"`
-	Price        int64   `json:"price"`
-	Unit         string  `json:"unit"`
-	Discount     float64 `json:"discount"`
-	DiscountType string  `json:"discount_type"`
-	Icon         string  `json:"icon"`
-}
-
-type sectionJSON struct {
-	Title       string      `json:"title"`
-	Description string      `json:"description"`
-	Type        string      `json:"type"`
-	Addons      []addonJSON `json:"addons"`
-}
-
+// ServiceDetail is the service with its variants and add-ons as the customer app has always read them. The service's first
+// variant group is its "tiers" (each option priced as the service's price plus the option's extra), and its modifier groups
+// are its "sections".
 func (d *Discovery) ServiceDetail(ctx context.Context, id int64) (domain.ServiceDetail, error) {
 	if cached, ok := d.detail.get(id); ok {
 		return cached, nil
 	}
-	var tiersRaw, sectionsRaw []byte
 	var cat *string
 	var v domain.ServiceView
+	var kind string
+	var value int64
 	err := d.pool.QueryRow(ctx, `
-		SELECT `+serviceViewCols+`, tiers, sections FROM services
+		SELECT `+serviceViewCols+` FROM services
 		WHERE id = $1 AND active AND service_category IS NOT NULL`, id).
 		Scan(&v.ID, &v.Name, &v.Description, &v.Price, &v.Unit, &v.ServiceType, &cat,
-			&v.MinKg, &v.MaxKg, &v.Discount, &v.DiscountType, &v.Icon, &v.Image, &tiersRaw, &sectionsRaw)
+			&v.MinKg, &v.MaxKg, &kind, &value, &v.Icon, &v.Image, &v.TaxType)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.ServiceDetail{}, apperr.NotFound("Service not found")
 	}
@@ -290,41 +272,109 @@ func (d *Discovery) ServiceDetail(ctx context.Context, id int64) (domain.Service
 	if cat != nil {
 		v.ServiceCategory = *cat
 	}
-
-	var tiers []tierJSON
-	var sections []sectionJSON
-	if err := json.Unmarshal(tiersRaw, &tiers); err != nil {
-		return domain.ServiceDetail{}, apperr.Internal("The service tiers are invalid").WithCause(err)
+	rates, err := loadTaxRates(ctx, d.pool)
+	if err != nil {
+		return domain.ServiceDetail{}, err
 	}
-	if err := json.Unmarshal(sectionsRaw, &sections); err != nil {
-		return domain.ServiceDetail{}, apperr.Internal("The service sections are invalid").WithCause(err)
-	}
+	v.DiscountAmount = domain.DiscountAmountOf(v.Price, kind, value)
+	v.Discount, v.DiscountType = appDiscount(kind, value)
+	priceView(&v, rates)
+	// A tier is the service's price after its discount plus the option's extra; the extra itself is not discounted.
+	base := v.PriceAfterDiscount
 
+	items := []domain.ServiceItem{{ID: id}}
+	if err := attachGroups(ctx, d.pool, items); err != nil {
+		return domain.ServiceDetail{}, err
+	}
 	detail := domain.ServiceDetail{ServiceView: v}
-	for _, t := range tiers {
-		tier := domain.ServiceTier{ID: t.ID, Code: t.Code, Name: t.Name, SortOrder: t.SortOrder}
-		if p := t.Pricing; p != nil {
-			tier.Pricing = &domain.ServiceTierPricing{
-				ID: p.ID, ServiceID: p.ServiceID, TierID: p.TierID, SKU: p.SKU,
-				EstimatedTime: p.EstimatedTime, EstimatedTimeUnit: p.EstimatedTimeUnit,
-				Price: p.Price, Discount: p.Discount, DiscountType: p.DiscountType, Unit: p.Unit,
-			}
+	for _, g := range items[0].VariantGroups {
+		if tiers := tiersOf(v, base, g); len(tiers) > 0 {
+			detail.Tiers = tiers
+			break
 		}
-		detail.Tiers = append(detail.Tiers, tier)
 	}
-	for _, sec := range sections {
-		section := domain.ServiceSection{Title: sec.Title, Description: sec.Description, Type: sec.Type}
-		for _, a := range sec.Addons {
-			section.Addons = append(section.Addons, domain.ServiceAddon{
-				ID: a.ID, Name: a.Name, Description: a.Description, Price: a.Price, Unit: a.Unit,
-				Discount: a.Discount, DiscountType: a.DiscountType, Icon: a.Icon,
-			})
+	for _, g := range items[0].ModifierGroups {
+		if section, ok := sectionOf(g, v.TaxRateBps); ok {
+			detail.Sections = append(detail.Sections, section)
 		}
-		detail.Sections = append(detail.Sections, section)
 	}
 	d.detail.set(id, detail)
 	return detail, nil
 }
 
+// tiersOf turns a variant group's active options into the app's tiers.
+// Each tier is priced as the service's price after its discount (and before tax) plus the option's extra, and tax is added to that sum once.
+func tiersOf(v domain.ServiceView, base int64, g domain.VariantGroup) []domain.ServiceTier {
+	var out []domain.ServiceTier
+	for _, o := range g.Options {
+		if !o.Active {
+			continue
+		}
+		code := slug(o.Name)
+		out = append(out, domain.ServiceTier{
+			ID: o.ID, Code: code, Name: o.Name, SortOrder: int32(len(out) + 1),
+			Pricing: &domain.ServiceTierPricing{
+				ServiceID: v.ID, TierID: o.ID, SKU: "WZ-" + strconv.FormatInt(v.ID, 10) + "-" + strings.ToUpper(code),
+				EstimatedTime: o.EstimatedTime, EstimatedTimeUnit: o.EstimatedTimeUnit,
+				Price: domain.AddTax(base+o.PriceDelta, v.TaxRateBps), Unit: v.Unit,
+			},
+		})
+	}
+	return out
+}
+
+// sectionOf turns a modifier group's active options into the app's section; a group with none is left out.
+// An add-on is taxed like the service it is added to.
+func sectionOf(g domain.ModifierGroup, bps int32) (domain.ServiceSection, bool) {
+	section := domain.ServiceSection{Title: g.Name, Type: "multiple"}
+	if g.Max != nil && *g.Max == 1 {
+		section.Type = "single"
+	}
+	for _, o := range g.Options {
+		if o.Active {
+			section.Addons = append(section.Addons, domain.ServiceAddon{ID: o.ID, Name: o.Name, Description: o.Description, Price: domain.AddTax(o.Price, bps)})
+		}
+	}
+	return section, len(section.Addons) > 0
+}
+
+// slug is a tier's code: lower-case letters and digits, anything else a dash.
+func slug(name string) string {
+	var b strings.Builder
+	dash := false
+	for _, r := range strings.ToLower(name) {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			b.WriteRune(r)
+			dash = false
+		} else if !dash && b.Len() > 0 {
+			b.WriteByte('-')
+			dash = true
+		}
+	}
+	return strings.TrimSuffix(b.String(), "-")
+}
+
 // Ping is for the readiness probe.
 func (d *Discovery) Ping(ctx context.Context) error { return d.pool.Ping(ctx) }
+
+// priceView fills the prices of a service the customer app browses, from its list price (Price on the way in) and the
+// DiscountAmount already set: the discount comes off first, tax is added to what is left, and Price becomes what the customer pays.
+func priceView(v *domain.ServiceView, rates domain.TaxRates) {
+	v.PriceBeforeTax = v.Price
+	v.PriceAfterDiscount = v.PriceBeforeTax - v.DiscountAmount
+	v.TaxRateBps = rates.Rate(v.TaxType)
+	v.PriceAfterTax = domain.AddTax(v.PriceAfterDiscount, v.TaxRateBps)
+	v.Price = v.PriceAfterTax // what the customer pays
+}
+
+// appDiscount is a discount as the customer app has always read it: a percentage as a number of percent (12.5) with the type
+// "percentage", whole rupiah with "fixed", and nothing with "".
+func appDiscount(kind string, value int64) (float64, string) {
+	switch kind {
+	case domain.DiscountPercent:
+		return float64(value) / 100, "percentage"
+	case domain.DiscountValue:
+		return float64(value), "fixed"
+	}
+	return 0, ""
+}

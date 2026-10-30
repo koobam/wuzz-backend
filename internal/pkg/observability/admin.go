@@ -57,11 +57,3 @@ func (s *AdminServer) Start() error {
 }
 
 func (s *AdminServer) Shutdown(ctx context.Context) error { return s.server.Shutdown(ctx) }
-
-// Setup would wire OpenTelemetry tracing/metrics export. Left a no-op for now
-// — the Prometheus registry above already covers metrics, and there is no
-// collector deployed yet to send traces to. The signature is kept so cmd/*
-// does not need to change when this grows a real implementation.
-func Setup(ctx context.Context, serviceName string) (func(context.Context) error, error) {
-	return func(context.Context) error { return nil }, nil
-}

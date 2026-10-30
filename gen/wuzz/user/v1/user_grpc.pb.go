@@ -29,6 +29,8 @@ const (
 	UserService_SendLoginCode_FullMethodName    = "/wuzz.user.v1.UserService/SendLoginCode"
 	UserService_ListUsers_FullMethodName        = "/wuzz.user.v1.UserService/ListUsers"
 	UserService_SetUserStatus_FullMethodName    = "/wuzz.user.v1.UserService/SetUserStatus"
+	UserService_ResolveCustomers_FullMethodName = "/wuzz.user.v1.UserService/ResolveCustomers"
+	UserService_ListAccounts_FullMethodName     = "/wuzz.user.v1.UserService/ListAccounts"
 	UserService_Refresh_FullMethodName          = "/wuzz.user.v1.UserService/Refresh"
 	UserService_Logout_FullMethodName           = "/wuzz.user.v1.UserService/Logout"
 )
@@ -70,6 +72,11 @@ type UserServiceClient interface {
 	// ListUsers and SetUserStatus are admin-only (the `admin` role in the token).
 	ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error)
 	SetUserStatus(ctx context.Context, in *SetUserStatusRequest, opts ...grpc.CallOption) (*SetUserStatusResponse, error)
+	// ResolveCustomers finds customers by id or by phone number, in one call (admin-only). A number is matched after the same
+	// normalisation sign-up applies. What is not found is listed as unmatched.
+	ResolveCustomers(ctx context.Context, in *ResolveCustomersRequest, opts ...grpc.CallOption) (*ResolveCustomersResponse, error)
+	// ListAccounts lists back-office admins or staff (not customers); admin-only like ListUsers.
+	ListAccounts(ctx context.Context, in *ListAccountsRequest, opts ...grpc.CallOption) (*ListAccountsResponse, error)
 	Refresh(ctx context.Context, in *RefreshRequest, opts ...grpc.CallOption) (*RefreshResponse, error)
 	Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*LogoutResponse, error)
 }
@@ -182,6 +189,26 @@ func (c *userServiceClient) SetUserStatus(ctx context.Context, in *SetUserStatus
 	return out, nil
 }
 
+func (c *userServiceClient) ResolveCustomers(ctx context.Context, in *ResolveCustomersRequest, opts ...grpc.CallOption) (*ResolveCustomersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResolveCustomersResponse)
+	err := c.cc.Invoke(ctx, UserService_ResolveCustomers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) ListAccounts(ctx context.Context, in *ListAccountsRequest, opts ...grpc.CallOption) (*ListAccountsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListAccountsResponse)
+	err := c.cc.Invoke(ctx, UserService_ListAccounts_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *userServiceClient) Refresh(ctx context.Context, in *RefreshRequest, opts ...grpc.CallOption) (*RefreshResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RefreshResponse)
@@ -239,6 +266,11 @@ type UserServiceServer interface {
 	// ListUsers and SetUserStatus are admin-only (the `admin` role in the token).
 	ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error)
 	SetUserStatus(context.Context, *SetUserStatusRequest) (*SetUserStatusResponse, error)
+	// ResolveCustomers finds customers by id or by phone number, in one call (admin-only). A number is matched after the same
+	// normalisation sign-up applies. What is not found is listed as unmatched.
+	ResolveCustomers(context.Context, *ResolveCustomersRequest) (*ResolveCustomersResponse, error)
+	// ListAccounts lists back-office admins or staff (not customers); admin-only like ListUsers.
+	ListAccounts(context.Context, *ListAccountsRequest) (*ListAccountsResponse, error)
 	Refresh(context.Context, *RefreshRequest) (*RefreshResponse, error)
 	Logout(context.Context, *LogoutRequest) (*LogoutResponse, error)
 	mustEmbedUnimplementedUserServiceServer()
@@ -280,6 +312,12 @@ func (UnimplementedUserServiceServer) ListUsers(context.Context, *ListUsersReque
 }
 func (UnimplementedUserServiceServer) SetUserStatus(context.Context, *SetUserStatusRequest) (*SetUserStatusResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SetUserStatus not implemented")
+}
+func (UnimplementedUserServiceServer) ResolveCustomers(context.Context, *ResolveCustomersRequest) (*ResolveCustomersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ResolveCustomers not implemented")
+}
+func (UnimplementedUserServiceServer) ListAccounts(context.Context, *ListAccountsRequest) (*ListAccountsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListAccounts not implemented")
 }
 func (UnimplementedUserServiceServer) Refresh(context.Context, *RefreshRequest) (*RefreshResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Refresh not implemented")
@@ -488,6 +526,42 @@ func _UserService_SetUserStatus_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserService_ResolveCustomers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResolveCustomersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).ResolveCustomers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_ResolveCustomers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).ResolveCustomers(ctx, req.(*ResolveCustomersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_ListAccounts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListAccountsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).ListAccounts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_ListAccounts_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).ListAccounts(ctx, req.(*ListAccountsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _UserService_Refresh_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RefreshRequest)
 	if err := dec(in); err != nil {
@@ -570,6 +644,14 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetUserStatus",
 			Handler:    _UserService_SetUserStatus_Handler,
+		},
+		{
+			MethodName: "ResolveCustomers",
+			Handler:    _UserService_ResolveCustomers_Handler,
+		},
+		{
+			MethodName: "ListAccounts",
+			Handler:    _UserService_ListAccounts_Handler,
 		},
 		{
 			MethodName: "Refresh",

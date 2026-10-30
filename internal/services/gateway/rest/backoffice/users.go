@@ -43,6 +43,7 @@ func (h *Users) List(c *gin.Context) {
 		Status: c.Query("status"),
 		Limit:  int32(httpx.IntQuery(c, "limit", 25)),
 		Offset: int32(httpx.IntQuery(c, "offset", 0)),
+		SortBy: c.Query("sort_by"), SortDir: c.Query("sort_dir"),
 	})
 	if err != nil {
 		httpx.Fail(c, httpx.Upstream(err))

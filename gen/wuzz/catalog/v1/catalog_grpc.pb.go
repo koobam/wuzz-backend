@@ -19,17 +19,69 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	CatalogService_ListOutlets_FullMethodName      = "/wuzz.catalog.v1.CatalogService/ListOutlets"
-	CatalogService_GetOutlet_FullMethodName        = "/wuzz.catalog.v1.CatalogService/GetOutlet"
-	CatalogService_CreateOutlet_FullMethodName     = "/wuzz.catalog.v1.CatalogService/CreateOutlet"
-	CatalogService_UpdateOutlet_FullMethodName     = "/wuzz.catalog.v1.CatalogService/UpdateOutlet"
-	CatalogService_NearbyOutlets_FullMethodName    = "/wuzz.catalog.v1.CatalogService/NearbyOutlets"
-	CatalogService_ResolveCoverage_FullMethodName  = "/wuzz.catalog.v1.CatalogService/ResolveCoverage"
-	CatalogService_BrowseServices_FullMethodName   = "/wuzz.catalog.v1.CatalogService/BrowseServices"
-	CatalogService_GetServiceDetail_FullMethodName = "/wuzz.catalog.v1.CatalogService/GetServiceDetail"
-	CatalogService_ListServices_FullMethodName     = "/wuzz.catalog.v1.CatalogService/ListServices"
-	CatalogService_CreateService_FullMethodName    = "/wuzz.catalog.v1.CatalogService/CreateService"
-	CatalogService_UpdateService_FullMethodName    = "/wuzz.catalog.v1.CatalogService/UpdateService"
+	CatalogService_ListOutlets_FullMethodName           = "/wuzz.catalog.v1.CatalogService/ListOutlets"
+	CatalogService_GetOutlet_FullMethodName             = "/wuzz.catalog.v1.CatalogService/GetOutlet"
+	CatalogService_ListServiceCategories_FullMethodName = "/wuzz.catalog.v1.CatalogService/ListServiceCategories"
+	CatalogService_ListTaxRates_FullMethodName          = "/wuzz.catalog.v1.CatalogService/ListTaxRates"
+	CatalogService_CreateOutlet_FullMethodName          = "/wuzz.catalog.v1.CatalogService/CreateOutlet"
+	CatalogService_UpdateOutlet_FullMethodName          = "/wuzz.catalog.v1.CatalogService/UpdateOutlet"
+	CatalogService_DeleteOutlet_FullMethodName          = "/wuzz.catalog.v1.CatalogService/DeleteOutlet"
+	CatalogService_NearbyOutlets_FullMethodName         = "/wuzz.catalog.v1.CatalogService/NearbyOutlets"
+	CatalogService_ResolveCoverage_FullMethodName       = "/wuzz.catalog.v1.CatalogService/ResolveCoverage"
+	CatalogService_BrowseServices_FullMethodName        = "/wuzz.catalog.v1.CatalogService/BrowseServices"
+	CatalogService_GetServiceDetail_FullMethodName      = "/wuzz.catalog.v1.CatalogService/GetServiceDetail"
+	CatalogService_ListServices_FullMethodName          = "/wuzz.catalog.v1.CatalogService/ListServices"
+	CatalogService_CreateService_FullMethodName         = "/wuzz.catalog.v1.CatalogService/CreateService"
+	CatalogService_UpdateService_FullMethodName         = "/wuzz.catalog.v1.CatalogService/UpdateService"
+	CatalogService_DeleteService_FullMethodName         = "/wuzz.catalog.v1.CatalogService/DeleteService"
+	CatalogService_ListVariantGroups_FullMethodName     = "/wuzz.catalog.v1.CatalogService/ListVariantGroups"
+	CatalogService_GetVariantGroup_FullMethodName       = "/wuzz.catalog.v1.CatalogService/GetVariantGroup"
+	CatalogService_CreateVariantGroup_FullMethodName    = "/wuzz.catalog.v1.CatalogService/CreateVariantGroup"
+	CatalogService_UpdateVariantGroup_FullMethodName    = "/wuzz.catalog.v1.CatalogService/UpdateVariantGroup"
+	CatalogService_DeleteVariantGroup_FullMethodName    = "/wuzz.catalog.v1.CatalogService/DeleteVariantGroup"
+	CatalogService_ListModifierGroups_FullMethodName    = "/wuzz.catalog.v1.CatalogService/ListModifierGroups"
+	CatalogService_GetModifierGroup_FullMethodName      = "/wuzz.catalog.v1.CatalogService/GetModifierGroup"
+	CatalogService_CreateModifierGroup_FullMethodName   = "/wuzz.catalog.v1.CatalogService/CreateModifierGroup"
+	CatalogService_UpdateModifierGroup_FullMethodName   = "/wuzz.catalog.v1.CatalogService/UpdateModifierGroup"
+	CatalogService_DeleteModifierGroup_FullMethodName   = "/wuzz.catalog.v1.CatalogService/DeleteModifierGroup"
+	CatalogService_ListMaterials_FullMethodName         = "/wuzz.catalog.v1.CatalogService/ListMaterials"
+	CatalogService_GetMaterial_FullMethodName           = "/wuzz.catalog.v1.CatalogService/GetMaterial"
+	CatalogService_CreateMaterial_FullMethodName        = "/wuzz.catalog.v1.CatalogService/CreateMaterial"
+	CatalogService_UpdateMaterial_FullMethodName        = "/wuzz.catalog.v1.CatalogService/UpdateMaterial"
+	CatalogService_DeleteMaterial_FullMethodName        = "/wuzz.catalog.v1.CatalogService/DeleteMaterial"
+	CatalogService_GetBom_FullMethodName                = "/wuzz.catalog.v1.CatalogService/GetBom"
+	CatalogService_SetBom_FullMethodName                = "/wuzz.catalog.v1.CatalogService/SetBom"
+	CatalogService_GetServiceCosting_FullMethodName     = "/wuzz.catalog.v1.CatalogService/GetServiceCosting"
+	CatalogService_CalcCosting_FullMethodName           = "/wuzz.catalog.v1.CatalogService/CalcCosting"
+	CatalogService_ListBanners_FullMethodName           = "/wuzz.catalog.v1.CatalogService/ListBanners"
+	CatalogService_GetBanner_FullMethodName             = "/wuzz.catalog.v1.CatalogService/GetBanner"
+	CatalogService_CreateBanner_FullMethodName          = "/wuzz.catalog.v1.CatalogService/CreateBanner"
+	CatalogService_UpdateBanner_FullMethodName          = "/wuzz.catalog.v1.CatalogService/UpdateBanner"
+	CatalogService_SetBannerStatus_FullMethodName       = "/wuzz.catalog.v1.CatalogService/SetBannerStatus"
+	CatalogService_DeleteBanner_FullMethodName          = "/wuzz.catalog.v1.CatalogService/DeleteBanner"
+	CatalogService_ReorderBanners_FullMethodName        = "/wuzz.catalog.v1.CatalogService/ReorderBanners"
+	CatalogService_ListBannerScreens_FullMethodName     = "/wuzz.catalog.v1.CatalogService/ListBannerScreens"
+	CatalogService_ListLiveBanners_FullMethodName       = "/wuzz.catalog.v1.CatalogService/ListLiveBanners"
+	CatalogService_ListVouchers_FullMethodName          = "/wuzz.catalog.v1.CatalogService/ListVouchers"
+	CatalogService_GetVoucher_FullMethodName            = "/wuzz.catalog.v1.CatalogService/GetVoucher"
+	CatalogService_CreateVoucher_FullMethodName         = "/wuzz.catalog.v1.CatalogService/CreateVoucher"
+	CatalogService_UpdateVoucher_FullMethodName         = "/wuzz.catalog.v1.CatalogService/UpdateVoucher"
+	CatalogService_SetVoucherStatus_FullMethodName      = "/wuzz.catalog.v1.CatalogService/SetVoucherStatus"
+	CatalogService_DeleteVoucher_FullMethodName         = "/wuzz.catalog.v1.CatalogService/DeleteVoucher"
+	CatalogService_ListVoucherColors_FullMethodName     = "/wuzz.catalog.v1.CatalogService/ListVoucherColors"
+	CatalogService_ListVoucherGrants_FullMethodName     = "/wuzz.catalog.v1.CatalogService/ListVoucherGrants"
+	CatalogService_InjectVoucher_FullMethodName         = "/wuzz.catalog.v1.CatalogService/InjectVoucher"
+	CatalogService_ListVoucherInjections_FullMethodName = "/wuzz.catalog.v1.CatalogService/ListVoucherInjections"
+	CatalogService_ListMyVouchers_FullMethodName        = "/wuzz.catalog.v1.CatalogService/ListMyVouchers"
+	CatalogService_ClaimVoucher_FullMethodName          = "/wuzz.catalog.v1.CatalogService/ClaimVoucher"
+	CatalogService_ListStock_FullMethodName             = "/wuzz.catalog.v1.CatalogService/ListStock"
+	CatalogService_ListMovements_FullMethodName         = "/wuzz.catalog.v1.CatalogService/ListMovements"
+	CatalogService_ReceiveStock_FullMethodName          = "/wuzz.catalog.v1.CatalogService/ReceiveStock"
+	CatalogService_WasteStock_FullMethodName            = "/wuzz.catalog.v1.CatalogService/WasteStock"
+	CatalogService_AdjustStock_FullMethodName           = "/wuzz.catalog.v1.CatalogService/AdjustStock"
+	CatalogService_TransferStock_FullMethodName         = "/wuzz.catalog.v1.CatalogService/TransferStock"
+	CatalogService_SetMinStock_FullMethodName           = "/wuzz.catalog.v1.CatalogService/SetMinStock"
+	CatalogService_ApplyOrderStock_FullMethodName       = "/wuzz.catalog.v1.CatalogService/ApplyOrderStock"
 )
 
 // CatalogServiceClient is the client API for CatalogService service.
@@ -42,8 +94,12 @@ const (
 type CatalogServiceClient interface {
 	ListOutlets(ctx context.Context, in *ListOutletsRequest, opts ...grpc.CallOption) (*ListOutletsResponse, error)
 	GetOutlet(ctx context.Context, in *GetOutletRequest, opts ...grpc.CallOption) (*GetOutletResponse, error)
+	ListServiceCategories(ctx context.Context, in *ListServiceCategoriesRequest, opts ...grpc.CallOption) (*ListServiceCategoriesResponse, error)
+	ListTaxRates(ctx context.Context, in *ListTaxRatesRequest, opts ...grpc.CallOption) (*ListTaxRatesResponse, error)
 	CreateOutlet(ctx context.Context, in *CreateOutletRequest, opts ...grpc.CallOption) (*CreateOutletResponse, error)
 	UpdateOutlet(ctx context.Context, in *UpdateOutletRequest, opts ...grpc.CallOption) (*UpdateOutletResponse, error)
+	// Refused (FailedPrecondition/conflict) while the outlet has stock records; the gateway also checks staff and orders first.
+	DeleteOutlet(ctx context.Context, in *DeleteOutletRequest, opts ...grpc.CallOption) (*DeleteOutletResponse, error)
 	// Customer-app discovery, served from MongoDB (geo index + search). Public.
 	NearbyOutlets(ctx context.Context, in *NearbyOutletsRequest, opts ...grpc.CallOption) (*NearbyOutletsResponse, error)
 	// Which service area (e.g. "Jakarta Barat") a position falls in.
@@ -53,6 +109,68 @@ type CatalogServiceClient interface {
 	ListServices(ctx context.Context, in *ListServicesRequest, opts ...grpc.CallOption) (*ListServicesResponse, error)
 	CreateService(ctx context.Context, in *CreateServiceRequest, opts ...grpc.CallOption) (*CreateServiceResponse, error)
 	UpdateService(ctx context.Context, in *UpdateServiceRequest, opts ...grpc.CallOption) (*UpdateServiceResponse, error)
+	// Takes the service's group links and its own recipe with it; orders keep their own copy of what they sold.
+	DeleteService(ctx context.Context, in *DeleteServiceRequest, opts ...grpc.CallOption) (*DeleteServiceResponse, error)
+	// Reusable variant and modifier groups (admin writes).
+	ListVariantGroups(ctx context.Context, in *ListVariantGroupsRequest, opts ...grpc.CallOption) (*ListVariantGroupsResponse, error)
+	GetVariantGroup(ctx context.Context, in *GetVariantGroupRequest, opts ...grpc.CallOption) (*VariantGroupResponse, error)
+	CreateVariantGroup(ctx context.Context, in *SaveVariantGroupRequest, opts ...grpc.CallOption) (*VariantGroupResponse, error)
+	UpdateVariantGroup(ctx context.Context, in *SaveVariantGroupRequest, opts ...grpc.CallOption) (*VariantGroupResponse, error)
+	DeleteVariantGroup(ctx context.Context, in *DeleteGroupRequest, opts ...grpc.CallOption) (*DeleteGroupResponse, error)
+	ListModifierGroups(ctx context.Context, in *ListModifierGroupsRequest, opts ...grpc.CallOption) (*ListModifierGroupsResponse, error)
+	GetModifierGroup(ctx context.Context, in *GetModifierGroupRequest, opts ...grpc.CallOption) (*ModifierGroupResponse, error)
+	CreateModifierGroup(ctx context.Context, in *SaveModifierGroupRequest, opts ...grpc.CallOption) (*ModifierGroupResponse, error)
+	UpdateModifierGroup(ctx context.Context, in *SaveModifierGroupRequest, opts ...grpc.CallOption) (*ModifierGroupResponse, error)
+	DeleteModifierGroup(ctx context.Context, in *DeleteGroupRequest, opts ...grpc.CallOption) (*DeleteGroupResponse, error)
+	// Materials, recipes (BOM) and costing (admin). Quantities and costs travel as exact decimal strings.
+	ListMaterials(ctx context.Context, in *ListMaterialsRequest, opts ...grpc.CallOption) (*ListMaterialsResponse, error)
+	GetMaterial(ctx context.Context, in *GetMaterialRequest, opts ...grpc.CallOption) (*MaterialResponse, error)
+	CreateMaterial(ctx context.Context, in *SaveMaterialRequest, opts ...grpc.CallOption) (*MaterialResponse, error)
+	UpdateMaterial(ctx context.Context, in *SaveMaterialRequest, opts ...grpc.CallOption) (*MaterialResponse, error)
+	DeleteMaterial(ctx context.Context, in *GetMaterialRequest, opts ...grpc.CallOption) (*DeleteGroupResponse, error)
+	GetBom(ctx context.Context, in *BomRef, opts ...grpc.CallOption) (*Bom, error)
+	SetBom(ctx context.Context, in *SetBomRequest, opts ...grpc.CallOption) (*Bom, error)
+	GetServiceCosting(ctx context.Context, in *GetServiceCostingRequest, opts ...grpc.CallOption) (*ServiceCosting, error)
+	CalcCosting(ctx context.Context, in *CalcCostingRequest, opts ...grpc.CallOption) (*CalcCostingResponse, error)
+	// Banners of the customer app (admin writes). ListLiveBanners is public: the banners on a phone right now.
+	ListBanners(ctx context.Context, in *ListBannersRequest, opts ...grpc.CallOption) (*ListBannersResponse, error)
+	GetBanner(ctx context.Context, in *GetBannerRequest, opts ...grpc.CallOption) (*BannerResponse, error)
+	CreateBanner(ctx context.Context, in *SaveBannerRequest, opts ...grpc.CallOption) (*BannerResponse, error)
+	UpdateBanner(ctx context.Context, in *SaveBannerRequest, opts ...grpc.CallOption) (*BannerResponse, error)
+	SetBannerStatus(ctx context.Context, in *SetBannerStatusRequest, opts ...grpc.CallOption) (*BannerResponse, error)
+	DeleteBanner(ctx context.Context, in *GetBannerRequest, opts ...grpc.CallOption) (*DeleteGroupResponse, error)
+	// Writes the carousel's order: ids must list every banner exactly once.
+	ReorderBanners(ctx context.Context, in *ReorderBannersRequest, opts ...grpc.CallOption) (*ListBannersResponse, error)
+	// The screens of the app a banner may open (wuzz://screen/<key>).
+	ListBannerScreens(ctx context.Context, in *ListBannerScreensRequest, opts ...grpc.CallOption) (*ListBannerScreensResponse, error)
+	ListLiveBanners(ctx context.Context, in *ListLiveBannersRequest, opts ...grpc.CallOption) (*ListLiveBannersResponse, error)
+	// Vouchers (admin writes). ListMyVouchers and ClaimVoucher are the signed-in customer's own wallet.
+	ListVouchers(ctx context.Context, in *ListVouchersRequest, opts ...grpc.CallOption) (*ListVouchersResponse, error)
+	GetVoucher(ctx context.Context, in *GetVoucherRequest, opts ...grpc.CallOption) (*VoucherResponse, error)
+	CreateVoucher(ctx context.Context, in *SaveVoucherRequest, opts ...grpc.CallOption) (*VoucherResponse, error)
+	UpdateVoucher(ctx context.Context, in *SaveVoucherRequest, opts ...grpc.CallOption) (*VoucherResponse, error)
+	SetVoucherStatus(ctx context.Context, in *SetVoucherStatusRequest, opts ...grpc.CallOption) (*VoucherResponse, error)
+	DeleteVoucher(ctx context.Context, in *GetVoucherRequest, opts ...grpc.CallOption) (*DeleteGroupResponse, error)
+	// The colours a coupon may have.
+	ListVoucherColors(ctx context.Context, in *ListVoucherColorsRequest, opts ...grpc.CallOption) (*ListVoucherColorsResponse, error)
+	// Who holds a voucher.
+	ListVoucherGrants(ctx context.Context, in *ListVoucherGrantsRequest, opts ...grpc.CallOption) (*ListVoucherGrantsResponse, error)
+	// Puts a voucher in the wallets of customers the user service has already resolved, and audits it.
+	InjectVoucher(ctx context.Context, in *InjectVoucherRequest, opts ...grpc.CallOption) (*InjectVoucherResponse, error)
+	ListVoucherInjections(ctx context.Context, in *ListVoucherInjectionsRequest, opts ...grpc.CallOption) (*ListVoucherInjectionsResponse, error)
+	ListMyVouchers(ctx context.Context, in *ListMyVouchersRequest, opts ...grpc.CallOption) (*ListMyVouchersResponse, error)
+	ClaimVoucher(ctx context.Context, in *ClaimVoucherRequest, opts ...grpc.CallOption) (*MyVoucherResponse, error)
+	// The stock ledger. Admins use every outlet; outlet staff list and book receipts and waste at their own outlet only.
+	ListStock(ctx context.Context, in *ListStockRequest, opts ...grpc.CallOption) (*ListStockResponse, error)
+	ListMovements(ctx context.Context, in *ListMovementsRequest, opts ...grpc.CallOption) (*ListMovementsResponse, error)
+	ReceiveStock(ctx context.Context, in *ReceiveStockRequest, opts ...grpc.CallOption) (*StockMovementResponse, error)
+	WasteStock(ctx context.Context, in *WasteStockRequest, opts ...grpc.CallOption) (*StockMovementResponse, error)
+	AdjustStock(ctx context.Context, in *AdjustStockRequest, opts ...grpc.CallOption) (*StockMovementResponse, error)
+	TransferStock(ctx context.Context, in *TransferStockRequest, opts ...grpc.CallOption) (*TransferStockResponse, error)
+	SetMinStock(ctx context.Context, in *SetMinStockRequest, opts ...grpc.CallOption) (*StockRowResponse, error)
+	// Called by the order service (not by people) to take an order's materials out of stock, or put them back; authenticated by
+	// the internal key. Idempotent per order.
+	ApplyOrderStock(ctx context.Context, in *ApplyOrderStockRequest, opts ...grpc.CallOption) (*ApplyOrderStockResponse, error)
 }
 
 type catalogServiceClient struct {
@@ -83,6 +201,26 @@ func (c *catalogServiceClient) GetOutlet(ctx context.Context, in *GetOutletReque
 	return out, nil
 }
 
+func (c *catalogServiceClient) ListServiceCategories(ctx context.Context, in *ListServiceCategoriesRequest, opts ...grpc.CallOption) (*ListServiceCategoriesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListServiceCategoriesResponse)
+	err := c.cc.Invoke(ctx, CatalogService_ListServiceCategories_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) ListTaxRates(ctx context.Context, in *ListTaxRatesRequest, opts ...grpc.CallOption) (*ListTaxRatesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListTaxRatesResponse)
+	err := c.cc.Invoke(ctx, CatalogService_ListTaxRates_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *catalogServiceClient) CreateOutlet(ctx context.Context, in *CreateOutletRequest, opts ...grpc.CallOption) (*CreateOutletResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateOutletResponse)
@@ -97,6 +235,16 @@ func (c *catalogServiceClient) UpdateOutlet(ctx context.Context, in *UpdateOutle
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(UpdateOutletResponse)
 	err := c.cc.Invoke(ctx, CatalogService_UpdateOutlet_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) DeleteOutlet(ctx context.Context, in *DeleteOutletRequest, opts ...grpc.CallOption) (*DeleteOutletResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteOutletResponse)
+	err := c.cc.Invoke(ctx, CatalogService_DeleteOutlet_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -173,6 +321,496 @@ func (c *catalogServiceClient) UpdateService(ctx context.Context, in *UpdateServ
 	return out, nil
 }
 
+func (c *catalogServiceClient) DeleteService(ctx context.Context, in *DeleteServiceRequest, opts ...grpc.CallOption) (*DeleteServiceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteServiceResponse)
+	err := c.cc.Invoke(ctx, CatalogService_DeleteService_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) ListVariantGroups(ctx context.Context, in *ListVariantGroupsRequest, opts ...grpc.CallOption) (*ListVariantGroupsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListVariantGroupsResponse)
+	err := c.cc.Invoke(ctx, CatalogService_ListVariantGroups_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) GetVariantGroup(ctx context.Context, in *GetVariantGroupRequest, opts ...grpc.CallOption) (*VariantGroupResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(VariantGroupResponse)
+	err := c.cc.Invoke(ctx, CatalogService_GetVariantGroup_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) CreateVariantGroup(ctx context.Context, in *SaveVariantGroupRequest, opts ...grpc.CallOption) (*VariantGroupResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(VariantGroupResponse)
+	err := c.cc.Invoke(ctx, CatalogService_CreateVariantGroup_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) UpdateVariantGroup(ctx context.Context, in *SaveVariantGroupRequest, opts ...grpc.CallOption) (*VariantGroupResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(VariantGroupResponse)
+	err := c.cc.Invoke(ctx, CatalogService_UpdateVariantGroup_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) DeleteVariantGroup(ctx context.Context, in *DeleteGroupRequest, opts ...grpc.CallOption) (*DeleteGroupResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteGroupResponse)
+	err := c.cc.Invoke(ctx, CatalogService_DeleteVariantGroup_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) ListModifierGroups(ctx context.Context, in *ListModifierGroupsRequest, opts ...grpc.CallOption) (*ListModifierGroupsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListModifierGroupsResponse)
+	err := c.cc.Invoke(ctx, CatalogService_ListModifierGroups_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) GetModifierGroup(ctx context.Context, in *GetModifierGroupRequest, opts ...grpc.CallOption) (*ModifierGroupResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ModifierGroupResponse)
+	err := c.cc.Invoke(ctx, CatalogService_GetModifierGroup_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) CreateModifierGroup(ctx context.Context, in *SaveModifierGroupRequest, opts ...grpc.CallOption) (*ModifierGroupResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ModifierGroupResponse)
+	err := c.cc.Invoke(ctx, CatalogService_CreateModifierGroup_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) UpdateModifierGroup(ctx context.Context, in *SaveModifierGroupRequest, opts ...grpc.CallOption) (*ModifierGroupResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ModifierGroupResponse)
+	err := c.cc.Invoke(ctx, CatalogService_UpdateModifierGroup_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) DeleteModifierGroup(ctx context.Context, in *DeleteGroupRequest, opts ...grpc.CallOption) (*DeleteGroupResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteGroupResponse)
+	err := c.cc.Invoke(ctx, CatalogService_DeleteModifierGroup_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) ListMaterials(ctx context.Context, in *ListMaterialsRequest, opts ...grpc.CallOption) (*ListMaterialsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListMaterialsResponse)
+	err := c.cc.Invoke(ctx, CatalogService_ListMaterials_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) GetMaterial(ctx context.Context, in *GetMaterialRequest, opts ...grpc.CallOption) (*MaterialResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MaterialResponse)
+	err := c.cc.Invoke(ctx, CatalogService_GetMaterial_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) CreateMaterial(ctx context.Context, in *SaveMaterialRequest, opts ...grpc.CallOption) (*MaterialResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MaterialResponse)
+	err := c.cc.Invoke(ctx, CatalogService_CreateMaterial_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) UpdateMaterial(ctx context.Context, in *SaveMaterialRequest, opts ...grpc.CallOption) (*MaterialResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MaterialResponse)
+	err := c.cc.Invoke(ctx, CatalogService_UpdateMaterial_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) DeleteMaterial(ctx context.Context, in *GetMaterialRequest, opts ...grpc.CallOption) (*DeleteGroupResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteGroupResponse)
+	err := c.cc.Invoke(ctx, CatalogService_DeleteMaterial_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) GetBom(ctx context.Context, in *BomRef, opts ...grpc.CallOption) (*Bom, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Bom)
+	err := c.cc.Invoke(ctx, CatalogService_GetBom_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) SetBom(ctx context.Context, in *SetBomRequest, opts ...grpc.CallOption) (*Bom, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Bom)
+	err := c.cc.Invoke(ctx, CatalogService_SetBom_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) GetServiceCosting(ctx context.Context, in *GetServiceCostingRequest, opts ...grpc.CallOption) (*ServiceCosting, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ServiceCosting)
+	err := c.cc.Invoke(ctx, CatalogService_GetServiceCosting_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) CalcCosting(ctx context.Context, in *CalcCostingRequest, opts ...grpc.CallOption) (*CalcCostingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CalcCostingResponse)
+	err := c.cc.Invoke(ctx, CatalogService_CalcCosting_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) ListBanners(ctx context.Context, in *ListBannersRequest, opts ...grpc.CallOption) (*ListBannersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListBannersResponse)
+	err := c.cc.Invoke(ctx, CatalogService_ListBanners_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) GetBanner(ctx context.Context, in *GetBannerRequest, opts ...grpc.CallOption) (*BannerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BannerResponse)
+	err := c.cc.Invoke(ctx, CatalogService_GetBanner_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) CreateBanner(ctx context.Context, in *SaveBannerRequest, opts ...grpc.CallOption) (*BannerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BannerResponse)
+	err := c.cc.Invoke(ctx, CatalogService_CreateBanner_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) UpdateBanner(ctx context.Context, in *SaveBannerRequest, opts ...grpc.CallOption) (*BannerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BannerResponse)
+	err := c.cc.Invoke(ctx, CatalogService_UpdateBanner_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) SetBannerStatus(ctx context.Context, in *SetBannerStatusRequest, opts ...grpc.CallOption) (*BannerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BannerResponse)
+	err := c.cc.Invoke(ctx, CatalogService_SetBannerStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) DeleteBanner(ctx context.Context, in *GetBannerRequest, opts ...grpc.CallOption) (*DeleteGroupResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteGroupResponse)
+	err := c.cc.Invoke(ctx, CatalogService_DeleteBanner_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) ReorderBanners(ctx context.Context, in *ReorderBannersRequest, opts ...grpc.CallOption) (*ListBannersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListBannersResponse)
+	err := c.cc.Invoke(ctx, CatalogService_ReorderBanners_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) ListBannerScreens(ctx context.Context, in *ListBannerScreensRequest, opts ...grpc.CallOption) (*ListBannerScreensResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListBannerScreensResponse)
+	err := c.cc.Invoke(ctx, CatalogService_ListBannerScreens_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) ListLiveBanners(ctx context.Context, in *ListLiveBannersRequest, opts ...grpc.CallOption) (*ListLiveBannersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListLiveBannersResponse)
+	err := c.cc.Invoke(ctx, CatalogService_ListLiveBanners_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) ListVouchers(ctx context.Context, in *ListVouchersRequest, opts ...grpc.CallOption) (*ListVouchersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListVouchersResponse)
+	err := c.cc.Invoke(ctx, CatalogService_ListVouchers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) GetVoucher(ctx context.Context, in *GetVoucherRequest, opts ...grpc.CallOption) (*VoucherResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(VoucherResponse)
+	err := c.cc.Invoke(ctx, CatalogService_GetVoucher_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) CreateVoucher(ctx context.Context, in *SaveVoucherRequest, opts ...grpc.CallOption) (*VoucherResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(VoucherResponse)
+	err := c.cc.Invoke(ctx, CatalogService_CreateVoucher_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) UpdateVoucher(ctx context.Context, in *SaveVoucherRequest, opts ...grpc.CallOption) (*VoucherResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(VoucherResponse)
+	err := c.cc.Invoke(ctx, CatalogService_UpdateVoucher_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) SetVoucherStatus(ctx context.Context, in *SetVoucherStatusRequest, opts ...grpc.CallOption) (*VoucherResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(VoucherResponse)
+	err := c.cc.Invoke(ctx, CatalogService_SetVoucherStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) DeleteVoucher(ctx context.Context, in *GetVoucherRequest, opts ...grpc.CallOption) (*DeleteGroupResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteGroupResponse)
+	err := c.cc.Invoke(ctx, CatalogService_DeleteVoucher_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) ListVoucherColors(ctx context.Context, in *ListVoucherColorsRequest, opts ...grpc.CallOption) (*ListVoucherColorsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListVoucherColorsResponse)
+	err := c.cc.Invoke(ctx, CatalogService_ListVoucherColors_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) ListVoucherGrants(ctx context.Context, in *ListVoucherGrantsRequest, opts ...grpc.CallOption) (*ListVoucherGrantsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListVoucherGrantsResponse)
+	err := c.cc.Invoke(ctx, CatalogService_ListVoucherGrants_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) InjectVoucher(ctx context.Context, in *InjectVoucherRequest, opts ...grpc.CallOption) (*InjectVoucherResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(InjectVoucherResponse)
+	err := c.cc.Invoke(ctx, CatalogService_InjectVoucher_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) ListVoucherInjections(ctx context.Context, in *ListVoucherInjectionsRequest, opts ...grpc.CallOption) (*ListVoucherInjectionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListVoucherInjectionsResponse)
+	err := c.cc.Invoke(ctx, CatalogService_ListVoucherInjections_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) ListMyVouchers(ctx context.Context, in *ListMyVouchersRequest, opts ...grpc.CallOption) (*ListMyVouchersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListMyVouchersResponse)
+	err := c.cc.Invoke(ctx, CatalogService_ListMyVouchers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) ClaimVoucher(ctx context.Context, in *ClaimVoucherRequest, opts ...grpc.CallOption) (*MyVoucherResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MyVoucherResponse)
+	err := c.cc.Invoke(ctx, CatalogService_ClaimVoucher_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) ListStock(ctx context.Context, in *ListStockRequest, opts ...grpc.CallOption) (*ListStockResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListStockResponse)
+	err := c.cc.Invoke(ctx, CatalogService_ListStock_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) ListMovements(ctx context.Context, in *ListMovementsRequest, opts ...grpc.CallOption) (*ListMovementsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListMovementsResponse)
+	err := c.cc.Invoke(ctx, CatalogService_ListMovements_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) ReceiveStock(ctx context.Context, in *ReceiveStockRequest, opts ...grpc.CallOption) (*StockMovementResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StockMovementResponse)
+	err := c.cc.Invoke(ctx, CatalogService_ReceiveStock_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) WasteStock(ctx context.Context, in *WasteStockRequest, opts ...grpc.CallOption) (*StockMovementResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StockMovementResponse)
+	err := c.cc.Invoke(ctx, CatalogService_WasteStock_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) AdjustStock(ctx context.Context, in *AdjustStockRequest, opts ...grpc.CallOption) (*StockMovementResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StockMovementResponse)
+	err := c.cc.Invoke(ctx, CatalogService_AdjustStock_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) TransferStock(ctx context.Context, in *TransferStockRequest, opts ...grpc.CallOption) (*TransferStockResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(TransferStockResponse)
+	err := c.cc.Invoke(ctx, CatalogService_TransferStock_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) SetMinStock(ctx context.Context, in *SetMinStockRequest, opts ...grpc.CallOption) (*StockRowResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StockRowResponse)
+	err := c.cc.Invoke(ctx, CatalogService_SetMinStock_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) ApplyOrderStock(ctx context.Context, in *ApplyOrderStockRequest, opts ...grpc.CallOption) (*ApplyOrderStockResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ApplyOrderStockResponse)
+	err := c.cc.Invoke(ctx, CatalogService_ApplyOrderStock_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CatalogServiceServer is the server API for CatalogService service.
 // All implementations must embed UnimplementedCatalogServiceServer
 // for forward compatibility.
@@ -183,8 +821,12 @@ func (c *catalogServiceClient) UpdateService(ctx context.Context, in *UpdateServ
 type CatalogServiceServer interface {
 	ListOutlets(context.Context, *ListOutletsRequest) (*ListOutletsResponse, error)
 	GetOutlet(context.Context, *GetOutletRequest) (*GetOutletResponse, error)
+	ListServiceCategories(context.Context, *ListServiceCategoriesRequest) (*ListServiceCategoriesResponse, error)
+	ListTaxRates(context.Context, *ListTaxRatesRequest) (*ListTaxRatesResponse, error)
 	CreateOutlet(context.Context, *CreateOutletRequest) (*CreateOutletResponse, error)
 	UpdateOutlet(context.Context, *UpdateOutletRequest) (*UpdateOutletResponse, error)
+	// Refused (FailedPrecondition/conflict) while the outlet has stock records; the gateway also checks staff and orders first.
+	DeleteOutlet(context.Context, *DeleteOutletRequest) (*DeleteOutletResponse, error)
 	// Customer-app discovery, served from MongoDB (geo index + search). Public.
 	NearbyOutlets(context.Context, *NearbyOutletsRequest) (*NearbyOutletsResponse, error)
 	// Which service area (e.g. "Jakarta Barat") a position falls in.
@@ -194,6 +836,68 @@ type CatalogServiceServer interface {
 	ListServices(context.Context, *ListServicesRequest) (*ListServicesResponse, error)
 	CreateService(context.Context, *CreateServiceRequest) (*CreateServiceResponse, error)
 	UpdateService(context.Context, *UpdateServiceRequest) (*UpdateServiceResponse, error)
+	// Takes the service's group links and its own recipe with it; orders keep their own copy of what they sold.
+	DeleteService(context.Context, *DeleteServiceRequest) (*DeleteServiceResponse, error)
+	// Reusable variant and modifier groups (admin writes).
+	ListVariantGroups(context.Context, *ListVariantGroupsRequest) (*ListVariantGroupsResponse, error)
+	GetVariantGroup(context.Context, *GetVariantGroupRequest) (*VariantGroupResponse, error)
+	CreateVariantGroup(context.Context, *SaveVariantGroupRequest) (*VariantGroupResponse, error)
+	UpdateVariantGroup(context.Context, *SaveVariantGroupRequest) (*VariantGroupResponse, error)
+	DeleteVariantGroup(context.Context, *DeleteGroupRequest) (*DeleteGroupResponse, error)
+	ListModifierGroups(context.Context, *ListModifierGroupsRequest) (*ListModifierGroupsResponse, error)
+	GetModifierGroup(context.Context, *GetModifierGroupRequest) (*ModifierGroupResponse, error)
+	CreateModifierGroup(context.Context, *SaveModifierGroupRequest) (*ModifierGroupResponse, error)
+	UpdateModifierGroup(context.Context, *SaveModifierGroupRequest) (*ModifierGroupResponse, error)
+	DeleteModifierGroup(context.Context, *DeleteGroupRequest) (*DeleteGroupResponse, error)
+	// Materials, recipes (BOM) and costing (admin). Quantities and costs travel as exact decimal strings.
+	ListMaterials(context.Context, *ListMaterialsRequest) (*ListMaterialsResponse, error)
+	GetMaterial(context.Context, *GetMaterialRequest) (*MaterialResponse, error)
+	CreateMaterial(context.Context, *SaveMaterialRequest) (*MaterialResponse, error)
+	UpdateMaterial(context.Context, *SaveMaterialRequest) (*MaterialResponse, error)
+	DeleteMaterial(context.Context, *GetMaterialRequest) (*DeleteGroupResponse, error)
+	GetBom(context.Context, *BomRef) (*Bom, error)
+	SetBom(context.Context, *SetBomRequest) (*Bom, error)
+	GetServiceCosting(context.Context, *GetServiceCostingRequest) (*ServiceCosting, error)
+	CalcCosting(context.Context, *CalcCostingRequest) (*CalcCostingResponse, error)
+	// Banners of the customer app (admin writes). ListLiveBanners is public: the banners on a phone right now.
+	ListBanners(context.Context, *ListBannersRequest) (*ListBannersResponse, error)
+	GetBanner(context.Context, *GetBannerRequest) (*BannerResponse, error)
+	CreateBanner(context.Context, *SaveBannerRequest) (*BannerResponse, error)
+	UpdateBanner(context.Context, *SaveBannerRequest) (*BannerResponse, error)
+	SetBannerStatus(context.Context, *SetBannerStatusRequest) (*BannerResponse, error)
+	DeleteBanner(context.Context, *GetBannerRequest) (*DeleteGroupResponse, error)
+	// Writes the carousel's order: ids must list every banner exactly once.
+	ReorderBanners(context.Context, *ReorderBannersRequest) (*ListBannersResponse, error)
+	// The screens of the app a banner may open (wuzz://screen/<key>).
+	ListBannerScreens(context.Context, *ListBannerScreensRequest) (*ListBannerScreensResponse, error)
+	ListLiveBanners(context.Context, *ListLiveBannersRequest) (*ListLiveBannersResponse, error)
+	// Vouchers (admin writes). ListMyVouchers and ClaimVoucher are the signed-in customer's own wallet.
+	ListVouchers(context.Context, *ListVouchersRequest) (*ListVouchersResponse, error)
+	GetVoucher(context.Context, *GetVoucherRequest) (*VoucherResponse, error)
+	CreateVoucher(context.Context, *SaveVoucherRequest) (*VoucherResponse, error)
+	UpdateVoucher(context.Context, *SaveVoucherRequest) (*VoucherResponse, error)
+	SetVoucherStatus(context.Context, *SetVoucherStatusRequest) (*VoucherResponse, error)
+	DeleteVoucher(context.Context, *GetVoucherRequest) (*DeleteGroupResponse, error)
+	// The colours a coupon may have.
+	ListVoucherColors(context.Context, *ListVoucherColorsRequest) (*ListVoucherColorsResponse, error)
+	// Who holds a voucher.
+	ListVoucherGrants(context.Context, *ListVoucherGrantsRequest) (*ListVoucherGrantsResponse, error)
+	// Puts a voucher in the wallets of customers the user service has already resolved, and audits it.
+	InjectVoucher(context.Context, *InjectVoucherRequest) (*InjectVoucherResponse, error)
+	ListVoucherInjections(context.Context, *ListVoucherInjectionsRequest) (*ListVoucherInjectionsResponse, error)
+	ListMyVouchers(context.Context, *ListMyVouchersRequest) (*ListMyVouchersResponse, error)
+	ClaimVoucher(context.Context, *ClaimVoucherRequest) (*MyVoucherResponse, error)
+	// The stock ledger. Admins use every outlet; outlet staff list and book receipts and waste at their own outlet only.
+	ListStock(context.Context, *ListStockRequest) (*ListStockResponse, error)
+	ListMovements(context.Context, *ListMovementsRequest) (*ListMovementsResponse, error)
+	ReceiveStock(context.Context, *ReceiveStockRequest) (*StockMovementResponse, error)
+	WasteStock(context.Context, *WasteStockRequest) (*StockMovementResponse, error)
+	AdjustStock(context.Context, *AdjustStockRequest) (*StockMovementResponse, error)
+	TransferStock(context.Context, *TransferStockRequest) (*TransferStockResponse, error)
+	SetMinStock(context.Context, *SetMinStockRequest) (*StockRowResponse, error)
+	// Called by the order service (not by people) to take an order's materials out of stock, or put them back; authenticated by
+	// the internal key. Idempotent per order.
+	ApplyOrderStock(context.Context, *ApplyOrderStockRequest) (*ApplyOrderStockResponse, error)
 	mustEmbedUnimplementedCatalogServiceServer()
 }
 
@@ -210,11 +914,20 @@ func (UnimplementedCatalogServiceServer) ListOutlets(context.Context, *ListOutle
 func (UnimplementedCatalogServiceServer) GetOutlet(context.Context, *GetOutletRequest) (*GetOutletResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetOutlet not implemented")
 }
+func (UnimplementedCatalogServiceServer) ListServiceCategories(context.Context, *ListServiceCategoriesRequest) (*ListServiceCategoriesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListServiceCategories not implemented")
+}
+func (UnimplementedCatalogServiceServer) ListTaxRates(context.Context, *ListTaxRatesRequest) (*ListTaxRatesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListTaxRates not implemented")
+}
 func (UnimplementedCatalogServiceServer) CreateOutlet(context.Context, *CreateOutletRequest) (*CreateOutletResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateOutlet not implemented")
 }
 func (UnimplementedCatalogServiceServer) UpdateOutlet(context.Context, *UpdateOutletRequest) (*UpdateOutletResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateOutlet not implemented")
+}
+func (UnimplementedCatalogServiceServer) DeleteOutlet(context.Context, *DeleteOutletRequest) (*DeleteOutletResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteOutlet not implemented")
 }
 func (UnimplementedCatalogServiceServer) NearbyOutlets(context.Context, *NearbyOutletsRequest) (*NearbyOutletsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method NearbyOutlets not implemented")
@@ -236,6 +949,153 @@ func (UnimplementedCatalogServiceServer) CreateService(context.Context, *CreateS
 }
 func (UnimplementedCatalogServiceServer) UpdateService(context.Context, *UpdateServiceRequest) (*UpdateServiceResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateService not implemented")
+}
+func (UnimplementedCatalogServiceServer) DeleteService(context.Context, *DeleteServiceRequest) (*DeleteServiceResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteService not implemented")
+}
+func (UnimplementedCatalogServiceServer) ListVariantGroups(context.Context, *ListVariantGroupsRequest) (*ListVariantGroupsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListVariantGroups not implemented")
+}
+func (UnimplementedCatalogServiceServer) GetVariantGroup(context.Context, *GetVariantGroupRequest) (*VariantGroupResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetVariantGroup not implemented")
+}
+func (UnimplementedCatalogServiceServer) CreateVariantGroup(context.Context, *SaveVariantGroupRequest) (*VariantGroupResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateVariantGroup not implemented")
+}
+func (UnimplementedCatalogServiceServer) UpdateVariantGroup(context.Context, *SaveVariantGroupRequest) (*VariantGroupResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateVariantGroup not implemented")
+}
+func (UnimplementedCatalogServiceServer) DeleteVariantGroup(context.Context, *DeleteGroupRequest) (*DeleteGroupResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteVariantGroup not implemented")
+}
+func (UnimplementedCatalogServiceServer) ListModifierGroups(context.Context, *ListModifierGroupsRequest) (*ListModifierGroupsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListModifierGroups not implemented")
+}
+func (UnimplementedCatalogServiceServer) GetModifierGroup(context.Context, *GetModifierGroupRequest) (*ModifierGroupResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetModifierGroup not implemented")
+}
+func (UnimplementedCatalogServiceServer) CreateModifierGroup(context.Context, *SaveModifierGroupRequest) (*ModifierGroupResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateModifierGroup not implemented")
+}
+func (UnimplementedCatalogServiceServer) UpdateModifierGroup(context.Context, *SaveModifierGroupRequest) (*ModifierGroupResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateModifierGroup not implemented")
+}
+func (UnimplementedCatalogServiceServer) DeleteModifierGroup(context.Context, *DeleteGroupRequest) (*DeleteGroupResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteModifierGroup not implemented")
+}
+func (UnimplementedCatalogServiceServer) ListMaterials(context.Context, *ListMaterialsRequest) (*ListMaterialsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListMaterials not implemented")
+}
+func (UnimplementedCatalogServiceServer) GetMaterial(context.Context, *GetMaterialRequest) (*MaterialResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetMaterial not implemented")
+}
+func (UnimplementedCatalogServiceServer) CreateMaterial(context.Context, *SaveMaterialRequest) (*MaterialResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateMaterial not implemented")
+}
+func (UnimplementedCatalogServiceServer) UpdateMaterial(context.Context, *SaveMaterialRequest) (*MaterialResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateMaterial not implemented")
+}
+func (UnimplementedCatalogServiceServer) DeleteMaterial(context.Context, *GetMaterialRequest) (*DeleteGroupResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteMaterial not implemented")
+}
+func (UnimplementedCatalogServiceServer) GetBom(context.Context, *BomRef) (*Bom, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetBom not implemented")
+}
+func (UnimplementedCatalogServiceServer) SetBom(context.Context, *SetBomRequest) (*Bom, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetBom not implemented")
+}
+func (UnimplementedCatalogServiceServer) GetServiceCosting(context.Context, *GetServiceCostingRequest) (*ServiceCosting, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetServiceCosting not implemented")
+}
+func (UnimplementedCatalogServiceServer) CalcCosting(context.Context, *CalcCostingRequest) (*CalcCostingResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CalcCosting not implemented")
+}
+func (UnimplementedCatalogServiceServer) ListBanners(context.Context, *ListBannersRequest) (*ListBannersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListBanners not implemented")
+}
+func (UnimplementedCatalogServiceServer) GetBanner(context.Context, *GetBannerRequest) (*BannerResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetBanner not implemented")
+}
+func (UnimplementedCatalogServiceServer) CreateBanner(context.Context, *SaveBannerRequest) (*BannerResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateBanner not implemented")
+}
+func (UnimplementedCatalogServiceServer) UpdateBanner(context.Context, *SaveBannerRequest) (*BannerResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateBanner not implemented")
+}
+func (UnimplementedCatalogServiceServer) SetBannerStatus(context.Context, *SetBannerStatusRequest) (*BannerResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetBannerStatus not implemented")
+}
+func (UnimplementedCatalogServiceServer) DeleteBanner(context.Context, *GetBannerRequest) (*DeleteGroupResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteBanner not implemented")
+}
+func (UnimplementedCatalogServiceServer) ReorderBanners(context.Context, *ReorderBannersRequest) (*ListBannersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReorderBanners not implemented")
+}
+func (UnimplementedCatalogServiceServer) ListBannerScreens(context.Context, *ListBannerScreensRequest) (*ListBannerScreensResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListBannerScreens not implemented")
+}
+func (UnimplementedCatalogServiceServer) ListLiveBanners(context.Context, *ListLiveBannersRequest) (*ListLiveBannersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListLiveBanners not implemented")
+}
+func (UnimplementedCatalogServiceServer) ListVouchers(context.Context, *ListVouchersRequest) (*ListVouchersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListVouchers not implemented")
+}
+func (UnimplementedCatalogServiceServer) GetVoucher(context.Context, *GetVoucherRequest) (*VoucherResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetVoucher not implemented")
+}
+func (UnimplementedCatalogServiceServer) CreateVoucher(context.Context, *SaveVoucherRequest) (*VoucherResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateVoucher not implemented")
+}
+func (UnimplementedCatalogServiceServer) UpdateVoucher(context.Context, *SaveVoucherRequest) (*VoucherResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateVoucher not implemented")
+}
+func (UnimplementedCatalogServiceServer) SetVoucherStatus(context.Context, *SetVoucherStatusRequest) (*VoucherResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetVoucherStatus not implemented")
+}
+func (UnimplementedCatalogServiceServer) DeleteVoucher(context.Context, *GetVoucherRequest) (*DeleteGroupResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteVoucher not implemented")
+}
+func (UnimplementedCatalogServiceServer) ListVoucherColors(context.Context, *ListVoucherColorsRequest) (*ListVoucherColorsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListVoucherColors not implemented")
+}
+func (UnimplementedCatalogServiceServer) ListVoucherGrants(context.Context, *ListVoucherGrantsRequest) (*ListVoucherGrantsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListVoucherGrants not implemented")
+}
+func (UnimplementedCatalogServiceServer) InjectVoucher(context.Context, *InjectVoucherRequest) (*InjectVoucherResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method InjectVoucher not implemented")
+}
+func (UnimplementedCatalogServiceServer) ListVoucherInjections(context.Context, *ListVoucherInjectionsRequest) (*ListVoucherInjectionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListVoucherInjections not implemented")
+}
+func (UnimplementedCatalogServiceServer) ListMyVouchers(context.Context, *ListMyVouchersRequest) (*ListMyVouchersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListMyVouchers not implemented")
+}
+func (UnimplementedCatalogServiceServer) ClaimVoucher(context.Context, *ClaimVoucherRequest) (*MyVoucherResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ClaimVoucher not implemented")
+}
+func (UnimplementedCatalogServiceServer) ListStock(context.Context, *ListStockRequest) (*ListStockResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListStock not implemented")
+}
+func (UnimplementedCatalogServiceServer) ListMovements(context.Context, *ListMovementsRequest) (*ListMovementsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListMovements not implemented")
+}
+func (UnimplementedCatalogServiceServer) ReceiveStock(context.Context, *ReceiveStockRequest) (*StockMovementResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReceiveStock not implemented")
+}
+func (UnimplementedCatalogServiceServer) WasteStock(context.Context, *WasteStockRequest) (*StockMovementResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method WasteStock not implemented")
+}
+func (UnimplementedCatalogServiceServer) AdjustStock(context.Context, *AdjustStockRequest) (*StockMovementResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AdjustStock not implemented")
+}
+func (UnimplementedCatalogServiceServer) TransferStock(context.Context, *TransferStockRequest) (*TransferStockResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method TransferStock not implemented")
+}
+func (UnimplementedCatalogServiceServer) SetMinStock(context.Context, *SetMinStockRequest) (*StockRowResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetMinStock not implemented")
+}
+func (UnimplementedCatalogServiceServer) ApplyOrderStock(context.Context, *ApplyOrderStockRequest) (*ApplyOrderStockResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ApplyOrderStock not implemented")
 }
 func (UnimplementedCatalogServiceServer) mustEmbedUnimplementedCatalogServiceServer() {}
 func (UnimplementedCatalogServiceServer) testEmbeddedByValue()                        {}
@@ -294,6 +1154,42 @@ func _CatalogService_GetOutlet_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CatalogService_ListServiceCategories_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListServiceCategoriesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).ListServiceCategories(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_ListServiceCategories_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).ListServiceCategories(ctx, req.(*ListServiceCategoriesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_ListTaxRates_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListTaxRatesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).ListTaxRates(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_ListTaxRates_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).ListTaxRates(ctx, req.(*ListTaxRatesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CatalogService_CreateOutlet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateOutletRequest)
 	if err := dec(in); err != nil {
@@ -326,6 +1222,24 @@ func _CatalogService_UpdateOutlet_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CatalogServiceServer).UpdateOutlet(ctx, req.(*UpdateOutletRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_DeleteOutlet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteOutletRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).DeleteOutlet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_DeleteOutlet_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).DeleteOutlet(ctx, req.(*DeleteOutletRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -456,6 +1370,888 @@ func _CatalogService_UpdateService_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CatalogService_DeleteService_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteServiceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).DeleteService(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_DeleteService_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).DeleteService(ctx, req.(*DeleteServiceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_ListVariantGroups_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListVariantGroupsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).ListVariantGroups(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_ListVariantGroups_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).ListVariantGroups(ctx, req.(*ListVariantGroupsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_GetVariantGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetVariantGroupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).GetVariantGroup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_GetVariantGroup_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).GetVariantGroup(ctx, req.(*GetVariantGroupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_CreateVariantGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SaveVariantGroupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).CreateVariantGroup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_CreateVariantGroup_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).CreateVariantGroup(ctx, req.(*SaveVariantGroupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_UpdateVariantGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SaveVariantGroupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).UpdateVariantGroup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_UpdateVariantGroup_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).UpdateVariantGroup(ctx, req.(*SaveVariantGroupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_DeleteVariantGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteGroupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).DeleteVariantGroup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_DeleteVariantGroup_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).DeleteVariantGroup(ctx, req.(*DeleteGroupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_ListModifierGroups_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListModifierGroupsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).ListModifierGroups(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_ListModifierGroups_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).ListModifierGroups(ctx, req.(*ListModifierGroupsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_GetModifierGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetModifierGroupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).GetModifierGroup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_GetModifierGroup_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).GetModifierGroup(ctx, req.(*GetModifierGroupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_CreateModifierGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SaveModifierGroupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).CreateModifierGroup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_CreateModifierGroup_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).CreateModifierGroup(ctx, req.(*SaveModifierGroupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_UpdateModifierGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SaveModifierGroupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).UpdateModifierGroup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_UpdateModifierGroup_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).UpdateModifierGroup(ctx, req.(*SaveModifierGroupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_DeleteModifierGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteGroupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).DeleteModifierGroup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_DeleteModifierGroup_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).DeleteModifierGroup(ctx, req.(*DeleteGroupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_ListMaterials_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListMaterialsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).ListMaterials(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_ListMaterials_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).ListMaterials(ctx, req.(*ListMaterialsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_GetMaterial_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetMaterialRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).GetMaterial(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_GetMaterial_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).GetMaterial(ctx, req.(*GetMaterialRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_CreateMaterial_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SaveMaterialRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).CreateMaterial(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_CreateMaterial_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).CreateMaterial(ctx, req.(*SaveMaterialRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_UpdateMaterial_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SaveMaterialRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).UpdateMaterial(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_UpdateMaterial_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).UpdateMaterial(ctx, req.(*SaveMaterialRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_DeleteMaterial_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetMaterialRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).DeleteMaterial(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_DeleteMaterial_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).DeleteMaterial(ctx, req.(*GetMaterialRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_GetBom_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BomRef)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).GetBom(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_GetBom_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).GetBom(ctx, req.(*BomRef))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_SetBom_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetBomRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).SetBom(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_SetBom_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).SetBom(ctx, req.(*SetBomRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_GetServiceCosting_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetServiceCostingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).GetServiceCosting(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_GetServiceCosting_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).GetServiceCosting(ctx, req.(*GetServiceCostingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_CalcCosting_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CalcCostingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).CalcCosting(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_CalcCosting_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).CalcCosting(ctx, req.(*CalcCostingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_ListBanners_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListBannersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).ListBanners(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_ListBanners_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).ListBanners(ctx, req.(*ListBannersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_GetBanner_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetBannerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).GetBanner(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_GetBanner_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).GetBanner(ctx, req.(*GetBannerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_CreateBanner_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SaveBannerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).CreateBanner(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_CreateBanner_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).CreateBanner(ctx, req.(*SaveBannerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_UpdateBanner_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SaveBannerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).UpdateBanner(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_UpdateBanner_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).UpdateBanner(ctx, req.(*SaveBannerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_SetBannerStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetBannerStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).SetBannerStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_SetBannerStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).SetBannerStatus(ctx, req.(*SetBannerStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_DeleteBanner_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetBannerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).DeleteBanner(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_DeleteBanner_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).DeleteBanner(ctx, req.(*GetBannerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_ReorderBanners_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReorderBannersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).ReorderBanners(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_ReorderBanners_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).ReorderBanners(ctx, req.(*ReorderBannersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_ListBannerScreens_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListBannerScreensRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).ListBannerScreens(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_ListBannerScreens_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).ListBannerScreens(ctx, req.(*ListBannerScreensRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_ListLiveBanners_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListLiveBannersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).ListLiveBanners(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_ListLiveBanners_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).ListLiveBanners(ctx, req.(*ListLiveBannersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_ListVouchers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListVouchersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).ListVouchers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_ListVouchers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).ListVouchers(ctx, req.(*ListVouchersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_GetVoucher_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetVoucherRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).GetVoucher(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_GetVoucher_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).GetVoucher(ctx, req.(*GetVoucherRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_CreateVoucher_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SaveVoucherRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).CreateVoucher(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_CreateVoucher_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).CreateVoucher(ctx, req.(*SaveVoucherRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_UpdateVoucher_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SaveVoucherRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).UpdateVoucher(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_UpdateVoucher_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).UpdateVoucher(ctx, req.(*SaveVoucherRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_SetVoucherStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetVoucherStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).SetVoucherStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_SetVoucherStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).SetVoucherStatus(ctx, req.(*SetVoucherStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_DeleteVoucher_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetVoucherRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).DeleteVoucher(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_DeleteVoucher_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).DeleteVoucher(ctx, req.(*GetVoucherRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_ListVoucherColors_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListVoucherColorsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).ListVoucherColors(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_ListVoucherColors_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).ListVoucherColors(ctx, req.(*ListVoucherColorsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_ListVoucherGrants_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListVoucherGrantsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).ListVoucherGrants(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_ListVoucherGrants_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).ListVoucherGrants(ctx, req.(*ListVoucherGrantsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_InjectVoucher_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InjectVoucherRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).InjectVoucher(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_InjectVoucher_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).InjectVoucher(ctx, req.(*InjectVoucherRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_ListVoucherInjections_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListVoucherInjectionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).ListVoucherInjections(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_ListVoucherInjections_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).ListVoucherInjections(ctx, req.(*ListVoucherInjectionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_ListMyVouchers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListMyVouchersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).ListMyVouchers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_ListMyVouchers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).ListMyVouchers(ctx, req.(*ListMyVouchersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_ClaimVoucher_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ClaimVoucherRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).ClaimVoucher(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_ClaimVoucher_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).ClaimVoucher(ctx, req.(*ClaimVoucherRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_ListStock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListStockRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).ListStock(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_ListStock_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).ListStock(ctx, req.(*ListStockRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_ListMovements_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListMovementsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).ListMovements(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_ListMovements_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).ListMovements(ctx, req.(*ListMovementsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_ReceiveStock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReceiveStockRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).ReceiveStock(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_ReceiveStock_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).ReceiveStock(ctx, req.(*ReceiveStockRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_WasteStock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(WasteStockRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).WasteStock(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_WasteStock_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).WasteStock(ctx, req.(*WasteStockRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_AdjustStock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AdjustStockRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).AdjustStock(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_AdjustStock_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).AdjustStock(ctx, req.(*AdjustStockRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_TransferStock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TransferStockRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).TransferStock(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_TransferStock_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).TransferStock(ctx, req.(*TransferStockRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_SetMinStock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetMinStockRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).SetMinStock(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_SetMinStock_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).SetMinStock(ctx, req.(*SetMinStockRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_ApplyOrderStock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ApplyOrderStockRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).ApplyOrderStock(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_ApplyOrderStock_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).ApplyOrderStock(ctx, req.(*ApplyOrderStockRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CatalogService_ServiceDesc is the grpc.ServiceDesc for CatalogService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -472,12 +2268,24 @@ var CatalogService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _CatalogService_GetOutlet_Handler,
 		},
 		{
+			MethodName: "ListServiceCategories",
+			Handler:    _CatalogService_ListServiceCategories_Handler,
+		},
+		{
+			MethodName: "ListTaxRates",
+			Handler:    _CatalogService_ListTaxRates_Handler,
+		},
+		{
 			MethodName: "CreateOutlet",
 			Handler:    _CatalogService_CreateOutlet_Handler,
 		},
 		{
 			MethodName: "UpdateOutlet",
 			Handler:    _CatalogService_UpdateOutlet_Handler,
+		},
+		{
+			MethodName: "DeleteOutlet",
+			Handler:    _CatalogService_DeleteOutlet_Handler,
 		},
 		{
 			MethodName: "NearbyOutlets",
@@ -506,6 +2314,202 @@ var CatalogService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateService",
 			Handler:    _CatalogService_UpdateService_Handler,
+		},
+		{
+			MethodName: "DeleteService",
+			Handler:    _CatalogService_DeleteService_Handler,
+		},
+		{
+			MethodName: "ListVariantGroups",
+			Handler:    _CatalogService_ListVariantGroups_Handler,
+		},
+		{
+			MethodName: "GetVariantGroup",
+			Handler:    _CatalogService_GetVariantGroup_Handler,
+		},
+		{
+			MethodName: "CreateVariantGroup",
+			Handler:    _CatalogService_CreateVariantGroup_Handler,
+		},
+		{
+			MethodName: "UpdateVariantGroup",
+			Handler:    _CatalogService_UpdateVariantGroup_Handler,
+		},
+		{
+			MethodName: "DeleteVariantGroup",
+			Handler:    _CatalogService_DeleteVariantGroup_Handler,
+		},
+		{
+			MethodName: "ListModifierGroups",
+			Handler:    _CatalogService_ListModifierGroups_Handler,
+		},
+		{
+			MethodName: "GetModifierGroup",
+			Handler:    _CatalogService_GetModifierGroup_Handler,
+		},
+		{
+			MethodName: "CreateModifierGroup",
+			Handler:    _CatalogService_CreateModifierGroup_Handler,
+		},
+		{
+			MethodName: "UpdateModifierGroup",
+			Handler:    _CatalogService_UpdateModifierGroup_Handler,
+		},
+		{
+			MethodName: "DeleteModifierGroup",
+			Handler:    _CatalogService_DeleteModifierGroup_Handler,
+		},
+		{
+			MethodName: "ListMaterials",
+			Handler:    _CatalogService_ListMaterials_Handler,
+		},
+		{
+			MethodName: "GetMaterial",
+			Handler:    _CatalogService_GetMaterial_Handler,
+		},
+		{
+			MethodName: "CreateMaterial",
+			Handler:    _CatalogService_CreateMaterial_Handler,
+		},
+		{
+			MethodName: "UpdateMaterial",
+			Handler:    _CatalogService_UpdateMaterial_Handler,
+		},
+		{
+			MethodName: "DeleteMaterial",
+			Handler:    _CatalogService_DeleteMaterial_Handler,
+		},
+		{
+			MethodName: "GetBom",
+			Handler:    _CatalogService_GetBom_Handler,
+		},
+		{
+			MethodName: "SetBom",
+			Handler:    _CatalogService_SetBom_Handler,
+		},
+		{
+			MethodName: "GetServiceCosting",
+			Handler:    _CatalogService_GetServiceCosting_Handler,
+		},
+		{
+			MethodName: "CalcCosting",
+			Handler:    _CatalogService_CalcCosting_Handler,
+		},
+		{
+			MethodName: "ListBanners",
+			Handler:    _CatalogService_ListBanners_Handler,
+		},
+		{
+			MethodName: "GetBanner",
+			Handler:    _CatalogService_GetBanner_Handler,
+		},
+		{
+			MethodName: "CreateBanner",
+			Handler:    _CatalogService_CreateBanner_Handler,
+		},
+		{
+			MethodName: "UpdateBanner",
+			Handler:    _CatalogService_UpdateBanner_Handler,
+		},
+		{
+			MethodName: "SetBannerStatus",
+			Handler:    _CatalogService_SetBannerStatus_Handler,
+		},
+		{
+			MethodName: "DeleteBanner",
+			Handler:    _CatalogService_DeleteBanner_Handler,
+		},
+		{
+			MethodName: "ReorderBanners",
+			Handler:    _CatalogService_ReorderBanners_Handler,
+		},
+		{
+			MethodName: "ListBannerScreens",
+			Handler:    _CatalogService_ListBannerScreens_Handler,
+		},
+		{
+			MethodName: "ListLiveBanners",
+			Handler:    _CatalogService_ListLiveBanners_Handler,
+		},
+		{
+			MethodName: "ListVouchers",
+			Handler:    _CatalogService_ListVouchers_Handler,
+		},
+		{
+			MethodName: "GetVoucher",
+			Handler:    _CatalogService_GetVoucher_Handler,
+		},
+		{
+			MethodName: "CreateVoucher",
+			Handler:    _CatalogService_CreateVoucher_Handler,
+		},
+		{
+			MethodName: "UpdateVoucher",
+			Handler:    _CatalogService_UpdateVoucher_Handler,
+		},
+		{
+			MethodName: "SetVoucherStatus",
+			Handler:    _CatalogService_SetVoucherStatus_Handler,
+		},
+		{
+			MethodName: "DeleteVoucher",
+			Handler:    _CatalogService_DeleteVoucher_Handler,
+		},
+		{
+			MethodName: "ListVoucherColors",
+			Handler:    _CatalogService_ListVoucherColors_Handler,
+		},
+		{
+			MethodName: "ListVoucherGrants",
+			Handler:    _CatalogService_ListVoucherGrants_Handler,
+		},
+		{
+			MethodName: "InjectVoucher",
+			Handler:    _CatalogService_InjectVoucher_Handler,
+		},
+		{
+			MethodName: "ListVoucherInjections",
+			Handler:    _CatalogService_ListVoucherInjections_Handler,
+		},
+		{
+			MethodName: "ListMyVouchers",
+			Handler:    _CatalogService_ListMyVouchers_Handler,
+		},
+		{
+			MethodName: "ClaimVoucher",
+			Handler:    _CatalogService_ClaimVoucher_Handler,
+		},
+		{
+			MethodName: "ListStock",
+			Handler:    _CatalogService_ListStock_Handler,
+		},
+		{
+			MethodName: "ListMovements",
+			Handler:    _CatalogService_ListMovements_Handler,
+		},
+		{
+			MethodName: "ReceiveStock",
+			Handler:    _CatalogService_ReceiveStock_Handler,
+		},
+		{
+			MethodName: "WasteStock",
+			Handler:    _CatalogService_WasteStock_Handler,
+		},
+		{
+			MethodName: "AdjustStock",
+			Handler:    _CatalogService_AdjustStock_Handler,
+		},
+		{
+			MethodName: "TransferStock",
+			Handler:    _CatalogService_TransferStock_Handler,
+		},
+		{
+			MethodName: "SetMinStock",
+			Handler:    _CatalogService_SetMinStock_Handler,
+		},
+		{
+			MethodName: "ApplyOrderStock",
+			Handler:    _CatalogService_ApplyOrderStock_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

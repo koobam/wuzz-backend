@@ -45,7 +45,7 @@ func realMain() error {
 	cfg.SetBuildVersion(version)
 
 	log := observability.NewLogger(cfg.Telemetry.LogLevel, cfg.Telemetry.LogFormat, cfg.ServiceName, cfg.Version)
-	shutdownTelemetry, err := observability.Setup(ctx, cfg.ServiceName)
+	shutdownTelemetry, err := observability.Setup(ctx, cfg)
 	if err != nil {
 		return err
 	}
@@ -74,6 +74,7 @@ func realMain() error {
 	defer stopRelay()
 
 	users := userpg.NewUsers(pool)
+	accounts := userpg.NewAccounts(pool)
 	members := userpg.NewMembers(pool)
 	sessions := userredis.NewSessions(rdb, cfg.Auth.RefreshTokenTTL)
 	pending := userredis.NewPendingRegistrations(rdb)
@@ -86,7 +87,10 @@ func realMain() error {
 	if cfg.Twilio.DevMode || cfg.Twilio.AccountSID == "" {
 		log.Warn("phone verification is not sending SMS: using the logging verifier",
 			slog.Bool("dev_mode", cfg.Twilio.DevMode))
-		verifications = verification.NewLogging(rdb, log, cfg.Auth.VerificationCodeTTL)
+		if cfg.Twilio.FixedCode != "" {
+			log.Warn("OTP_FIXED_CODE is set: every sign-in code is the same fixed one. Never on a real deployment.")
+		}
+		verifications = verification.NewLogging(rdb, log, cfg.Auth.VerificationCodeTTL, cfg.Twilio.FixedCode)
 	} else {
 		verifications = verification.NewTwilio(cfg.Twilio)
 	}
@@ -101,7 +105,7 @@ func realMain() error {
 		return err
 	}
 
-	application := app.New(users, members, pending, sessions, verifications, signer, cfg.Auth.AccessTokenTTL, cfg.Auth.VerificationCodeTTL)
+	application := app.New(users, accounts, members, pending, sessions, verifications, signer, cfg.Auth.AccessTokenTTL, cfg.Auth.VerificationCodeTTL)
 
 	// Development sign-in without a code: only in a dev environment that is
 	// already skipping SMS. Anywhere else the handler stays nil.

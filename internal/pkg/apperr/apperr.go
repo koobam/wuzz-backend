@@ -19,6 +19,9 @@ const (
 	KindNotFound     Kind = "NOT_FOUND"
 	KindConflict     Kind = "CONFLICT"
 	KindRateLimited  Kind = "RATE_LIMITED"
+	KindTooLarge     Kind = "TOO_LARGE"
+	KindUnsupported  Kind = "UNSUPPORTED_MEDIA"
+	KindUnavailable  Kind = "UNAVAILABLE"
 	KindInternal     Kind = "INTERNAL"
 )
 
@@ -74,6 +77,12 @@ func (e *Error) HTTPStatus() int {
 		return http.StatusConflict
 	case KindRateLimited:
 		return http.StatusTooManyRequests
+	case KindTooLarge:
+		return http.StatusRequestEntityTooLarge
+	case KindUnsupported:
+		return http.StatusUnsupportedMediaType
+	case KindUnavailable:
+		return http.StatusServiceUnavailable
 	default:
 		return http.StatusInternalServerError
 	}
@@ -81,7 +90,7 @@ func (e *Error) HTTPStatus() int {
 
 func (e *Error) GRPCCode() codes.Code {
 	switch e.Kind {
-	case KindInvalid:
+	case KindInvalid, KindTooLarge, KindUnsupported:
 		return codes.InvalidArgument
 	case KindUnauthorized:
 		return codes.Unauthenticated
@@ -93,6 +102,8 @@ func (e *Error) GRPCCode() codes.Code {
 		return codes.AlreadyExists
 	case KindRateLimited:
 		return codes.ResourceExhausted
+	case KindUnavailable:
+		return codes.Unavailable
 	default:
 		return codes.Internal
 	}
@@ -108,7 +119,14 @@ func Forbidden(message string) *Error    { return newErr(KindForbidden, message)
 func NotFound(message string) *Error     { return newErr(KindNotFound, message) }
 func Conflict(message string) *Error     { return newErr(KindConflict, message) }
 func RateLimited(message string) *Error  { return newErr(KindRateLimited, message) }
-func Internal(message string) *Error     { return newErr(KindInternal, message) }
+
+// TooLarge is a request body over its limit (413); Unsupported is one in a format the endpoint does not take (415).
+func TooLarge(message string) *Error    { return newErr(KindTooLarge, message) }
+func Unsupported(message string) *Error { return newErr(KindUnsupported, message) }
+func Internal(message string) *Error    { return newErr(KindInternal, message) }
+
+// Unavailable is a dependency the request needs (the search index) being down: the client gets a 503 and may retry.
+func Unavailable(message string) *Error { return newErr(KindUnavailable, message) }
 
 // From coerces any error into *Error, defaulting to Internal so a bug two
 // layers down never leaks its message to a client.
@@ -142,6 +160,8 @@ func FromGRPCCode(code codes.Code, message string) *Error {
 		return Conflict(message)
 	case codes.ResourceExhausted:
 		return RateLimited(message)
+	case codes.Unavailable:
+		return Unavailable(message)
 	default:
 		return Internal(message)
 	}

@@ -8,3 +8,6 @@
 !.env.*.example
 *.log
 .DS_Store
+
+# Local-dev uploads (MEDIA_LOCAL_DIR)
+/.data/

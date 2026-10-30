@@ -23,6 +23,8 @@ const (
 	TransactionService_GetOrder_FullMethodName          = "/wuzz.transaction.v1.TransactionService/GetOrder"
 	TransactionService_ListOrders_FullMethodName        = "/wuzz.transaction.v1.TransactionService/ListOrders"
 	TransactionService_UpdateOrderStatus_FullMethodName = "/wuzz.transaction.v1.TransactionService/UpdateOrderStatus"
+	TransactionService_OrderStats_FullMethodName        = "/wuzz.transaction.v1.TransactionService/OrderStats"
+	TransactionService_OrderSummary_FullMethodName      = "/wuzz.transaction.v1.TransactionService/OrderSummary"
 )
 
 // TransactionServiceClient is the client API for TransactionService service.
@@ -40,6 +42,9 @@ type TransactionServiceClient interface {
 	GetOrder(ctx context.Context, in *GetOrderRequest, opts ...grpc.CallOption) (*GetOrderResponse, error)
 	ListOrders(ctx context.Context, in *ListOrdersRequest, opts ...grpc.CallOption) (*ListOrdersResponse, error)
 	UpdateOrderStatus(ctx context.Context, in *UpdateOrderStatusRequest, opts ...grpc.CallOption) (*UpdateOrderStatusResponse, error)
+	OrderStats(ctx context.Context, in *OrderStatsRequest, opts ...grpc.CallOption) (*OrderStatsResponse, error)
+	// Totals over the same filters as ListOrders, in one query.
+	OrderSummary(ctx context.Context, in *OrderSummaryRequest, opts ...grpc.CallOption) (*OrderSummaryResponse, error)
 }
 
 type transactionServiceClient struct {
@@ -90,6 +95,26 @@ func (c *transactionServiceClient) UpdateOrderStatus(ctx context.Context, in *Up
 	return out, nil
 }
 
+func (c *transactionServiceClient) OrderStats(ctx context.Context, in *OrderStatsRequest, opts ...grpc.CallOption) (*OrderStatsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OrderStatsResponse)
+	err := c.cc.Invoke(ctx, TransactionService_OrderStats_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *transactionServiceClient) OrderSummary(ctx context.Context, in *OrderSummaryRequest, opts ...grpc.CallOption) (*OrderSummaryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OrderSummaryResponse)
+	err := c.cc.Invoke(ctx, TransactionService_OrderSummary_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TransactionServiceServer is the server API for TransactionService service.
 // All implementations must embed UnimplementedTransactionServiceServer
 // for forward compatibility.
@@ -105,6 +130,9 @@ type TransactionServiceServer interface {
 	GetOrder(context.Context, *GetOrderRequest) (*GetOrderResponse, error)
 	ListOrders(context.Context, *ListOrdersRequest) (*ListOrdersResponse, error)
 	UpdateOrderStatus(context.Context, *UpdateOrderStatusRequest) (*UpdateOrderStatusResponse, error)
+	OrderStats(context.Context, *OrderStatsRequest) (*OrderStatsResponse, error)
+	// Totals over the same filters as ListOrders, in one query.
+	OrderSummary(context.Context, *OrderSummaryRequest) (*OrderSummaryResponse, error)
 	mustEmbedUnimplementedTransactionServiceServer()
 }
 
@@ -126,6 +154,12 @@ func (UnimplementedTransactionServiceServer) ListOrders(context.Context, *ListOr
 }
 func (UnimplementedTransactionServiceServer) UpdateOrderStatus(context.Context, *UpdateOrderStatusRequest) (*UpdateOrderStatusResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateOrderStatus not implemented")
+}
+func (UnimplementedTransactionServiceServer) OrderStats(context.Context, *OrderStatsRequest) (*OrderStatsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method OrderStats not implemented")
+}
+func (UnimplementedTransactionServiceServer) OrderSummary(context.Context, *OrderSummaryRequest) (*OrderSummaryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method OrderSummary not implemented")
 }
 func (UnimplementedTransactionServiceServer) mustEmbedUnimplementedTransactionServiceServer() {}
 func (UnimplementedTransactionServiceServer) testEmbeddedByValue()                            {}
@@ -220,6 +254,42 @@ func _TransactionService_UpdateOrderStatus_Handler(srv interface{}, ctx context.
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TransactionService_OrderStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(OrderStatsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TransactionServiceServer).OrderStats(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TransactionService_OrderStats_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TransactionServiceServer).OrderStats(ctx, req.(*OrderStatsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TransactionService_OrderSummary_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(OrderSummaryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TransactionServiceServer).OrderSummary(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TransactionService_OrderSummary_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TransactionServiceServer).OrderSummary(ctx, req.(*OrderSummaryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TransactionService_ServiceDesc is the grpc.ServiceDesc for TransactionService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -242,6 +312,14 @@ var TransactionService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateOrderStatus",
 			Handler:    _TransactionService_UpdateOrderStatus_Handler,
+		},
+		{
+			MethodName: "OrderStats",
+			Handler:    _TransactionService_OrderStats_Handler,
+		},
+		{
+			MethodName: "OrderSummary",
+			Handler:    _TransactionService_OrderSummary_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

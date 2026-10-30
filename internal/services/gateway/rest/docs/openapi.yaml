@@ -49,6 +49,16 @@ components:
         success: { type: boolean }
         message: { type: string }
         data: {}
+    Upload:
+      type: object
+      properties:
+        url: { type: string, example: "https://assets.wuzz.care/outlets/2026/10/3f9c1b7a5d2e4c8f9a0b1c2d3e4f5a6b.webp" }
+        key: { type: string, example: "outlets/2026/10/3f9c1b7a5d2e4c8f9a0b1c2d3e4f5a6b.webp" }
+        file_name: { type: string, description: "The name the file had on the sender's side, for display only", example: "pusat-depan.jpg" }
+        content_type: { type: string, enum: [image/jpeg, image/png, image/webp, image/avif] }
+        size: { type: integer, description: Bytes as stored }
+        width: { type: integer }
+        height: { type: integer }
     Phone:
       type: object
       required: [phone]
@@ -85,18 +95,198 @@ components:
       properties:
         name: { type: string }
         address: { type: string }
-        phone: { type: string }
+        phone: { type: string, example: "0211234567", description: "required on a create (digits, spaces, + - ( ), 6 to 20 characters); a full edit cannot blank it" }
+        email: { type: string, format: email, maxLength: 254, example: "pusat@wuzz.care", description: "the outlet's contact email, stored lower-case; required on a create; leave out to keep the stored one; a full edit cannot blank it. The on/off switch (a PATCH that changes only `active`) is exempt, so an outlet seeded without an email can still be switched" }
         latitude: { type: number }
         longitude: { type: number }
         active: { type: boolean }
+        images: { type: array, items: { type: string }, description: "https addresses of the outlet's pictures, the first is its banner; leave out to keep them, [] to remove them" }
+        category: { type: string, enum: [laundry, caffe, all], description: "what the outlet is for; required on a create; leave out to keep the stored one" }
+        delivery_types: { type: array, items: { type: string, enum: [pickup, delivery] }, minItems: 1, description: "how an order reaches the customer; leave out to keep them (a new outlet has both)" }
+        open_time: { type: string, example: "08:00", pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$', description: "older, single-range form: with close_time and WITHOUT hours it sets one range for all seven days (24 hour HH:MM, 00:00 to 23:59); a side left out is taken from the first open day. Ignored when hours is sent" }
+        close_time: { type: string, example: "22:00", pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$', description: "closing time, same format; a close before the open means the outlet closes after midnight (22:00-02:00); it cannot equal open_time" }
+        timezone: { type: string, enum: [Asia/Jakarta, Asia/Makassar, Asia/Jayapura], description: "the clock the hours are on: WIB, WITA or WIT; leave out to keep it (a new outlet is Asia/Jakarta)" }
+        hours: { type: array, minItems: 7, maxItems: 7, items: { $ref: '#/components/schemas/OutletDay' }, description: "exactly seven days, weekday 0 (Monday) to 6 (Sunday), each once, in any order; leave out to keep the stored week (a new outlet is open 08:00-22:00 every day, or open_time-close_time if those are sent)" }
+    OutletDay:
+      type: object
+      required: [weekday]
+      properties:
+        weekday: { type: integer, minimum: 0, maximum: 6, description: "0 = Monday ... 6 = Sunday" }
+        closed: { type: boolean, description: "a closed day has no times (any sent are ignored)" }
+        open_24h: { type: boolean, description: "open round the clock (the whole local day, 00:00 to 24:00): the day has no times of its own, any sent are ignored, and it is read back with open_time and close_time \"00:00\". It cannot be sent together with closed (400). Today's range (the outlet's top-level open_time/close_time) reads 00:00-23:59 on such a day" }
+        open_time: { type: string, example: "08:00", pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$' }
+        close_time: { type: string, example: "22:00", pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$', description: "a close before the open means the outlet closes after midnight, in the early hours of the NEXT day; it cannot equal open_time" }
+    Outlet:
+      type: object
+      description: "An outlet as the back office reads it (the body fields above, plus what the server works out)"
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        address: { type: string }
+        phone: { type: string }
+        email: { type: string, description: "the outlet's contact email, lower-case; empty when it has none" }
+        latitude: { type: number }
+        longitude: { type: number }
+        active: { type: boolean }
+        images: { type: array, items: { type: string } }
+        category: { type: string, enum: [laundry, caffe, all] }
+        delivery_types: { type: array, items: { type: string, enum: [pickup, delivery] } }
+        open_time: { type: string, example: "08:00", description: "TODAY's opening time on the outlet's clock (empty when it is closed today); kept for older clients, use hours" }
+        close_time: { type: string, example: "22:00", description: "TODAY's closing time (empty when closed today)" }
+        timezone: { type: string, enum: [Asia/Jakarta, Asia/Makassar, Asia/Jayapura] }
+        timezone_label: { type: string, enum: [WIB, WITA, WIT] }
+        hours: { type: array, items: { $ref: '#/components/schemas/OutletDay' }, description: "the week, Monday (weekday 0) to Sunday (6), always seven days" }
+        is_open_now: { type: boolean, description: "whether the week says the outlet is open at the moment of the request, on the outlet's own clock: today's hours, or yesterday's if they run past midnight and are still going (the closing minute itself is closed)" }
     ServiceBody:
       type: object
       required: [name, unit]
       properties:
         name: { type: string }
         unit: { type: string, example: kg }
-        price: { type: integer, format: int64 }
+        price_before_tax: { type: integer, format: int64, minimum: 0, description: "whole rupiah BEFORE tax: what is stored and keyed in. On an update, leave out to keep it" }
+        price: { type: integer, format: int64, description: "the older name of price_before_tax, accepted only for a service without tax (where they are the same number): a price read back from the list is the one AFTER tax" }
+        tax_type: { type: string, enum: [none, ppn], description: "how tax is added to the price. A create without it is none; an update without it keeps the stored one" }
+        discount_type: { type: string, enum: [none, value, percent], description: "a discount on the list price (price_before_tax), taken off BEFORE tax. A create without it is none; an update without it keeps the stored one" }
+        discount_value: { type: integer, format: int64, minimum: 0, description: "the size of the discount: whole rupiah for value (at most the price), basis points for percent (1250 = 12.5%, at most 10000). Must be 0 for none; an update that gives discount_type none without it clears it" }
+        internal_notes: { type: string, maxLength: 500, description: "a note for staff, never shown to customers; an update without it keeps the stored note" }
         active: { type: boolean }
+        category_id: { type: integer, format: int64, description: "the category it is listed under; leave out to keep it, 0 for none" }
+        variant_group_ids: { type: array, maxItems: 20, items: { type: integer, format: int64 }, description: "the variant groups the service offers, in order; leave out to keep them, [] to remove them all" }
+        modifier_group_ids: { type: array, maxItems: 20, items: { type: integer, format: int64 }, description: "the modifier groups the service carries, in order; leave out to keep them, [] to remove them all" }
+    VariantGroupBody:
+      type: object
+      required: [name, options]
+      description: A choice of exactly one option, shared by the services that offer it. Each option adds its price_delta to the service's price. The first active option becomes the default when none is marked.
+      properties:
+        name: { type: string, maxLength: 80 }
+        internal_notes: { type: string, maxLength: 500, description: "a private note for the back office; the names of groups need not be unique, this tells them apart" }
+        options:
+          type: array
+          minItems: 1
+          maxItems: 30
+          description: "A PUT replaces the options: those with an id are kept, the ones left out are deleted, the ones without an id are added."
+          items:
+            type: object
+            required: [name]
+            properties:
+              id: { type: integer, format: int64, description: "leave out for a new option" }
+              name: { type: string, maxLength: 80 }
+              price_delta: { type: integer, format: int64, minimum: 0 }
+              is_default: { type: boolean }
+              active: { type: boolean, default: true }
+              estimated_time: { type: integer, minimum: 0 }
+              estimated_time_unit: { type: string }
+    ModifierGroupBody:
+      type: object
+      required: [name, options]
+      description: Optional add-ons with a rule for how many may be picked. Names are unique, ignoring case.
+      properties:
+        name: { type: string, maxLength: 80 }
+        internal_notes: { type: string, maxLength: 500 }
+        min: { type: integer, minimum: 0, description: "0 is optional, 1 or more is required; at most the number of active options" }
+        max: { type: integer, minimum: 1, nullable: true, description: "the most that may be picked, not below min; null or left out for no limit" }
+        options:
+          type: array
+          minItems: 1
+          maxItems: 30
+          description: "A PUT replaces the options the same way as for a variant group."
+          items:
+            type: object
+            required: [name]
+            properties:
+              id: { type: integer, format: int64 }
+              name: { type: string, maxLength: 80 }
+              description: { type: string }
+              price: { type: integer, format: int64, minimum: 0, description: "added per unit; 0 is free" }
+              active: { type: boolean, default: true }
+    MaterialBody:
+      type: object
+      required: [sku, name, category, unit, purchase_price, purchase_qty]
+      description: |
+        A material (bahan). All quantities of a recipe are in its base unit. What one base unit costs is the exact fraction purchase_price / purchase_qty
+        (Rp 100.000 for 3.000 ml is 100/3 per ml); it is derived whenever needed, never stored or rounded. The `unit_cost` of a response is that fraction
+        rounded half away from zero to 6 places, for display only.
+      properties:
+        sku: { type: string, minLength: 1, maxLength: 40, pattern: "^[A-Za-z0-9._/-]+$", description: "unique ignoring case" }
+        name: { type: string, maxLength: 80 }
+        category: { type: string, enum: [chemical, packaging, consumable, other] }
+        unit: { type: string, enum: [ml, g, pcs, sheet], description: "the base unit; it cannot change while a recipe uses the material" }
+        purchase_price: { type: integer, format: int64, minimum: 0, description: "whole rupiah" }
+        purchase_qty: { type: string, example: "3000", description: "how many base units that price buys: an exact decimal STRING, more than 0, at most 4 decimal places (a JSON number is refused)" }
+        active: { type: boolean, default: true }
+        notes: { type: string, maxLength: 500 }
+    BomBody:
+      type: object
+      required: [lines]
+      description: Replaces the whole recipe of the owner. At most 40 lines, one per material.
+      properties:
+        lines:
+          type: array
+          maxItems: 40
+          items:
+            type: object
+            required: [material_id, qty, per]
+            properties:
+              material_id: { type: integer, format: int64 }
+              qty: { type: string, example: "25", description: "base units, an exact decimal STRING, more than 0, at most 4 decimal places" }
+              per: { type: string, enum: [unit, line], description: "unit = for every unit sold (per kg, pcs, session), scales with the quantity; line = once per order line" }
+              loss_percent: { type: string, example: "5", description: "standard waste, an exact decimal STRING from 0 to 100 with at most 2 decimal places; the effective quantity is qty x (1 + loss_percent / 100)" }
+    CostingCalcBody:
+      type: object
+      required: [service_id, qty]
+      properties:
+        service_id: { type: integer, format: int64 }
+        variant_option_ids: { type: array, items: { type: integer, format: int64 } }
+        modifier_option_ids: { type: array, items: { type: integer, format: int64 } }
+        qty: { type: string, example: "2.5", description: "units sold, an exact decimal STRING, more than 0, at most 4 decimal places" }
+    StockReceiptBody:
+      type: object
+      required: [outlet_id, material_id, qty, total_cost]
+      properties:
+        outlet_id: { type: integer, format: int64 }
+        material_id: { type: integer, format: int64 }
+        qty: { type: string, example: "5000", description: "base units received: an exact decimal STRING, more than 0, at most 4 decimal places" }
+        total_cost: { type: integer, format: int64, minimum: 0, description: "whole rupiah paid for all of it" }
+        supplier: { type: string, maxLength: 80 }
+        doc_no: { type: string, maxLength: 40 }
+        note: { type: string, maxLength: 500 }
+        idempotency_key: { type: string, maxLength: 100, description: "a retry with the same key returns the original movement instead of booking it twice" }
+    StockWasteBody:
+      type: object
+      required: [outlet_id, material_id, qty, reason]
+      properties:
+        outlet_id: { type: integer, format: int64 }
+        material_id: { type: integer, format: int64 }
+        qty: { type: string, example: "250", description: "an exact decimal STRING, more than 0, at most 4 decimal places" }
+        reason: { type: string, enum: [expired, damaged, spilled, lost, other] }
+        note: { type: string, maxLength: 500 }
+        idempotency_key: { type: string, maxLength: 100 }
+    StockAdjustBody:
+      type: object
+      required: [outlet_id, material_id, counted_qty, note]
+      properties:
+        outlet_id: { type: integer, format: int64 }
+        material_id: { type: integer, format: int64 }
+        counted_qty: { type: string, example: "4980.5", description: "what was counted: an exact decimal STRING, 0 or more, at most 4 decimal places" }
+        note: { type: string, maxLength: 500, description: "required: it is the stock count" }
+        idempotency_key: { type: string, maxLength: 100 }
+    StockTransferBody:
+      type: object
+      required: [from_outlet_id, to_outlet_id, material_id, qty]
+      properties:
+        from_outlet_id: { type: integer, format: int64 }
+        to_outlet_id: { type: integer, format: int64, description: "a different outlet" }
+        material_id: { type: integer, format: int64 }
+        qty: { type: string, description: "an exact decimal STRING, more than 0, at most 4 decimal places" }
+        note: { type: string, maxLength: 500 }
+        idempotency_key: { type: string, maxLength: 100 }
+    StockMinBody:
+      type: object
+      required: [outlet_id, material_id, min_qty]
+      properties:
+        outlet_id: { type: integer, format: int64 }
+        material_id: { type: integer, format: int64 }
+        min_qty: { type: string, example: "2000", description: "the reorder level: an exact decimal STRING, 0 or more; 0 turns the low-stock flag off" }
     OrderLine:
       type: object
       required: [name]
@@ -104,12 +294,26 @@ components:
         item_id: { type: integer, format: int64 }
         name: { type: string }
         unit: { type: string }
-        price: { type: integer, format: int64 }
+        price: { type: integer, format: int64, description: "per unit, already including the variant and the modifiers" }
         qty: { type: number }
+        variant: { type: string, maxLength: 80, description: "the tier picked, e.g. Express" }
+        variant_option_ids: { type: array, maxItems: 20, items: { type: integer, format: int64, minimum: 1 }, description: "the variant options chosen (catalog ids), kept only so the cost of the line can be reproduced; they play no part in the price" }
+        modifier_option_ids: { type: array, maxItems: 20, items: { type: integer, format: int64, minimum: 1 }, description: "the modifier options chosen, likewise" }
+        modifiers:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            required: [name]
+            properties:
+              group: { type: string }
+              name: { type: string }
+              price: { type: integer, format: int64, description: "added per unit" }
     CreateOrder:
       type: object
       required: [id, outlet_id, customer_name, lines]
       properties:
+        code: { type: string, pattern: "^TRX-[0-9]{8}-[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{4}$", example: "TRX-25102026-K7M2", description: "optional: the order's human-readable code, which the POS may build offline so the cashier sees it at once (TRX-DDMMYYYY-XXXX: a real day, four characters from an alphabet without 0, O, 1, I). Kept if well-formed and not used by another order; otherwise the server makes its own. Either way the order that comes back carries the code that stuck, and a retry of an id already stored returns the stored code whatever this says." }
         id: { type: string, description: Client-generated id; the call is idempotent on it. }
         outlet_id: { type: integer, format: int64 }
         customer_name: { type: string }
@@ -118,6 +322,51 @@ components:
           type: array
           minItems: 1
           items: { $ref: "#/components/schemas/OrderLine" }
+    BannerBody:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 120 }
+        internal_notes: { type: string, maxLength: 500, description: "head office's private note; never sent to the app" }
+        image_url: { type: string, maxLength: 500, description: "the address an upload returned (https; http only for localhost in dev)" }
+        target_type: { type: string, enum: [none, service, outlet, screen, external], default: none, description: "what a tap opens" }
+        target_value: { type: string, description: "a service id or an outlet id (it must exist), a screen key (see GET /backoffice/v1/banners/screens), a full https address for external; empty for none. A number is accepted for an id." }
+        status: { type: string, enum: [active, inactive], default: inactive, description: "active needs an image" }
+        starts_at: { type: string, format: date-time, nullable: true, description: "RFC 3339; kept to the second; null or empty = no start" }
+        ends_at: { type: string, format: date-time, nullable: true, description: "RFC 3339; must be after starts_at; null or empty = no end. The banner stops showing the instant it is reached." }
+        outlet_ids: { type: array, maxItems: 200, items: { type: integer, format: int64, minimum: 1 }, description: "show only at these outlets; empty = every outlet" }
+    BannerOrder:
+      type: object
+      required: [ids]
+      properties:
+        ids: { type: array, items: { type: integer, format: int64 }, description: "every banner exactly once, first shown first" }
+    VoucherBody:
+      type: object
+      required: [title, discount_type, value]
+      properties:
+        code: { type: string, description: "4 to 20 capital letters or digits (it is upper-cased for you); empty = a public voucher, which is in every wallet while it is live. Unique across vouchers (409 when taken)." }
+        title: { type: string, minLength: 1, maxLength: 120 }
+        description: { type: string, maxLength: 500, description: "shown to customers" }
+        internal_notes: { type: string, maxLength: 500, description: "head office's private note; never sent to the app" }
+        discount_type: { type: string, enum: [percentage, amount] }
+        value: { type: integer, format: int64, description: "1 to 100 for a percentage, whole rupiah (1 to 1000000000) for an amount; a fraction is refused" }
+        max_discount: { type: integer, format: int64, minimum: 0, default: 0, description: "rupiah cap of a percentage; 0 = no cap; only a percentage may have one" }
+        min_spend: { type: integer, format: int64, minimum: 0, default: 0, description: "rupiah an order must come to; 0 = none" }
+        max_claims: { type: integer, minimum: 0, default: 0, description: "how many customers may hold it; 0 = no limit; only a voucher with a code may set one, and not below the number who hold it already" }
+        usage_limit: { type: integer, minimum: 1, maximum: 1000, default: 1, description: "how many times one customer may spend it" }
+        status: { type: string, enum: [active, inactive], default: inactive }
+        color: { type: string, description: "the coupon's colour, one of GET /backoffice/v1/vouchers/colors; the first when left out" }
+        image_url: { type: string, maxLength: 500, description: "the address an upload returned (folder vouchers)" }
+        starts_at: { type: string, format: date-time, nullable: true, description: "RFC 3339; kept to the second; null or empty = no start" }
+        ends_at: { type: string, format: date-time, nullable: true, description: "RFC 3339; must be after starts_at; null or empty = no end. The voucher stops being usable the instant it is reached." }
+        outlet_ids: { type: array, maxItems: 200, items: { type: integer, format: int64, minimum: 1 }, description: "usable only at these outlets; empty = every outlet" }
+        service_ids: { type: array, maxItems: 200, items: { type: integer, format: int64, minimum: 1 }, description: "usable only on these services; empty = every service" }
+    VoucherInject:
+      type: object
+      properties:
+        customer_ids: { type: array, items: { oneOf: [{ type: integer, format: int64 }, { type: string }] }, description: "customer ids, as numbers or text" }
+        phones: { type: array, items: { type: string }, description: "phone numbers as typed (0812…, +62 812…, 62812…)" }
+        expires_at: { type: string, format: date-time, nullable: true, description: "when these copies stop being usable; must be in the future; null = when the voucher ends" }
     UserStatus:
       type: object
       required: [status]
@@ -223,6 +472,31 @@ paths:
         - { name: selected_outlet_id, in: query, schema: { type: integer } }
         - { name: query, in: query, schema: { type: string } }
       responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /app/v1/banners:
+    get:
+      tags: [App catalog]
+      summary: The banners on a phone right now
+      description: "Answers { banners: [{ id, title, image_url, target_type, target_value, deeplink }] }, first shown first, at most 20. A banner is in it when it is active and the server's clock is inside its schedule. With outlet_id: those for every outlet and those limited to it; without: only those for every outlet. deeplink is wuzz://service/<id>, wuzz://outlet/<id>, wuzz://screen/<key> or an https address, and empty for a banner that goes nowhere."
+      parameters:
+        - { name: outlet_id, in: query, schema: { type: integer, format: int64, minimum: 1 } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /app/v1/vouchers:
+    get:
+      tags: [App catalog]
+      summary: The customer's voucher wallet
+      description: "Signed-in customers only (403 for staff). Answers { vouchers: [...] }: grants first (newest first), then the public vouchers. A voucher is in it when it is active, the server's clock is inside its schedule, and, for a grant, the customer's own expiry has not passed and a use is left. Each has source (public, claim or inject), uses_remaining, usage_limit and expires_at (the earlier of the voucher's end and the customer's own expiry, or null). No internal note, status or claim count."
+      security: [{ bearer: [] }]
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /app/v1/vouchers/claim:
+    post:
+      tags: [App catalog]
+      summary: Claim a voucher by its code
+      description: "Body { code } (any case, spaces trimmed). Puts the voucher in the caller's own wallet and answers 201 with it. 400 for something that cannot be a code, 404 for a code that is no voucher's, 409 when the voucher is not available now (switched off, not started, ended), when the caller has it already, or when everyone it was for has claimed it. Limited to 10 attempts a minute per address."
+      security: [{ bearer: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [code], properties: { code: { type: string } } } } }
+      responses: { "201": { $ref: "#/components/responses/Ok" } }
   /app/v1/services/{id}:
     get:
       tags: [App catalog]
@@ -268,6 +542,13 @@ paths:
     get:
       tags: [POS]
       summary: Outlets and services, for offline caching
+      security: [{ bearer: [] }]
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /pos/v1/tax:
+    get:
+      tags: [POS]
+      summary: The rate of each tax type
+      description: "Same as GET /backoffice/v1/tax: { types: [{ type, rate_bps }] }."
       security: [{ bearer: [] }]
       responses: { "200": { $ref: "#/components/responses/Ok" } }
   /pos/v1/orders:
@@ -380,6 +661,10 @@ paths:
       tags: [Backoffice]
       security: [{ bearer: [] }]
       parameters:
+        - { name: query, in: query, description: Matches the username, the name or the phone number, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string, enum: [active, inactive, banned] } }
+        - { name: sort_by, in: query, description: "With neither sort_by nor sort_dir the list is newest first (id desc); a column on its own is ascending; ties are broken by id", schema: { type: string, enum: [id, name, created_at, points] } }
+        - { name: sort_dir, in: query, schema: { type: string, enum: [asc, desc] } }
         - { $ref: "#/components/parameters/Limit" }
         - { $ref: "#/components/parameters/Offset" }
       responses: { "200": { $ref: "#/components/responses/Ok" } }
@@ -392,10 +677,98 @@ paths:
         required: true
         content: { application/json: { schema: { $ref: "#/components/schemas/UserStatus" } } }
       responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/admins:
+    get:
+      tags: [Backoffice]
+      summary: Back-office admins (role super, finance or support), newest first
+      security: [{ bearer: [] }]
+      parameters:
+        - { name: query, in: query, description: Matches the name or the phone number, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string, enum: [active, inactive, banned] } }
+        - { name: outlet_id, in: query, description: "Only the accounts tied to this outlet; absent or 0 means no filter; a negative or non-numeric value is a 400", schema: { type: integer, format: int64, minimum: 0 } }
+        - { name: sort_by, in: query, description: "With neither sort_by nor sort_dir the list is newest first (id desc); a column on its own is ascending; ties are broken by id", schema: { type: string, enum: [id, name, created_at] } }
+        - { name: sort_dir, in: query, schema: { type: string, enum: [asc, desc] } }
+        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/Offset" }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/staff:
+    get:
+      tags: [Backoffice]
+      summary: Outlet staff and wuzzers, newest first
+      security: [{ bearer: [] }]
+      parameters:
+        - { name: query, in: query, description: Matches the name or the phone number, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string, enum: [active, inactive, banned] } }
+        - { name: outlet_id, in: query, description: "Only the accounts tied to this outlet; absent or 0 means no filter; a negative or non-numeric value is a 400", schema: { type: integer, format: int64, minimum: 0 } }
+        - { name: sort_by, in: query, description: "With neither sort_by nor sort_dir the list is newest first (id desc); a column on its own is ascending; ties are broken by id", schema: { type: string, enum: [id, name, created_at] } }
+        - { name: sort_dir, in: query, schema: { type: string, enum: [asc, desc] } }
+        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/Offset" }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/tax:
+    get:
+      tags: [Backoffice]
+      summary: The rate of each tax type
+      description: |
+        { types: [{ type, rate_bps }] }: "none" is 0 and "ppn" is 1100 (11%). A service stores its price before tax and its tax type; the price after tax is
+        price + tax, with tax = price x rate_bps / 10000 rounded ONCE to whole rupiah, half away from zero (10.000 at 11% is 11.100; 50 at 11% is 56).
+        Every service answered by the API already carries price_before_tax (the list price), discount_type, discount_value, discount_amount, price_after_discount (what tax is added to), tax_rate_bps and price_after_tax; this is for a form that previews them while typing.
+      security: [{ bearer: [] }]
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/service-categories:
+    get:
+      tags: [Backoffice]
+      summary: The categories services are listed under
+      security: [{ bearer: [] }]
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/uploads:
+    post:
+      tags: [Backoffice]
+      summary: Upload a picture
+      description: |
+        Send one JPEG, PNG, WebP or AVIF picture as multipart/form-data in the field `file` (at most 5 MB, 8000 pixels on a side, 25 megapixels;
+        the type is decided by the bytes, never by the file name or the declared type). JPEG and PNG are re-encoded without their metadata;
+        WebP and AVIF are stored as sent. `folder` is optional and must be one of: outlets (the default), banners, vouchers. The answer is the address the
+        picture is now served from (`url`) and its random `key`; put the `url` in an outlet's `images`.
+        413 when over the size limit, 415 when it is not one of the four types, 400 for a damaged or oversized picture, 503 when uploads
+        are not configured or the store is down.
+      security: [{ bearer: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+                folder: { type: string, enum: [outlets, banners, vouchers], default: outlets }
+      responses:
+        "201":
+          description: The stored picture, in the envelope's `data`
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  data: { $ref: "#/components/schemas/Upload" }
+        "400": { $ref: "#/components/responses/Ok" }
+        "413": { $ref: "#/components/responses/Ok" }
+        "415": { $ref: "#/components/responses/Ok" }
+        "503": { $ref: "#/components/responses/Ok" }
   /backoffice/v1/outlets:
     get:
       tags: [Backoffice]
+      summary: Outlets, optionally only those inside a map area
+      description: Give all of south, west, north and east (degrees) to get only the outlets inside that box, or none for every outlet.
       security: [{ bearer: [] }]
+      parameters:
+        - { name: south, in: query, schema: { type: number, minimum: -90, maximum: 90 } }
+        - { name: west, in: query, schema: { type: number, minimum: -180, maximum: 180 } }
+        - { name: north, in: query, schema: { type: number, minimum: -90, maximum: 90 } }
+        - { name: east, in: query, schema: { type: number, minimum: -180, maximum: 180 } }
       responses: { "200": { $ref: "#/components/responses/Ok" } }
     post:
       tags: [Backoffice]
@@ -412,6 +785,13 @@ paths:
       requestBody:
         required: true
         content: { application/json: { schema: { $ref: "#/components/schemas/OutletBody" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+    delete:
+      tags: [Backoffice]
+      summary: Delete an outlet
+      description: "Removes the outlet and its opening hours. Refused with 409 naming what is left (staff or admin accounts, orders) while anything points at it, while it has stock records, and while a banner opens it or is limited to it, and while a voucher is limited to it; switch it off (active=false) instead. 404 for an unknown id. Its pictures stay in the media storage."
+      security: [{ bearer: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
       responses: { "200": { $ref: "#/components/responses/Ok" } }
   /backoffice/v1/services:
     get:
@@ -434,6 +814,464 @@ paths:
         required: true
         content: { application/json: { schema: { $ref: "#/components/schemas/ServiceBody" } } }
       responses: { "200": { $ref: "#/components/responses/Ok" } }
+    delete:
+      tags: [Backoffice]
+      summary: Delete a service
+      description: "Removes the service with its links to variant and modifier groups and its own recipe; the groups and every other recipe stay. Orders keep their own copy of what they sold. Refused with 409, naming the banners or vouchers, while a banner opens the service or a voucher is limited to it. 404 for an unknown id."
+      security: [{ bearer: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/variant-groups:
+    get:
+      tags: [Backoffice]
+      summary: Variant groups
+      description: "Every reusable variant group with its options, the services that use it and when it was created and last changed. Answers { items, total }: one page, and how many groups the filter matches before the page is cut."
+      security: [{ bearer: [] }]
+      parameters:
+        - { name: q, in: query, description: "Matches, ignoring case, part of the group name, its note or any option name", schema: { type: string, maxLength: 64 } }
+        - { name: sort_by, in: query, schema: { type: string, enum: [id, name, created_at, updated_at], default: id } }
+        - { name: sort_dir, in: query, schema: { type: string, enum: [asc, desc], default: asc } }
+        - { name: limit, in: query, description: "Page size; 10 when left out or 0 or less, at most 100", schema: { type: integer, maximum: 100, default: 10 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+        - { name: service_id, in: query, description: "Only the groups linked to this service; an unknown id gives an empty list", schema: { type: integer, format: int64, minimum: 1 } }
+        - { name: usage, in: query, description: "used = linked to at least one service, unused = to none; leave out for all", schema: { type: string, enum: [used, unused] } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+    post:
+      tags: [Backoffice]
+      security: [{ bearer: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/VariantGroupBody" } } }
+      responses: { "201": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/variant-groups/{id}:
+    get:
+      tags: [Backoffice]
+      security: [{ bearer: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+    put:
+      tags: [Backoffice]
+      summary: Replace a variant group
+      security: [{ bearer: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/VariantGroupBody" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+    delete:
+      tags: [Backoffice]
+      summary: Delete a variant group
+      description: Refused with 409, naming the services, while any still offers the group.
+      security: [{ bearer: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/modifier-groups:
+    get:
+      tags: [Backoffice]
+      summary: Modifier groups
+      description: "Every reusable modifier group with its options, the services that use it and when it was created and last changed. Answers { items, total }: one page, and how many groups the filter matches before the page is cut."
+      security: [{ bearer: [] }]
+      parameters:
+        - { name: q, in: query, description: "Matches, ignoring case, part of the group name, its note or any option name", schema: { type: string, maxLength: 64 } }
+        - { name: sort_by, in: query, schema: { type: string, enum: [id, name, created_at, updated_at], default: id } }
+        - { name: sort_dir, in: query, schema: { type: string, enum: [asc, desc], default: asc } }
+        - { name: limit, in: query, description: "Page size; 10 when left out or 0 or less, at most 100", schema: { type: integer, maximum: 100, default: 10 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+        - { name: service_id, in: query, description: "Only the groups linked to this service; an unknown id gives an empty list", schema: { type: integer, format: int64, minimum: 1 } }
+        - { name: usage, in: query, description: "used = linked to at least one service, unused = to none; leave out for all", schema: { type: string, enum: [used, unused] } }
+        - { name: requirement, in: query, description: "required = min 1 or more, optional = min 0; leave out for all", schema: { type: string, enum: [required, optional] } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+    post:
+      tags: [Backoffice]
+      security: [{ bearer: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/ModifierGroupBody" } } }
+      responses: { "201": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/modifier-groups/{id}:
+    get:
+      tags: [Backoffice]
+      security: [{ bearer: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+    put:
+      tags: [Backoffice]
+      summary: Replace a modifier group
+      security: [{ bearer: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/ModifierGroupBody" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+    delete:
+      tags: [Backoffice]
+      summary: Delete a modifier group
+      description: Refused with 409, naming the services, while any still carries the group.
+      security: [{ bearer: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/materials:
+    get:
+      tags: [Backoffice]
+      summary: Materials
+      description: "Answers { items, total }: one page, and how many materials match before the page is cut."
+      security: [{ bearer: [] }]
+      parameters:
+        - { name: q, in: query, description: "Matches, ignoring case, part of the SKU, the name or the notes", schema: { type: string, maxLength: 64 } }
+        - { name: category, in: query, schema: { type: string, enum: [chemical, packaging, consumable, other] } }
+        - { name: active, in: query, schema: { type: string, enum: ["true", "false"] } }
+        - { name: sort_by, in: query, schema: { type: string, enum: [id, sku, name, created_at, updated_at], default: id } }
+        - { name: sort_dir, in: query, schema: { type: string, enum: [asc, desc], default: asc } }
+        - { name: limit, in: query, description: "Page size; 10 when left out or 0 or less, at most 100", schema: { type: integer, maximum: 100, default: 10 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+    post:
+      tags: [Backoffice]
+      summary: Create a material
+      description: A SKU that is already taken answers 409.
+      security: [{ bearer: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/MaterialBody" } } }
+      responses: { "201": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/materials/{id}:
+    get:
+      tags: [Backoffice]
+      security: [{ bearer: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+    put:
+      tags: [Backoffice]
+      summary: Replace a material
+      description: The unit cannot change while a recipe uses the material (409).
+      security: [{ bearer: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/MaterialBody" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+    delete:
+      tags: [Backoffice]
+      summary: Delete a material
+      description: "Refused with 409 naming up to five owners (a service, or \"group / option\") while any recipe uses it."
+      security: [{ bearer: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/banners:
+    get:
+      tags: [Backoffice]
+      summary: Banners
+      description: "Answers { items, total }: one page, in the carousel's order unless sorted otherwise. Each item has is_live (active, and the server's clock inside the schedule), deeplink, starts_at and ends_at (null = open), outlet_ids and outlets [{ id, name }] (empty = every outlet). Search, filter and sort run in Typesense; if it is down the answer is 503."
+      security: [{ bearer: [] }]
+      parameters:
+        - { name: q, in: query, description: "Matches, ignoring case, part of the title or the internal note", schema: { type: string, maxLength: 64 } }
+        - { name: status, in: query, schema: { type: string, enum: [active, inactive] } }
+        - { name: live, in: query, description: "true = on a phone right now; false = not", schema: { type: string, enum: ["true", "false"] } }
+        - { name: outlet_id, in: query, description: "banners that apply to this outlet: shown everywhere, or limited to it", schema: { type: integer, format: int64, minimum: 1 } }
+        - { name: sort_by, in: query, schema: { type: string, enum: [id, title, status, sort_index, starts_at, ends_at, created_at, updated_at], default: sort_index } }
+        - { name: sort_dir, in: query, schema: { type: string, enum: [asc, desc], default: asc } }
+        - { name: limit, in: query, description: "Page size; 10 when left out or 0 or less, at most 100", schema: { type: integer, maximum: 100, default: 10 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+    post:
+      tags: [Backoffice]
+      summary: Create a banner
+      description: "It takes the last place in the carousel. 400 when a rule is broken (no title, active without an image, a target that is missing or does not exist, a schedule that ends before it starts, an outlet that does not exist)."
+      security: [{ bearer: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/BannerBody" } } }
+      responses: { "201": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/banners/screens:
+    get:
+      tags: [Backoffice]
+      summary: The screens of the app a banner may open
+      description: "Answers { screens: [key, ...] }: the values target_value may take when target_type is screen."
+      security: [{ bearer: [] }]
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/banners/reorder:
+    post:
+      tags: [Backoffice]
+      summary: Set the carousel's order
+      description: "ids must list every banner exactly once (400 otherwise). Answers { items, total } in the new order (the first 100)."
+      security: [{ bearer: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/BannerOrder" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/banners/{id}:
+    get:
+      tags: [Backoffice]
+      security: [{ bearer: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+    put:
+      tags: [Backoffice]
+      summary: Replace a banner
+      description: "Everything but its place in the carousel, which only the reorder call changes."
+      security: [{ bearer: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/BannerBody" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+    patch:
+      tags: [Backoffice]
+      summary: Switch a banner on or off
+      description: "Body { status }. Switching one on that has no image answers 400."
+      security: [{ bearer: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [status], properties: { status: { type: string, enum: [active, inactive] } } } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+    delete:
+      tags: [Backoffice]
+      summary: Delete a banner
+      security: [{ bearer: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/vouchers:
+    get:
+      tags: [Backoffice]
+      summary: Vouchers
+      description: "Answers { items, total }: one page, newest first unless sorted otherwise. Each item has type (public or code), is_live (active, and the server's clock inside the schedule), claims_count (how many customers hold it), starts_at and ends_at (null = open), outlet_ids and outlets [{ id, name }] and service_ids and services [{ id, name }] (empty = everywhere). Search, filter and sort run in Typesense; if it is down the answer is 503."
+      security: [{ bearer: [] }]
+      parameters:
+        - { name: q, in: query, description: "Matches, ignoring case, part of the title, the code, the description or the internal note", schema: { type: string, maxLength: 64 } }
+        - { name: status, in: query, schema: { type: string, enum: [active, inactive] } }
+        - { name: live, in: query, description: "true = usable right now; false = not", schema: { type: string, enum: ["true", "false"] } }
+        - { name: period, in: query, description: "where the schedule stands against the clock, whatever the status", schema: { type: string, enum: [running, upcoming, ended, unlimited] } }
+        - { name: discount_type, in: query, schema: { type: string, enum: [percentage, amount] } }
+        - { name: outlet_id, in: query, description: "vouchers usable at this outlet: everywhere, or limited to it", schema: { type: integer, format: int64, minimum: 1 } }
+        - { name: sort_by, in: query, schema: { type: string, enum: [id, title, code, status, value, claims, starts_at, ends_at, created_at, updated_at], default: created_at } }
+        - { name: sort_dir, in: query, schema: { type: string, enum: [asc, desc], default: desc } }
+        - { name: limit, in: query, description: "Page size; 10 when left out or 0 or less, at most 100", schema: { type: integer, maximum: 100, default: 10 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+    post:
+      tags: [Backoffice]
+      summary: Create a voucher
+      description: "400 when a rule is broken (no title, a percentage outside 1 to 100, a cap on an amount, a claim limit without a code, a colour outside the set, a schedule that ends before it starts, an outlet or service that does not exist); 409 when the code is taken."
+      security: [{ bearer: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/VoucherBody" } } }
+      responses: { "201": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/vouchers/colors:
+    get:
+      tags: [Backoffice]
+      summary: The colours a coupon may have
+      description: "Answers { colors: [\"#RRGGBB\", ...] }; the first is the default."
+      security: [{ bearer: [] }]
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/vouchers/{id}:
+    get:
+      tags: [Backoffice]
+      security: [{ bearer: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+    put:
+      tags: [Backoffice]
+      summary: Replace a voucher
+      description: "While customers hold the voucher its code cannot change and its claim limit cannot go below their number (409); everything else can, and what they hold follows."
+      security: [{ bearer: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/VoucherBody" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+    patch:
+      tags: [Backoffice]
+      summary: Switch a voucher on or off
+      description: "Body { status }. A voucher that is switched off leaves every wallet; the copies customers hold are kept."
+      security: [{ bearer: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [status], properties: { status: { type: string, enum: [active, inactive] } } } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+    delete:
+      tags: [Backoffice]
+      summary: Delete a voucher
+      description: "Refused with 409 while any customer holds it; switch it off instead. Answers { id, title }."
+      security: [{ bearer: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/vouchers/{id}/grants:
+    get:
+      tags: [Backoffice]
+      summary: Who holds a voucher
+      description: "Answers { items, total }, newest first. Each has customer_id, customer_name and customer_phone (as they were when it was granted), source (claim or inject), granted_by (the admin who sent it; empty for a claim), granted_at, expires_at (null = until the voucher ends) and uses_remaining."
+      security: [{ bearer: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/Id" }
+        - { name: q, in: query, description: "part of the customer's name or phone number", schema: { type: string, maxLength: 64 } }
+        - { name: limit, in: query, schema: { type: integer, maximum: 100, default: 10 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/vouchers/{id}/inject:
+    post:
+      tags: [Backoffice]
+      summary: Put a voucher in customers' wallets
+      description: "Names customers by id and by phone number, at most 500 in all; a customer named twice counts once. Each customer found gets one copy, with usage_limit uses, unless they hold it already, the voucher's claim limit has been reached, or they are switched off or banned. Answers the audit of the send: target_count, injected_count and skipped { already_held, over_limit, not_found, inactive }, which add up to target_count. Only a voucher with a code that is switched on and has not ended can be sent (409 otherwise). Sending again is safe: nobody gets a second copy."
+      security: [{ bearer: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/VoucherInject" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/voucher-injections:
+    get:
+      tags: [Backoffice]
+      summary: The audit of voucher sends
+      description: "Answers { items, total }, newest first: who sent which voucher (title and code as they were), to how many, and what became of the rest."
+      security: [{ bearer: [] }]
+      parameters:
+        - { name: voucher_id, in: query, description: "only the sends of this voucher", schema: { type: integer, format: int64, minimum: 1 } }
+        - { name: limit, in: query, schema: { type: integer, maximum: 100, default: 10 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/boms/{owner_type}/{owner_id}:
+    get:
+      tags: [Backoffice]
+      summary: A recipe (bill of materials)
+      description: |
+        The materials a service, a variant option or a modifier option consumes. `cost` is the exact cost of the per-unit lines for one unit sold and
+        `line_cost` that of the per-line lines (once per order line), each rounded half away from zero to 6 places for display only.
+      security: [{ bearer: [] }]
+      parameters:
+        - { name: owner_type, in: path, required: true, schema: { type: string, enum: [service, variant_option, modifier_option] } }
+        - { name: owner_id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+    put:
+      tags: [Backoffice]
+      summary: Replace a recipe
+      description: A material that is inactive may stay on a line it is already on but cannot be newly added.
+      security: [{ bearer: [] }]
+      parameters:
+        - { name: owner_type, in: path, required: true, schema: { type: string, enum: [service, variant_option, modifier_option] } }
+        - { name: owner_id, in: path, required: true, schema: { type: integer, format: int64 } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/BomBody" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/services/{id}/costing:
+    get:
+      tags: [Backoffice]
+      summary: The cost table of a service
+      description: |
+        What the service's own recipe costs and what the recipe of each ACTIVE option of its linked variant and modifier groups adds, per unit sold and per
+        order line. Values are decimal strings rounded half away from zero to 6 places for display only.
+      security: [{ bearer: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/costing/calc:
+    post:
+      tags: [Backoffice]
+      summary: Cost a sale exactly
+      description: |
+        Every material line is an exact fraction; they are added and rounded to whole rupiah ONCE, half away from zero. `unit_price` is the service price
+        plus the chosen variants' extras plus the chosen modifiers' prices; `revenue` is unit_price x qty rounded once; `margin_percent` is gross_profit / revenue x 100
+        rounded to 2 places (0.00 without revenue). A variant group with no option chosen takes its default option; modifier choices respect the group's min and max.
+      security: [{ bearer: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CostingCalcBody" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/stock:
+    get:
+      tags: [Backoffice]
+      summary: Stock on hand
+      description: |
+        One row per outlet and material: the quantity (an exact decimal string, may be negative after sales), what it is worth in whole rupiah, and the average cost
+        (value / qty, an exact fraction shown rounded half away from zero to 6 places; the material's standard unit cost while nothing is on hand).
+        With an outlet, every active material is listed, with 0 when it has no balance yet, so receiving can start from the list. Answers { items, total }.
+      security: [{ bearer: [] }]
+      parameters:
+        - { name: outlet_id, in: query, description: "Which outlet; left out lists every outlet", schema: { type: integer, format: int64 } }
+        - { name: q, in: query, description: "Part of the SKU or the name, ignoring case", schema: { type: string, maxLength: 64 } }
+        - { name: low, in: query, description: "true = only what has reached its reorder level (min_qty > 0 and qty <= min_qty)", schema: { type: boolean } }
+        - { name: sort_by, in: query, schema: { type: string, enum: [sku, name, qty, value], default: sku } }
+        - { name: sort_dir, in: query, schema: { type: string, enum: [asc, desc], default: asc } }
+        - { name: limit, in: query, description: "Page size; 10 when left out or 0 or less, at most 100", schema: { type: integer, maximum: 100, default: 10 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/stock/movements:
+    get:
+      tags: [Backoffice]
+      summary: The stock ledger
+      description: |
+        Every movement, newest first by default. A movement carries the balance after it, so the ledger can be audited on its own: a balance's value is the
+        sum of its value_deltas. A movement made from an order carries ref_id (the order's id) and ref_code (its TRX code, e.g. TRX-25102026-K7M2, as it was when the movement was written; "" for other movements and for those from before codes existed). Answers { items, total }.
+      security: [{ bearer: [] }]
+      parameters:
+        - { name: outlet_id, in: query, description: "Which outlet; left out lists every outlet", schema: { type: integer, format: int64 } }
+        - { name: material_id, in: query, schema: { type: integer, format: int64 } }
+        - { name: kind, in: query, schema: { type: string, enum: [receipt, consumption, consumption_reversal, waste, adjustment, transfer_in, transfer_out] } }
+        - { name: q, in: query, description: "Part of the note, the document number, the supplier or the order's TRX code (ref_code), ignoring case", schema: { type: string, maxLength: 64 } }
+        - { name: from, in: query, description: "First day, YYYY-MM-DD (Asia/Jakarta)", schema: { type: string, format: date } }
+        - { name: to, in: query, description: "Last day, included", schema: { type: string, format: date } }
+        - { name: sort_by, in: query, schema: { type: string, enum: [created_at, id], default: created_at } }
+        - { name: sort_dir, in: query, schema: { type: string, enum: [asc, desc], default: desc } }
+        - { name: limit, in: query, description: "Page size; 10 when left out or 0 or less, at most 100", schema: { type: integer, maximum: 100, default: 10 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/stock/receipts:
+    post:
+      tags: [Backoffice]
+      summary: Receive goods
+      description: |
+        Books goods received; the value is the total cost paid, as entered. 201 for a new movement, 200 when the idempotency_key had already been used and the
+        original movement is returned.
+      security: [{ bearer: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/StockReceiptBody" } } }
+      responses: { "201": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/stock/waste:
+    post:
+      tags: [Backoffice]
+      summary: Write stock off
+      description: |
+        Takes stock out as expired, damaged, spilled, lost or other, valued at the moving average. More than is on hand is refused with 400 "Only X unit in stock".
+        201 for a new movement, 200 for a retried key.
+      security: [{ bearer: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/StockWasteBody" } } }
+      responses: { "201": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/stock/adjustments:
+    post:
+      tags: [Backoffice]
+      summary: Book a stock count
+      description: |
+        Books the difference between the counted quantity and the book (a positive one is valued at the current average, a negative one like waste). When they are equal
+        nothing is booked and the answer is 200 with data null.
+      security: [{ bearer: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/StockAdjustBody" } } }
+      responses: { "201": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/stock/transfers:
+    post:
+      tags: [Backoffice]
+      summary: Move stock between outlets
+      description: Two movements with the same ref in one transaction (transfer_out, then transfer_in worth exactly what left). Answers { out, in }; 201 new, 200 retried key.
+      security: [{ bearer: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/StockTransferBody" } } }
+      responses: { "201": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/stock/min:
+    put:
+      tags: [Backoffice]
+      summary: Set a reorder level
+      security: [{ bearer: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/StockMinBody" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
   /backoffice/v1/orders:
     get:
       tags: [Backoffice]
@@ -441,8 +1279,148 @@ paths:
       parameters:
         - { name: outlet_id, in: query, schema: { type: integer } }
         - { name: status, in: query, schema: { type: string } }
+        - { name: sort_by, in: query, schema: { type: string, enum: [created_at, total, status, customer_name, outlet_id, id, code] } }
+        - { name: sort_dir, in: query, schema: { type: string, enum: [asc, desc], default: desc } }
+        - { name: q, in: query, description: "Part of the transaction code (TRX-25102026-K7M2), the start of the order id, or part of the customer name or phone, ignoring case", schema: { type: string, maxLength: 64 } }
+        - { name: from, in: query, description: "First day, YYYY-MM-DD (Asia/Jakarta, by when the order was created); either end may be left out; at most 366 days apart", schema: { type: string, format: date } }
+        - { name: to, in: query, description: "Last day, included", schema: { type: string, format: date } }
         - { $ref: "#/components/parameters/Limit" }
         - { $ref: "#/components/parameters/Offset" }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/orders/summary:
+    get:
+      tags: [Backoffice]
+      summary: Totals for the Orders page
+      description: |
+        Counts and sums over the orders that GET /backoffice/v1/orders would list under the same filters (they share one WHERE clause), for the page's cards.
+        The cards follow the filters exactly and no status is special: `orders` counts every matching order and `counted` is the same number (kept for
+        compatibility); `value` (whole rupiah) and `lines` (order lines) are summed over all of them, cancelled ones included (so with status=cancelled the value is
+        the cancelled orders' value). `open` is created + processing + ready. `avg_value` is value / orders, rounded once half away from zero (0 when there are none);
+        `avg_lines` is lines / orders with 2 decimal places; `cancelled_percent` and `fulfilled_percent` are the share of `orders` with 1 decimal place ("0.0" when
+        there are no orders). All of it is integer arithmetic, rounded once at the end; no floating point is involved.
+      security: [{ bearer: [] }]
+      parameters:
+        - { name: outlet_id, in: query, schema: { type: integer, format: int64 } }
+        - { name: status, in: query, schema: { type: string, enum: [created, processing, ready, fulfilled, cancelled] } }
+        - { name: q, in: query, description: "Part of the transaction code (TRX-25102026-K7M2), the start of the order id, or part of the customer name or phone, ignoring case", schema: { type: string, maxLength: 64 } }
+        - { name: from, in: query, description: "First day, YYYY-MM-DD (Asia/Jakarta); at most 366 days from `to`", schema: { type: string, format: date } }
+        - { name: to, in: query, description: "Last day, included", schema: { type: string, format: date } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/stats/orders:
+    get:
+      tags: [Backoffice]
+      summary: Dashboard numbers
+      description: For the orders created within a range (Asia/Jakarta), their count by status, the revenue of the fulfilled ones, and a row per day. The range is the last `days` days, or `from`..`to` (both, YYYY-MM-DD, at most 92 days).
+      security: [{ bearer: [] }]
+      parameters:
+        - { name: outlet_id, in: query, schema: { type: integer } }
+        - { name: days, in: query, schema: { type: integer, minimum: 1, maximum: 92, default: 7 } }
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/presence:
+    get:
+      tags: [Backoffice]
+      summary: Staff online now
+      description: Everyone who pinged in the last 45 seconds, by name.
+      security: [{ bearer: [] }]
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /backoffice/v1/presence/ping:
+    post:
+      tags: [Backoffice]
+      summary: Mark the caller online
+      description: Apps call this every 20 seconds while open.
+      security: [{ bearer: [] }]
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /pos/v1/stock:
+    get:
+      tags: [POS]
+      summary: Stock on hand
+      description: |
+        One row per outlet and material: the quantity (an exact decimal string, may be negative after sales), what it is worth in whole rupiah, and the average cost
+        (value / qty, an exact fraction shown rounded half away from zero to 6 places; the material's standard unit cost while nothing is on hand).
+        With an outlet, every active material is listed, with 0 when it has no balance yet, so receiving can start from the list. Answers { items, total }.
+      security: [{ bearer: [] }]
+      parameters:
+        - { name: outlet_id, in: query, description: "Ignored: the list is always the outlet the signed-in account is pinned to", schema: { type: integer, format: int64 } }
+        - { name: q, in: query, description: "Part of the SKU or the name, ignoring case", schema: { type: string, maxLength: 64 } }
+        - { name: low, in: query, description: "true = only what has reached its reorder level (min_qty > 0 and qty <= min_qty)", schema: { type: boolean } }
+        - { name: sort_by, in: query, schema: { type: string, enum: [sku, name, qty, value], default: sku } }
+        - { name: sort_dir, in: query, schema: { type: string, enum: [asc, desc], default: asc } }
+        - { name: limit, in: query, description: "Page size; 10 when left out or 0 or less, at most 100", schema: { type: integer, maximum: 100, default: 10 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /pos/v1/stock/movements:
+    get:
+      tags: [POS]
+      summary: The stock ledger
+      description: |
+        Every movement, newest first by default. A movement carries the balance after it, so the ledger can be audited on its own: a balance's value is the
+        sum of its value_deltas. A movement made from an order carries ref_id (the order's id) and ref_code (its TRX code, e.g. TRX-25102026-K7M2, as it was when the movement was written; "" for other movements and for those from before codes existed). Answers { items, total }.
+      security: [{ bearer: [] }]
+      parameters:
+        - { name: outlet_id, in: query, description: "Ignored: the list is always the outlet the signed-in account is pinned to", schema: { type: integer, format: int64 } }
+        - { name: material_id, in: query, schema: { type: integer, format: int64 } }
+        - { name: kind, in: query, schema: { type: string, enum: [receipt, consumption, consumption_reversal, waste, adjustment, transfer_in, transfer_out] } }
+        - { name: q, in: query, description: "Part of the note, the document number, the supplier or the order's TRX code (ref_code), ignoring case", schema: { type: string, maxLength: 64 } }
+        - { name: from, in: query, description: "First day, YYYY-MM-DD (Asia/Jakarta)", schema: { type: string, format: date } }
+        - { name: to, in: query, description: "Last day, included", schema: { type: string, format: date } }
+        - { name: sort_by, in: query, schema: { type: string, enum: [created_at, id], default: created_at } }
+        - { name: sort_dir, in: query, schema: { type: string, enum: [asc, desc], default: desc } }
+        - { name: limit, in: query, description: "Page size; 10 when left out or 0 or less, at most 100", schema: { type: integer, maximum: 100, default: 10 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /pos/v1/stock/receipts:
+    post:
+      tags: [POS]
+      summary: Receive goods
+      description: |
+        Books goods received; the value is the total cost paid, as entered. 201 for a new movement, 200 when the idempotency_key had already been used and the
+        original movement is returned. The outlet is always the account's own.
+      security: [{ bearer: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/StockReceiptBody" } } }
+      responses: { "201": { $ref: "#/components/responses/Ok" } }
+  /pos/v1/stock/waste:
+    post:
+      tags: [POS]
+      summary: Write stock off
+      description: |
+        Takes stock out as expired, damaged, spilled, lost or other, valued at the moving average. More than is on hand is refused with 400 "Only X unit in stock".
+        201 for a new movement, 200 for a retried key. The outlet is always the account's own.
+      security: [{ bearer: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/StockWasteBody" } } }
+      responses: { "201": { $ref: "#/components/responses/Ok" } }
+  /pos/v1/stock/adjustments:
+    post:
+      tags: [POS]
+      summary: Not for the POS
+      description: Head office only; always answers 403.
+      security: [{ bearer: [] }]
+      responses: { "403": { $ref: "#/components/responses/Ok" } }
+  /pos/v1/stock/transfers:
+    post:
+      tags: [POS]
+      summary: Not for the POS
+      description: Head office only; always answers 403.
+      security: [{ bearer: [] }]
+      responses: { "403": { $ref: "#/components/responses/Ok" } }
+  /pos/v1/stock/min:
+    put:
+      tags: [POS]
+      summary: Not for the POS
+      description: Head office only; always answers 403.
+      security: [{ bearer: [] }]
+      responses: { "403": { $ref: "#/components/responses/Ok" } }
+  /pos/v1/presence/ping:
+    post:
+      tags: [POS]
+      summary: Mark the caller online
+      description: The POS calls this every 20 seconds while open, so the back office can see who is working.
+      security: [{ bearer: [] }]
       responses: { "200": { $ref: "#/components/responses/Ok" } }
   /backoffice/v1/orders/{id}:
     get:

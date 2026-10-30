@@ -17,7 +17,7 @@ import (
 	"github.com/koobam/wuzz-backend/migrations"
 )
 
-var services = []string{"user", "catalog", "transaction"}
+var services = []string{"user", "catalog", "transaction", "gateway"}
 
 // sqlFiles lists every migration file as "service/name.sql".
 func sqlFiles(t *testing.T) []string {

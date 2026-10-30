@@ -17,6 +17,9 @@ service TransactionService {
   rpc GetOrder(GetOrderRequest) returns (GetOrderResponse);
   rpc ListOrders(ListOrdersRequest) returns (ListOrdersResponse);
   rpc UpdateOrderStatus(UpdateOrderStatusRequest) returns (UpdateOrderStatusResponse);
+  rpc OrderStats(OrderStatsRequest) returns (OrderStatsResponse);
+  // Totals over the same filters as ListOrders, in one query.
+  rpc OrderSummary(OrderSummaryRequest) returns (OrderSummaryResponse);
 }
 
 message OrderLine {
@@ -27,6 +30,21 @@ message OrderLine {
   // cached catalog, so an order rung up offline keeps the price the customer saw.
   int64 price = 4;
   double qty = 5;
+  // The tier ("Express") and the add-ons ("Lipat") picked for this line, kept as the customer saw them. `price` already
+  // includes them: it is the tier's price (or the service's) plus every add-on, per unit.
+  string variant = 6;
+  repeated LineModifier modifiers = 7;
+  // The ids of the variant and modifier options chosen, kept so the cost of the line can be reproduced later. They play no part
+  // in the price. Orders from before this existed have none.
+  repeated int64 variant_option_ids = 8;
+  repeated int64 modifier_option_ids = 9;
+}
+
+message LineModifier {
+  string group = 1;
+  string name = 2;
+  // Rupiah added per unit; 0 for a free choice.
+  int64 price = 3;
 }
 
 message Order {
@@ -42,6 +60,8 @@ message Order {
   int64 version = 9;
   google.protobuf.Timestamp created_at = 10;
   google.protobuf.Timestamp updated_at = 11;
+  // The name people use for the order: TRX-DDMMYYYY-XXXX (the day in Asia/Jakarta, four characters without 0, O, 1, I).
+  string code = 12;
 }
 
 message CreateOrderRequest {
@@ -50,6 +70,9 @@ message CreateOrderRequest {
   string customer_name = 3;
   string customer_phone = 4;
   repeated OrderLine lines = 5;
+  // The code the client built, if any. The server keeps it when it is well-formed and not another order's, otherwise it makes its own;
+  // the order that comes back carries the one that stuck.
+  string code = 6;
 }
 message CreateOrderResponse {
   Order order = 1;
@@ -65,10 +88,42 @@ message ListOrdersRequest {
   string status = 2;
   int32 limit = 3;
   int32 offset = 4;
+  // Matches a TRX id's start, or part of the customer's name or phone. Empty = no search.
+  string query = 5;
+  // One of created_at, total, status, customer_name, outlet_id, id; empty = created_at. sort_dir is asc or desc (default desc).
+  string sort_by = 6;
+  string sort_dir = 7;
+  // Only orders created within these days (YYYY-MM-DD, Asia/Jakarta, both ends included); either may be empty. At most 366 days apart.
+  string from = 8;
+  string to = 9;
 }
 message ListOrdersResponse {
   repeated Order orders = 1;
   int64 total = 2;
+}
+
+message OrderStatsRequest {
+  int64 outlet_id = 1; // 0 = every outlet the caller may see
+  int32 days = 2;      // the last N days, today included, when from/to are empty; 1..92, default 7
+  // A chosen range (YYYY-MM-DD, Asia/Jakarta, both ends included). Give both or neither; at most 92 days.
+  // Everything in the response is about orders created within the range.
+  string from = 3;
+  string to = 4;
+}
+message StatusCount {
+  string status = 1;
+  int64 orders = 2;
+}
+message DayStats {
+  string date = 1; // YYYY-MM-DD in Asia/Jakarta
+  int64 orders = 2;
+  int64 fulfilled = 3;
+  int64 cancelled = 4;
+}
+message OrderStatsResponse {
+  repeated StatusCount by_status = 1; // every status, zero included
+  int64 revenue = 2;                  // sum of `total` over fulfilled orders in the range
+  repeated DayStats days = 3;         // oldest first, a row for every day
 }
 
 message UpdateOrderStatusRequest {
@@ -76,3 +131,25 @@ message UpdateOrderStatusRequest {
   string status = 2;
 }
 message UpdateOrderStatusResponse { Order order = 1; }
+
+// The filters are exactly ListOrders's (outlet, status, search, from, to), so a summary and a list can never disagree.
+message OrderSummaryRequest {
+  int64 outlet_id = 1;
+  string status = 2;
+  string query = 3;
+  string from = 4;
+  string to = 5;
+}
+message OrderSummaryResponse {
+  int64 orders = 1;    // every matching order, any status
+  int64 fulfilled = 2;
+  int64 cancelled = 3;
+  int64 open = 4;      // created + processing + ready
+  int64 counted = 5;   // not cancelled
+  int64 value = 6;     // whole rupiah, the sum of total over the counted orders
+  int64 avg_value = 7; // value / counted, rounded once half away from zero
+  int64 lines = 8;     // order lines over the counted orders
+  string avg_lines = 9;          // lines / counted, 2 decimal places
+  string cancelled_percent = 10; // cancelled / orders x 100, 1 decimal place
+  string fulfilled_percent = 11;
+}

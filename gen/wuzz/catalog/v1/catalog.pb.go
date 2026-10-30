@@ -23,16 +23,33 @@ const (
 )
 
 type Outlet struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Address       string                 `protobuf:"bytes,3,opt,name=address,proto3" json:"address,omitempty"`
-	Phone         string                 `protobuf:"bytes,4,opt,name=phone,proto3" json:"phone,omitempty"`
-	Latitude      float64                `protobuf:"fixed64,5,opt,name=latitude,proto3" json:"latitude,omitempty"`
-	Longitude     float64                `protobuf:"fixed64,6,opt,name=longitude,proto3" json:"longitude,omitempty"`
-	Active        bool                   `protobuf:"varint,7,opt,name=active,proto3" json:"active,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Id        int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name      string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Address   string                 `protobuf:"bytes,3,opt,name=address,proto3" json:"address,omitempty"`
+	Phone     string                 `protobuf:"bytes,4,opt,name=phone,proto3" json:"phone,omitempty"`
+	Latitude  float64                `protobuf:"fixed64,5,opt,name=latitude,proto3" json:"latitude,omitempty"`
+	Longitude float64                `protobuf:"fixed64,6,opt,name=longitude,proto3" json:"longitude,omitempty"`
+	Active    bool                   `protobuf:"varint,7,opt,name=active,proto3" json:"active,omitempty"`
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// Addresses (https) of the outlet's pictures; the first is its banner.
+	Images []string `protobuf:"bytes,10,rep,name=images,proto3" json:"images,omitempty"`
+	// "laundry", "caffe" or "all".
+	Category string `protobuf:"bytes,11,opt,name=category,proto3" json:"category,omitempty"`
+	// Opening and closing time, wall-clock "HH:MM" in Asia/Jakarta; a close before the open means it closes after midnight.
+	OpenTime  string `protobuf:"bytes,12,opt,name=open_time,json=openTime,proto3" json:"open_time,omitempty"`
+	CloseTime string `protobuf:"bytes,13,opt,name=close_time,json=closeTime,proto3" json:"close_time,omitempty"`
+	// How an order reaches the customer: "pickup", "delivery" or both.
+	DeliveryTypes []string `protobuf:"bytes,14,rep,name=delivery_types,json=deliveryTypes,proto3" json:"delivery_types,omitempty"`
+	// Whether the hours say it is open right now (worked out when the outlet is read).
+	IsOpenNow bool `protobuf:"varint,15,opt,name=is_open_now,json=isOpenNow,proto3" json:"is_open_now,omitempty"`
+	// The clock the opening hours are on: "Asia/Jakarta" (WIB), "Asia/Makassar" (WITA) or "Asia/Jayapura" (WIT).
+	Timezone string `protobuf:"bytes,16,opt,name=timezone,proto3" json:"timezone,omitempty"`
+	// The week, Monday (weekday 0) to Sunday (6). open_time and close_time above are today's hours (empty when closed today).
+	Hours []*OutletDay `protobuf:"bytes,17,rep,name=hours,proto3" json:"hours,omitempty"`
+	// Contact email of the outlet; empty when it has none. Lower case.
+	Email         string `protobuf:"bytes,18,opt,name=email,proto3" json:"email,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -130,6 +147,148 @@ func (x *Outlet) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *Outlet) GetImages() []string {
+	if x != nil {
+		return x.Images
+	}
+	return nil
+}
+
+func (x *Outlet) GetCategory() string {
+	if x != nil {
+		return x.Category
+	}
+	return ""
+}
+
+func (x *Outlet) GetOpenTime() string {
+	if x != nil {
+		return x.OpenTime
+	}
+	return ""
+}
+
+func (x *Outlet) GetCloseTime() string {
+	if x != nil {
+		return x.CloseTime
+	}
+	return ""
+}
+
+func (x *Outlet) GetDeliveryTypes() []string {
+	if x != nil {
+		return x.DeliveryTypes
+	}
+	return nil
+}
+
+func (x *Outlet) GetIsOpenNow() bool {
+	if x != nil {
+		return x.IsOpenNow
+	}
+	return false
+}
+
+func (x *Outlet) GetTimezone() string {
+	if x != nil {
+		return x.Timezone
+	}
+	return ""
+}
+
+func (x *Outlet) GetHours() []*OutletDay {
+	if x != nil {
+		return x.Hours
+	}
+	return nil
+}
+
+func (x *Outlet) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+// OutletDay is the opening hours of one weekday. A closed day has no times; a close before the open means it closes after midnight.
+// open_24h marks a day open round the clock: it has no times of its own (they are read back as "00:00"/"00:00") and it cannot also
+// be closed.
+type OutletDay struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Weekday       int32                  `protobuf:"varint,1,opt,name=weekday,proto3" json:"weekday,omitempty"` // 0 = Monday ... 6 = Sunday
+	Closed        bool                   `protobuf:"varint,2,opt,name=closed,proto3" json:"closed,omitempty"`
+	OpenTime      string                 `protobuf:"bytes,3,opt,name=open_time,json=openTime,proto3" json:"open_time,omitempty"`
+	CloseTime     string                 `protobuf:"bytes,4,opt,name=close_time,json=closeTime,proto3" json:"close_time,omitempty"`
+	Open_24H      bool                   `protobuf:"varint,5,opt,name=open_24h,json=open24h,proto3" json:"open_24h,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OutletDay) Reset() {
+	*x = OutletDay{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OutletDay) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OutletDay) ProtoMessage() {}
+
+func (x *OutletDay) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OutletDay.ProtoReflect.Descriptor instead.
+func (*OutletDay) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *OutletDay) GetWeekday() int32 {
+	if x != nil {
+		return x.Weekday
+	}
+	return 0
+}
+
+func (x *OutletDay) GetClosed() bool {
+	if x != nil {
+		return x.Closed
+	}
+	return false
+}
+
+func (x *OutletDay) GetOpenTime() string {
+	if x != nil {
+		return x.OpenTime
+	}
+	return ""
+}
+
+func (x *OutletDay) GetCloseTime() string {
+	if x != nil {
+		return x.CloseTime
+	}
+	return ""
+}
+
+func (x *OutletDay) GetOpen_24H() bool {
+	if x != nil {
+		return x.Open_24H
+	}
+	return false
+}
+
 type ServiceItem struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Id    int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -137,17 +296,41 @@ type ServiceItem struct {
 	// "kg" or "pcs".
 	Unit string `protobuf:"bytes,3,opt,name=unit,proto3" json:"unit,omitempty"`
 	// Rupiah, whole.
-	Price         int64                  `protobuf:"varint,4,opt,name=price,proto3" json:"price,omitempty"`
-	Active        bool                   `protobuf:"varint,5,opt,name=active,proto3" json:"active,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Price     int64                  `protobuf:"varint,4,opt,name=price,proto3" json:"price,omitempty"`
+	Active    bool                   `protobuf:"varint,5,opt,name=active,proto3" json:"active,omitempty"`
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// Which category it is listed under (0 = none), the icon it is drawn with, and a line about it.
+	CategoryId  int64  `protobuf:"varint,8,opt,name=category_id,json=categoryId,proto3" json:"category_id,omitempty"`
+	Icon        string `protobuf:"bytes,9,opt,name=icon,proto3" json:"icon,omitempty"`
+	Description string `protobuf:"bytes,10,opt,name=description,proto3" json:"description,omitempty"`
+	// The variant and modifier groups linked to the service, in order, with all their options.
+	VariantGroups  []*VariantGroup  `protobuf:"bytes,11,rep,name=variant_groups,json=variantGroups,proto3" json:"variant_groups,omitempty"`
+	ModifierGroups []*ModifierGroup `protobuf:"bytes,12,rep,name=modifier_groups,json=modifierGroups,proto3" json:"modifier_groups,omitempty"`
+	// How tax is added to the price: "none" or "ppn" (the rate is the checkout's configuration, not stored here).
+	TaxType string `protobuf:"bytes,13,opt,name=tax_type,json=taxType,proto3" json:"tax_type,omitempty"`
+	// A note for staff, never shown to customers.
+	InternalNotes string `protobuf:"bytes,14,opt,name=internal_notes,json=internalNotes,proto3" json:"internal_notes,omitempty"`
+	// `price` is what the customer pays (the price after tax). price_before_tax is what is stored and keyed in; both are whole
+	// rupiah, with the tax added once, rounded half away from zero. tax_rate_bps is the rate of tax_type (0 for "none").
+	PriceBeforeTax int64 `protobuf:"varint,15,opt,name=price_before_tax,json=priceBeforeTax,proto3" json:"price_before_tax,omitempty"`
+	PriceAfterTax  int64 `protobuf:"varint,16,opt,name=price_after_tax,json=priceAfterTax,proto3" json:"price_after_tax,omitempty"`
+	TaxRateBps     int32 `protobuf:"varint,17,opt,name=tax_rate_bps,json=taxRateBps,proto3" json:"tax_rate_bps,omitempty"`
+	// A discount on the list price (price_before_tax): "none", "value" (discount_value is whole rupiah) or "percent"
+	// (discount_value is basis points, 1250 = 12.5%). The discount comes off first and tax is added to what is left:
+	// discount_amount is what it takes off, price_after_discount = price_before_tax - discount_amount is the tax base, and
+	// price_after_tax = price_after_discount + tax. Each step rounds once, half away from zero.
+	DiscountType       string `protobuf:"bytes,18,opt,name=discount_type,json=discountType,proto3" json:"discount_type,omitempty"`
+	DiscountValue      int64  `protobuf:"varint,19,opt,name=discount_value,json=discountValue,proto3" json:"discount_value,omitempty"`
+	DiscountAmount     int64  `protobuf:"varint,20,opt,name=discount_amount,json=discountAmount,proto3" json:"discount_amount,omitempty"`
+	PriceAfterDiscount int64  `protobuf:"varint,21,opt,name=price_after_discount,json=priceAfterDiscount,proto3" json:"price_after_discount,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *ServiceItem) Reset() {
 	*x = ServiceItem{}
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[1]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -159,7 +342,7 @@ func (x *ServiceItem) String() string {
 func (*ServiceItem) ProtoMessage() {}
 
 func (x *ServiceItem) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[1]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -172,7 +355,7 @@ func (x *ServiceItem) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServiceItem.ProtoReflect.Descriptor instead.
 func (*ServiceItem) Descriptor() ([]byte, []int) {
-	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{1}
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *ServiceItem) GetId() int64 {
@@ -224,19 +407,1444 @@ func (x *ServiceItem) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *ServiceItem) GetCategoryId() int64 {
+	if x != nil {
+		return x.CategoryId
+	}
+	return 0
+}
+
+func (x *ServiceItem) GetIcon() string {
+	if x != nil {
+		return x.Icon
+	}
+	return ""
+}
+
+func (x *ServiceItem) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *ServiceItem) GetVariantGroups() []*VariantGroup {
+	if x != nil {
+		return x.VariantGroups
+	}
+	return nil
+}
+
+func (x *ServiceItem) GetModifierGroups() []*ModifierGroup {
+	if x != nil {
+		return x.ModifierGroups
+	}
+	return nil
+}
+
+func (x *ServiceItem) GetTaxType() string {
+	if x != nil {
+		return x.TaxType
+	}
+	return ""
+}
+
+func (x *ServiceItem) GetInternalNotes() string {
+	if x != nil {
+		return x.InternalNotes
+	}
+	return ""
+}
+
+func (x *ServiceItem) GetPriceBeforeTax() int64 {
+	if x != nil {
+		return x.PriceBeforeTax
+	}
+	return 0
+}
+
+func (x *ServiceItem) GetPriceAfterTax() int64 {
+	if x != nil {
+		return x.PriceAfterTax
+	}
+	return 0
+}
+
+func (x *ServiceItem) GetTaxRateBps() int32 {
+	if x != nil {
+		return x.TaxRateBps
+	}
+	return 0
+}
+
+func (x *ServiceItem) GetDiscountType() string {
+	if x != nil {
+		return x.DiscountType
+	}
+	return ""
+}
+
+func (x *ServiceItem) GetDiscountValue() int64 {
+	if x != nil {
+		return x.DiscountValue
+	}
+	return 0
+}
+
+func (x *ServiceItem) GetDiscountAmount() int64 {
+	if x != nil {
+		return x.DiscountAmount
+	}
+	return 0
+}
+
+func (x *ServiceItem) GetPriceAfterDiscount() int64 {
+	if x != nil {
+		return x.PriceAfterDiscount
+	}
+	return 0
+}
+
+// A wrapper, so that "not given" (an update keeps the stored links) differs from an empty list (it clears them).
+type IdList struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Ids           []int64                `protobuf:"varint,1,rep,packed,name=ids,proto3" json:"ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *IdList) Reset() {
+	*x = IdList{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *IdList) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IdList) ProtoMessage() {}
+
+func (x *IdList) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IdList.ProtoReflect.Descriptor instead.
+func (*IdList) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *IdList) GetIds() []int64 {
+	if x != nil {
+		return x.Ids
+	}
+	return nil
+}
+
+// A service a group is used by.
+type ServiceRef struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ServiceRef) Reset() {
+	*x = ServiceRef{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ServiceRef) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ServiceRef) ProtoMessage() {}
+
+func (x *ServiceRef) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ServiceRef.ProtoReflect.Descriptor instead.
+func (*ServiceRef) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ServiceRef) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *ServiceRef) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+type VariantOption struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"` // 0 = a new option, on a write
+	Name  string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// Rupiah added per unit to the service's price.
+	PriceDelta        int64  `protobuf:"varint,3,opt,name=price_delta,json=priceDelta,proto3" json:"price_delta,omitempty"`
+	IsDefault         bool   `protobuf:"varint,4,opt,name=is_default,json=isDefault,proto3" json:"is_default,omitempty"`
+	Active            bool   `protobuf:"varint,5,opt,name=active,proto3" json:"active,omitempty"`
+	SortIndex         int32  `protobuf:"varint,6,opt,name=sort_index,json=sortIndex,proto3" json:"sort_index,omitempty"`
+	EstimatedTime     int32  `protobuf:"varint,7,opt,name=estimated_time,json=estimatedTime,proto3" json:"estimated_time,omitempty"`
+	EstimatedTimeUnit string `protobuf:"bytes,8,opt,name=estimated_time_unit,json=estimatedTimeUnit,proto3" json:"estimated_time_unit,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *VariantOption) Reset() {
+	*x = VariantOption{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *VariantOption) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*VariantOption) ProtoMessage() {}
+
+func (x *VariantOption) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use VariantOption.ProtoReflect.Descriptor instead.
+func (*VariantOption) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *VariantOption) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *VariantOption) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *VariantOption) GetPriceDelta() int64 {
+	if x != nil {
+		return x.PriceDelta
+	}
+	return 0
+}
+
+func (x *VariantOption) GetIsDefault() bool {
+	if x != nil {
+		return x.IsDefault
+	}
+	return false
+}
+
+func (x *VariantOption) GetActive() bool {
+	if x != nil {
+		return x.Active
+	}
+	return false
+}
+
+func (x *VariantOption) GetSortIndex() int32 {
+	if x != nil {
+		return x.SortIndex
+	}
+	return 0
+}
+
+func (x *VariantOption) GetEstimatedTime() int32 {
+	if x != nil {
+		return x.EstimatedTime
+	}
+	return 0
+}
+
+func (x *VariantOption) GetEstimatedTimeUnit() string {
+	if x != nil {
+		return x.EstimatedTimeUnit
+	}
+	return ""
+}
+
+// A choice of exactly one option, shared by the services that offer it.
+type VariantGroup struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	InternalNotes string                 `protobuf:"bytes,3,opt,name=internal_notes,json=internalNotes,proto3" json:"internal_notes,omitempty"`
+	SortIndex     int32                  `protobuf:"varint,4,opt,name=sort_index,json=sortIndex,proto3" json:"sort_index,omitempty"`
+	Options       []*VariantOption       `protobuf:"bytes,5,rep,name=options,proto3" json:"options,omitempty"`
+	Services      []*ServiceRef          `protobuf:"bytes,6,rep,name=services,proto3" json:"services,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *VariantGroup) Reset() {
+	*x = VariantGroup{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *VariantGroup) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*VariantGroup) ProtoMessage() {}
+
+func (x *VariantGroup) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use VariantGroup.ProtoReflect.Descriptor instead.
+func (*VariantGroup) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *VariantGroup) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *VariantGroup) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *VariantGroup) GetInternalNotes() string {
+	if x != nil {
+		return x.InternalNotes
+	}
+	return ""
+}
+
+func (x *VariantGroup) GetSortIndex() int32 {
+	if x != nil {
+		return x.SortIndex
+	}
+	return 0
+}
+
+func (x *VariantGroup) GetOptions() []*VariantOption {
+	if x != nil {
+		return x.Options
+	}
+	return nil
+}
+
+func (x *VariantGroup) GetServices() []*ServiceRef {
+	if x != nil {
+		return x.Services
+	}
+	return nil
+}
+
+func (x *VariantGroup) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *VariantGroup) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+type ModifierOption struct {
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Id          int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"` // 0 = a new option, on a write
+	Name        string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Description string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	// Rupiah added per unit.
+	Price         int64 `protobuf:"varint,4,opt,name=price,proto3" json:"price,omitempty"`
+	Active        bool  `protobuf:"varint,5,opt,name=active,proto3" json:"active,omitempty"`
+	SortIndex     int32 `protobuf:"varint,6,opt,name=sort_index,json=sortIndex,proto3" json:"sort_index,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ModifierOption) Reset() {
+	*x = ModifierOption{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ModifierOption) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ModifierOption) ProtoMessage() {}
+
+func (x *ModifierOption) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ModifierOption.ProtoReflect.Descriptor instead.
+func (*ModifierOption) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ModifierOption) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *ModifierOption) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ModifierOption) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *ModifierOption) GetPrice() int64 {
+	if x != nil {
+		return x.Price
+	}
+	return 0
+}
+
+func (x *ModifierOption) GetActive() bool {
+	if x != nil {
+		return x.Active
+	}
+	return false
+}
+
+func (x *ModifierOption) GetSortIndex() int32 {
+	if x != nil {
+		return x.SortIndex
+	}
+	return 0
+}
+
+// Optional add-ons with a rule: min 0 is optional, min >= 1 required; max unset is no ceiling.
+type ModifierGroup struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	InternalNotes string                 `protobuf:"bytes,3,opt,name=internal_notes,json=internalNotes,proto3" json:"internal_notes,omitempty"`
+	Min           int32                  `protobuf:"varint,4,opt,name=min,proto3" json:"min,omitempty"`
+	Max           *int32                 `protobuf:"varint,5,opt,name=max,proto3,oneof" json:"max,omitempty"`
+	Options       []*ModifierOption      `protobuf:"bytes,6,rep,name=options,proto3" json:"options,omitempty"`
+	Services      []*ServiceRef          `protobuf:"bytes,7,rep,name=services,proto3" json:"services,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ModifierGroup) Reset() {
+	*x = ModifierGroup{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ModifierGroup) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ModifierGroup) ProtoMessage() {}
+
+func (x *ModifierGroup) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ModifierGroup.ProtoReflect.Descriptor instead.
+func (*ModifierGroup) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ModifierGroup) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *ModifierGroup) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ModifierGroup) GetInternalNotes() string {
+	if x != nil {
+		return x.InternalNotes
+	}
+	return ""
+}
+
+func (x *ModifierGroup) GetMin() int32 {
+	if x != nil {
+		return x.Min
+	}
+	return 0
+}
+
+func (x *ModifierGroup) GetMax() int32 {
+	if x != nil && x.Max != nil {
+		return *x.Max
+	}
+	return 0
+}
+
+func (x *ModifierGroup) GetOptions() []*ModifierOption {
+	if x != nil {
+		return x.Options
+	}
+	return nil
+}
+
+func (x *ModifierGroup) GetServices() []*ServiceRef {
+	if x != nil {
+		return x.Services
+	}
+	return nil
+}
+
+func (x *ModifierGroup) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *ModifierGroup) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+// The list filters. q matches the group name, its note or any option name (case-insensitive, no wildcards); sort_by is one of
+// id, name, created_at, updated_at (empty = id); sort_dir is asc or desc (empty = asc).
+type ListVariantGroupsRequest struct {
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Q       string                 `protobuf:"bytes,1,opt,name=q,proto3" json:"q,omitempty"`
+	SortBy  string                 `protobuf:"bytes,2,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
+	SortDir string                 `protobuf:"bytes,3,opt,name=sort_dir,json=sortDir,proto3" json:"sort_dir,omitempty"`
+	// A page: limit defaults to 10 (at most 100), offset to 0.
+	Limit  int32 `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
+	Offset int32 `protobuf:"varint,5,opt,name=offset,proto3" json:"offset,omitempty"`
+	// Only groups linked to this service (0 = any), and used / unused / empty (all) by any service.
+	ServiceId     int64  `protobuf:"varint,6,opt,name=service_id,json=serviceId,proto3" json:"service_id,omitempty"`
+	Usage         string `protobuf:"bytes,7,opt,name=usage,proto3" json:"usage,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListVariantGroupsRequest) Reset() {
+	*x = ListVariantGroupsRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListVariantGroupsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListVariantGroupsRequest) ProtoMessage() {}
+
+func (x *ListVariantGroupsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListVariantGroupsRequest.ProtoReflect.Descriptor instead.
+func (*ListVariantGroupsRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *ListVariantGroupsRequest) GetQ() string {
+	if x != nil {
+		return x.Q
+	}
+	return ""
+}
+
+func (x *ListVariantGroupsRequest) GetSortBy() string {
+	if x != nil {
+		return x.SortBy
+	}
+	return ""
+}
+
+func (x *ListVariantGroupsRequest) GetSortDir() string {
+	if x != nil {
+		return x.SortDir
+	}
+	return ""
+}
+
+func (x *ListVariantGroupsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *ListVariantGroupsRequest) GetOffset() int32 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+func (x *ListVariantGroupsRequest) GetServiceId() int64 {
+	if x != nil {
+		return x.ServiceId
+	}
+	return 0
+}
+
+func (x *ListVariantGroupsRequest) GetUsage() string {
+	if x != nil {
+		return x.Usage
+	}
+	return ""
+}
+
+// total counts every group the filter matches, before limit and offset.
+type ListVariantGroupsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Groups        []*VariantGroup        `protobuf:"bytes,1,rep,name=groups,proto3" json:"groups,omitempty"`
+	Total         int64                  `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListVariantGroupsResponse) Reset() {
+	*x = ListVariantGroupsResponse{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListVariantGroupsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListVariantGroupsResponse) ProtoMessage() {}
+
+func (x *ListVariantGroupsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListVariantGroupsResponse.ProtoReflect.Descriptor instead.
+func (*ListVariantGroupsResponse) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *ListVariantGroupsResponse) GetGroups() []*VariantGroup {
+	if x != nil {
+		return x.Groups
+	}
+	return nil
+}
+
+func (x *ListVariantGroupsResponse) GetTotal() int64 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
+type GetVariantGroupRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetVariantGroupRequest) Reset() {
+	*x = GetVariantGroupRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetVariantGroupRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetVariantGroupRequest) ProtoMessage() {}
+
+func (x *GetVariantGroupRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetVariantGroupRequest.ProtoReflect.Descriptor instead.
+func (*GetVariantGroupRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *GetVariantGroupRequest) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+type VariantGroupResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Group         *VariantGroup          `protobuf:"bytes,1,opt,name=group,proto3" json:"group,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *VariantGroupResponse) Reset() {
+	*x = VariantGroupResponse{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *VariantGroupResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*VariantGroupResponse) ProtoMessage() {}
+
+func (x *VariantGroupResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use VariantGroupResponse.ProtoReflect.Descriptor instead.
+func (*VariantGroupResponse) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *VariantGroupResponse) GetGroup() *VariantGroup {
+	if x != nil {
+		return x.Group
+	}
+	return nil
+}
+
+type SaveVariantGroupRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"` // 0 on a create
+	Group         *VariantGroup          `protobuf:"bytes,2,opt,name=group,proto3" json:"group,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SaveVariantGroupRequest) Reset() {
+	*x = SaveVariantGroupRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SaveVariantGroupRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveVariantGroupRequest) ProtoMessage() {}
+
+func (x *SaveVariantGroupRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveVariantGroupRequest.ProtoReflect.Descriptor instead.
+func (*SaveVariantGroupRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *SaveVariantGroupRequest) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *SaveVariantGroupRequest) GetGroup() *VariantGroup {
+	if x != nil {
+		return x.Group
+	}
+	return nil
+}
+
+type DeleteOutletRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteOutletRequest) Reset() {
+	*x = DeleteOutletRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteOutletRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteOutletRequest) ProtoMessage() {}
+
+func (x *DeleteOutletRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteOutletRequest.ProtoReflect.Descriptor instead.
+func (*DeleteOutletRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *DeleteOutletRequest) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+type DeleteOutletResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteOutletResponse) Reset() {
+	*x = DeleteOutletResponse{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteOutletResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteOutletResponse) ProtoMessage() {}
+
+func (x *DeleteOutletResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteOutletResponse.ProtoReflect.Descriptor instead.
+func (*DeleteOutletResponse) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{15}
+}
+
+type DeleteServiceRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteServiceRequest) Reset() {
+	*x = DeleteServiceRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteServiceRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteServiceRequest) ProtoMessage() {}
+
+func (x *DeleteServiceRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteServiceRequest.ProtoReflect.Descriptor instead.
+func (*DeleteServiceRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *DeleteServiceRequest) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+type DeleteServiceResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteServiceResponse) Reset() {
+	*x = DeleteServiceResponse{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteServiceResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteServiceResponse) ProtoMessage() {}
+
+func (x *DeleteServiceResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteServiceResponse.ProtoReflect.Descriptor instead.
+func (*DeleteServiceResponse) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{17}
+}
+
+type DeleteGroupRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteGroupRequest) Reset() {
+	*x = DeleteGroupRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteGroupRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteGroupRequest) ProtoMessage() {}
+
+func (x *DeleteGroupRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteGroupRequest.ProtoReflect.Descriptor instead.
+func (*DeleteGroupRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *DeleteGroupRequest) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+type DeleteGroupResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteGroupResponse) Reset() {
+	*x = DeleteGroupResponse{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteGroupResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteGroupResponse) ProtoMessage() {}
+
+func (x *DeleteGroupResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteGroupResponse.ProtoReflect.Descriptor instead.
+func (*DeleteGroupResponse) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{19}
+}
+
+type ListModifierGroupsRequest struct {
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Q       string                 `protobuf:"bytes,1,opt,name=q,proto3" json:"q,omitempty"`
+	SortBy  string                 `protobuf:"bytes,2,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
+	SortDir string                 `protobuf:"bytes,3,opt,name=sort_dir,json=sortDir,proto3" json:"sort_dir,omitempty"`
+	// required (min >= 1), optional (min 0) or empty for all.
+	Requirement   string `protobuf:"bytes,4,opt,name=requirement,proto3" json:"requirement,omitempty"`
+	Limit         int32  `protobuf:"varint,5,opt,name=limit,proto3" json:"limit,omitempty"`
+	Offset        int32  `protobuf:"varint,6,opt,name=offset,proto3" json:"offset,omitempty"`
+	ServiceId     int64  `protobuf:"varint,7,opt,name=service_id,json=serviceId,proto3" json:"service_id,omitempty"`
+	Usage         string `protobuf:"bytes,8,opt,name=usage,proto3" json:"usage,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListModifierGroupsRequest) Reset() {
+	*x = ListModifierGroupsRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListModifierGroupsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListModifierGroupsRequest) ProtoMessage() {}
+
+func (x *ListModifierGroupsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListModifierGroupsRequest.ProtoReflect.Descriptor instead.
+func (*ListModifierGroupsRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *ListModifierGroupsRequest) GetQ() string {
+	if x != nil {
+		return x.Q
+	}
+	return ""
+}
+
+func (x *ListModifierGroupsRequest) GetSortBy() string {
+	if x != nil {
+		return x.SortBy
+	}
+	return ""
+}
+
+func (x *ListModifierGroupsRequest) GetSortDir() string {
+	if x != nil {
+		return x.SortDir
+	}
+	return ""
+}
+
+func (x *ListModifierGroupsRequest) GetRequirement() string {
+	if x != nil {
+		return x.Requirement
+	}
+	return ""
+}
+
+func (x *ListModifierGroupsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *ListModifierGroupsRequest) GetOffset() int32 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+func (x *ListModifierGroupsRequest) GetServiceId() int64 {
+	if x != nil {
+		return x.ServiceId
+	}
+	return 0
+}
+
+func (x *ListModifierGroupsRequest) GetUsage() string {
+	if x != nil {
+		return x.Usage
+	}
+	return ""
+}
+
+type ListModifierGroupsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Groups        []*ModifierGroup       `protobuf:"bytes,1,rep,name=groups,proto3" json:"groups,omitempty"`
+	Total         int64                  `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListModifierGroupsResponse) Reset() {
+	*x = ListModifierGroupsResponse{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListModifierGroupsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListModifierGroupsResponse) ProtoMessage() {}
+
+func (x *ListModifierGroupsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListModifierGroupsResponse.ProtoReflect.Descriptor instead.
+func (*ListModifierGroupsResponse) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *ListModifierGroupsResponse) GetGroups() []*ModifierGroup {
+	if x != nil {
+		return x.Groups
+	}
+	return nil
+}
+
+func (x *ListModifierGroupsResponse) GetTotal() int64 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
+type GetModifierGroupRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetModifierGroupRequest) Reset() {
+	*x = GetModifierGroupRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetModifierGroupRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetModifierGroupRequest) ProtoMessage() {}
+
+func (x *GetModifierGroupRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetModifierGroupRequest.ProtoReflect.Descriptor instead.
+func (*GetModifierGroupRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *GetModifierGroupRequest) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+type ModifierGroupResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Group         *ModifierGroup         `protobuf:"bytes,1,opt,name=group,proto3" json:"group,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ModifierGroupResponse) Reset() {
+	*x = ModifierGroupResponse{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ModifierGroupResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ModifierGroupResponse) ProtoMessage() {}
+
+func (x *ModifierGroupResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ModifierGroupResponse.ProtoReflect.Descriptor instead.
+func (*ModifierGroupResponse) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *ModifierGroupResponse) GetGroup() *ModifierGroup {
+	if x != nil {
+		return x.Group
+	}
+	return nil
+}
+
+type SaveModifierGroupRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"` // 0 on a create
+	Group         *ModifierGroup         `protobuf:"bytes,2,opt,name=group,proto3" json:"group,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SaveModifierGroupRequest) Reset() {
+	*x = SaveModifierGroupRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SaveModifierGroupRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveModifierGroupRequest) ProtoMessage() {}
+
+func (x *SaveModifierGroupRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveModifierGroupRequest.ProtoReflect.Descriptor instead.
+func (*SaveModifierGroupRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *SaveModifierGroupRequest) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *SaveModifierGroupRequest) GetGroup() *ModifierGroup {
+	if x != nil {
+		return x.Group
+	}
+	return nil
+}
+
 type ListOutletsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Only outlets the caller may see are returned when ids is set.
 	Ids []int64 `protobuf:"varint,1,rep,packed,name=ids,proto3" json:"ids,omitempty"`
 	// Admins may ask for inactive outlets too.
 	IncludeInactive bool `protobuf:"varint,2,opt,name=include_inactive,json=includeInactive,proto3" json:"include_inactive,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Only outlets inside this box (a map's visible area). Unset = everywhere.
+	Bounds *Bounds `protobuf:"bytes,3,opt,name=bounds,proto3" json:"bounds,omitempty"`
+	// A searchable page, used when limit > 0 (the back office's table): q matches name, address, phone or email; active is "", "true" or
+	// "false"; sort_by is one of id, name, address, phone, active (empty = id); sort_dir asc or desc. Admin only; ids and bounds
+	// are ignored then. With limit 0 the plain list above is returned and total stays 0.
+	Q             string `protobuf:"bytes,4,opt,name=q,proto3" json:"q,omitempty"`
+	Active        string `protobuf:"bytes,5,opt,name=active,proto3" json:"active,omitempty"`
+	SortBy        string `protobuf:"bytes,6,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
+	SortDir       string `protobuf:"bytes,7,opt,name=sort_dir,json=sortDir,proto3" json:"sort_dir,omitempty"`
+	Limit         int32  `protobuf:"varint,8,opt,name=limit,proto3" json:"limit,omitempty"`
+	Offset        int32  `protobuf:"varint,9,opt,name=offset,proto3" json:"offset,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListOutletsRequest) Reset() {
 	*x = ListOutletsRequest{}
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[2]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -248,7 +1856,7 @@ func (x *ListOutletsRequest) String() string {
 func (*ListOutletsRequest) ProtoMessage() {}
 
 func (x *ListOutletsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[2]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -261,7 +1869,7 @@ func (x *ListOutletsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListOutletsRequest.ProtoReflect.Descriptor instead.
 func (*ListOutletsRequest) Descriptor() ([]byte, []int) {
-	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{2}
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *ListOutletsRequest) GetIds() []int64 {
@@ -278,16 +1886,136 @@ func (x *ListOutletsRequest) GetIncludeInactive() bool {
 	return false
 }
 
-type ListOutletsResponse struct {
+func (x *ListOutletsRequest) GetBounds() *Bounds {
+	if x != nil {
+		return x.Bounds
+	}
+	return nil
+}
+
+func (x *ListOutletsRequest) GetQ() string {
+	if x != nil {
+		return x.Q
+	}
+	return ""
+}
+
+func (x *ListOutletsRequest) GetActive() string {
+	if x != nil {
+		return x.Active
+	}
+	return ""
+}
+
+func (x *ListOutletsRequest) GetSortBy() string {
+	if x != nil {
+		return x.SortBy
+	}
+	return ""
+}
+
+func (x *ListOutletsRequest) GetSortDir() string {
+	if x != nil {
+		return x.SortDir
+	}
+	return ""
+}
+
+func (x *ListOutletsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *ListOutletsRequest) GetOffset() int32 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+// A box on the map, in degrees.
+type Bounds struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Outlets       []*Outlet              `protobuf:"bytes,1,rep,name=outlets,proto3" json:"outlets,omitempty"`
+	South         float64                `protobuf:"fixed64,1,opt,name=south,proto3" json:"south,omitempty"`
+	West          float64                `protobuf:"fixed64,2,opt,name=west,proto3" json:"west,omitempty"`
+	North         float64                `protobuf:"fixed64,3,opt,name=north,proto3" json:"north,omitempty"`
+	East          float64                `protobuf:"fixed64,4,opt,name=east,proto3" json:"east,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Bounds) Reset() {
+	*x = Bounds{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Bounds) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Bounds) ProtoMessage() {}
+
+func (x *Bounds) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Bounds.ProtoReflect.Descriptor instead.
+func (*Bounds) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *Bounds) GetSouth() float64 {
+	if x != nil {
+		return x.South
+	}
+	return 0
+}
+
+func (x *Bounds) GetWest() float64 {
+	if x != nil {
+		return x.West
+	}
+	return 0
+}
+
+func (x *Bounds) GetNorth() float64 {
+	if x != nil {
+		return x.North
+	}
+	return 0
+}
+
+func (x *Bounds) GetEast() float64 {
+	if x != nil {
+		return x.East
+	}
+	return 0
+}
+
+type ListOutletsResponse struct {
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Outlets []*Outlet              `protobuf:"bytes,1,rep,name=outlets,proto3" json:"outlets,omitempty"`
+	// How many outlets the paged filter matches, before limit and offset (0 for the plain list).
+	Total         int64 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListOutletsResponse) Reset() {
 	*x = ListOutletsResponse{}
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[3]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -299,7 +2027,7 @@ func (x *ListOutletsResponse) String() string {
 func (*ListOutletsResponse) ProtoMessage() {}
 
 func (x *ListOutletsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[3]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -312,7 +2040,7 @@ func (x *ListOutletsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListOutletsResponse.ProtoReflect.Descriptor instead.
 func (*ListOutletsResponse) Descriptor() ([]byte, []int) {
-	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{3}
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *ListOutletsResponse) GetOutlets() []*Outlet {
@@ -320,6 +2048,13 @@ func (x *ListOutletsResponse) GetOutlets() []*Outlet {
 		return x.Outlets
 	}
 	return nil
+}
+
+func (x *ListOutletsResponse) GetTotal() int64 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
 }
 
 type GetOutletRequest struct {
@@ -331,7 +2066,7 @@ type GetOutletRequest struct {
 
 func (x *GetOutletRequest) Reset() {
 	*x = GetOutletRequest{}
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[4]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -343,7 +2078,7 @@ func (x *GetOutletRequest) String() string {
 func (*GetOutletRequest) ProtoMessage() {}
 
 func (x *GetOutletRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[4]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -356,7 +2091,7 @@ func (x *GetOutletRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetOutletRequest.ProtoReflect.Descriptor instead.
 func (*GetOutletRequest) Descriptor() ([]byte, []int) {
-	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{4}
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *GetOutletRequest) GetId() int64 {
@@ -375,7 +2110,7 @@ type GetOutletResponse struct {
 
 func (x *GetOutletResponse) Reset() {
 	*x = GetOutletResponse{}
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[5]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -387,7 +2122,7 @@ func (x *GetOutletResponse) String() string {
 func (*GetOutletResponse) ProtoMessage() {}
 
 func (x *GetOutletResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[5]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -400,7 +2135,7 @@ func (x *GetOutletResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetOutletResponse.ProtoReflect.Descriptor instead.
 func (*GetOutletResponse) Descriptor() ([]byte, []int) {
-	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{5}
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *GetOutletResponse) GetOutlet() *Outlet {
@@ -411,19 +2146,30 @@ func (x *GetOutletResponse) GetOutlet() *Outlet {
 }
 
 type CreateOutletRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Address       string                 `protobuf:"bytes,2,opt,name=address,proto3" json:"address,omitempty"`
-	Phone         string                 `protobuf:"bytes,3,opt,name=phone,proto3" json:"phone,omitempty"`
-	Latitude      float64                `protobuf:"fixed64,4,opt,name=latitude,proto3" json:"latitude,omitempty"`
-	Longitude     float64                `protobuf:"fixed64,5,opt,name=longitude,proto3" json:"longitude,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Name      string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Address   string                 `protobuf:"bytes,2,opt,name=address,proto3" json:"address,omitempty"`
+	Phone     string                 `protobuf:"bytes,3,opt,name=phone,proto3" json:"phone,omitempty"`
+	Latitude  float64                `protobuf:"fixed64,4,opt,name=latitude,proto3" json:"latitude,omitempty"`
+	Longitude float64                `protobuf:"fixed64,5,opt,name=longitude,proto3" json:"longitude,omitempty"`
+	Images    []string               `protobuf:"bytes,6,rep,name=images,proto3" json:"images,omitempty"`
+	// Left empty, a new outlet is "all", open 08:00-22:00, pickup and delivery.
+	Category      string   `protobuf:"bytes,7,opt,name=category,proto3" json:"category,omitempty"`
+	OpenTime      string   `protobuf:"bytes,8,opt,name=open_time,json=openTime,proto3" json:"open_time,omitempty"`
+	CloseTime     string   `protobuf:"bytes,9,opt,name=close_time,json=closeTime,proto3" json:"close_time,omitempty"`
+	DeliveryTypes []string `protobuf:"bytes,10,rep,name=delivery_types,json=deliveryTypes,proto3" json:"delivery_types,omitempty"`
+	// Left empty: Asia/Jakarta, and the week is open_time-close_time every day (08:00-22:00 when those are empty too).
+	Timezone string       `protobuf:"bytes,11,opt,name=timezone,proto3" json:"timezone,omitempty"`
+	Hours    []*OutletDay `protobuf:"bytes,12,rep,name=hours,proto3" json:"hours,omitempty"`
+	// Optional contact email ("" = none); validated and lower-cased by the catalog.
+	Email         string `protobuf:"bytes,13,opt,name=email,proto3" json:"email,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CreateOutletRequest) Reset() {
 	*x = CreateOutletRequest{}
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[6]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -435,7 +2181,7 @@ func (x *CreateOutletRequest) String() string {
 func (*CreateOutletRequest) ProtoMessage() {}
 
 func (x *CreateOutletRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[6]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -448,7 +2194,7 @@ func (x *CreateOutletRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateOutletRequest.ProtoReflect.Descriptor instead.
 func (*CreateOutletRequest) Descriptor() ([]byte, []int) {
-	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{6}
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *CreateOutletRequest) GetName() string {
@@ -486,6 +2232,62 @@ func (x *CreateOutletRequest) GetLongitude() float64 {
 	return 0
 }
 
+func (x *CreateOutletRequest) GetImages() []string {
+	if x != nil {
+		return x.Images
+	}
+	return nil
+}
+
+func (x *CreateOutletRequest) GetCategory() string {
+	if x != nil {
+		return x.Category
+	}
+	return ""
+}
+
+func (x *CreateOutletRequest) GetOpenTime() string {
+	if x != nil {
+		return x.OpenTime
+	}
+	return ""
+}
+
+func (x *CreateOutletRequest) GetCloseTime() string {
+	if x != nil {
+		return x.CloseTime
+	}
+	return ""
+}
+
+func (x *CreateOutletRequest) GetDeliveryTypes() []string {
+	if x != nil {
+		return x.DeliveryTypes
+	}
+	return nil
+}
+
+func (x *CreateOutletRequest) GetTimezone() string {
+	if x != nil {
+		return x.Timezone
+	}
+	return ""
+}
+
+func (x *CreateOutletRequest) GetHours() []*OutletDay {
+	if x != nil {
+		return x.Hours
+	}
+	return nil
+}
+
+func (x *CreateOutletRequest) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
 type CreateOutletResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Outlet        *Outlet                `protobuf:"bytes,1,opt,name=outlet,proto3" json:"outlet,omitempty"`
@@ -495,7 +2297,7 @@ type CreateOutletResponse struct {
 
 func (x *CreateOutletResponse) Reset() {
 	*x = CreateOutletResponse{}
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[7]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -507,7 +2309,7 @@ func (x *CreateOutletResponse) String() string {
 func (*CreateOutletResponse) ProtoMessage() {}
 
 func (x *CreateOutletResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[7]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -520,7 +2322,7 @@ func (x *CreateOutletResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateOutletResponse.ProtoReflect.Descriptor instead.
 func (*CreateOutletResponse) Descriptor() ([]byte, []int) {
-	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{7}
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *CreateOutletResponse) GetOutlet() *Outlet {
@@ -531,21 +2333,30 @@ func (x *CreateOutletResponse) GetOutlet() *Outlet {
 }
 
 type UpdateOutletRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Address       string                 `protobuf:"bytes,3,opt,name=address,proto3" json:"address,omitempty"`
-	Phone         string                 `protobuf:"bytes,4,opt,name=phone,proto3" json:"phone,omitempty"`
-	Latitude      float64                `protobuf:"fixed64,5,opt,name=latitude,proto3" json:"latitude,omitempty"`
-	Longitude     float64                `protobuf:"fixed64,6,opt,name=longitude,proto3" json:"longitude,omitempty"`
-	Active        bool                   `protobuf:"varint,7,opt,name=active,proto3" json:"active,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Id        int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name      string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Address   string                 `protobuf:"bytes,3,opt,name=address,proto3" json:"address,omitempty"`
+	Phone     string                 `protobuf:"bytes,4,opt,name=phone,proto3" json:"phone,omitempty"`
+	Latitude  float64                `protobuf:"fixed64,5,opt,name=latitude,proto3" json:"latitude,omitempty"`
+	Longitude float64                `protobuf:"fixed64,6,opt,name=longitude,proto3" json:"longitude,omitempty"`
+	Active    bool                   `protobuf:"varint,7,opt,name=active,proto3" json:"active,omitempty"`
+	Images    []string               `protobuf:"bytes,8,rep,name=images,proto3" json:"images,omitempty"`
+	// These replace the stored values; the gateway fills what the caller left out from the outlet as it is.
+	Category      string       `protobuf:"bytes,9,opt,name=category,proto3" json:"category,omitempty"`
+	OpenTime      string       `protobuf:"bytes,10,opt,name=open_time,json=openTime,proto3" json:"open_time,omitempty"`
+	CloseTime     string       `protobuf:"bytes,11,opt,name=close_time,json=closeTime,proto3" json:"close_time,omitempty"`
+	DeliveryTypes []string     `protobuf:"bytes,12,rep,name=delivery_types,json=deliveryTypes,proto3" json:"delivery_types,omitempty"`
+	Timezone      string       `protobuf:"bytes,13,opt,name=timezone,proto3" json:"timezone,omitempty"`
+	Hours         []*OutletDay `protobuf:"bytes,14,rep,name=hours,proto3" json:"hours,omitempty"`
+	Email         string       `protobuf:"bytes,15,opt,name=email,proto3" json:"email,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateOutletRequest) Reset() {
 	*x = UpdateOutletRequest{}
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[8]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -557,7 +2368,7 @@ func (x *UpdateOutletRequest) String() string {
 func (*UpdateOutletRequest) ProtoMessage() {}
 
 func (x *UpdateOutletRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[8]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -570,7 +2381,7 @@ func (x *UpdateOutletRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateOutletRequest.ProtoReflect.Descriptor instead.
 func (*UpdateOutletRequest) Descriptor() ([]byte, []int) {
-	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{8}
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *UpdateOutletRequest) GetId() int64 {
@@ -622,6 +2433,62 @@ func (x *UpdateOutletRequest) GetActive() bool {
 	return false
 }
 
+func (x *UpdateOutletRequest) GetImages() []string {
+	if x != nil {
+		return x.Images
+	}
+	return nil
+}
+
+func (x *UpdateOutletRequest) GetCategory() string {
+	if x != nil {
+		return x.Category
+	}
+	return ""
+}
+
+func (x *UpdateOutletRequest) GetOpenTime() string {
+	if x != nil {
+		return x.OpenTime
+	}
+	return ""
+}
+
+func (x *UpdateOutletRequest) GetCloseTime() string {
+	if x != nil {
+		return x.CloseTime
+	}
+	return ""
+}
+
+func (x *UpdateOutletRequest) GetDeliveryTypes() []string {
+	if x != nil {
+		return x.DeliveryTypes
+	}
+	return nil
+}
+
+func (x *UpdateOutletRequest) GetTimezone() string {
+	if x != nil {
+		return x.Timezone
+	}
+	return ""
+}
+
+func (x *UpdateOutletRequest) GetHours() []*OutletDay {
+	if x != nil {
+		return x.Hours
+	}
+	return nil
+}
+
+func (x *UpdateOutletRequest) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
 type UpdateOutletResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Outlet        *Outlet                `protobuf:"bytes,1,opt,name=outlet,proto3" json:"outlet,omitempty"`
@@ -631,7 +2498,7 @@ type UpdateOutletResponse struct {
 
 func (x *UpdateOutletResponse) Reset() {
 	*x = UpdateOutletResponse{}
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[9]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -643,7 +2510,7 @@ func (x *UpdateOutletResponse) String() string {
 func (*UpdateOutletResponse) ProtoMessage() {}
 
 func (x *UpdateOutletResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[9]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -656,7 +2523,7 @@ func (x *UpdateOutletResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateOutletResponse.ProtoReflect.Descriptor instead.
 func (*UpdateOutletResponse) Descriptor() ([]byte, []int) {
-	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{9}
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *UpdateOutletResponse) GetOutlet() *Outlet {
@@ -669,13 +2536,28 @@ func (x *UpdateOutletResponse) GetOutlet() *Outlet {
 type ListServicesRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	IncludeInactive bool                   `protobuf:"varint,1,opt,name=include_inactive,json=includeInactive,proto3" json:"include_inactive,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// A searchable page, used when limit > 0 (the back office's table): q matches name, description or category name;
+	// category_id 0 = any; unit "" = any; active is "", "true" or "false"; sort_by is one of id, name, unit, price,
+	// category_id, active (empty = id). Admin only; include_inactive is implied. With limit 0 the plain list is returned.
+	Q          string `protobuf:"bytes,2,opt,name=q,proto3" json:"q,omitempty"`
+	CategoryId int64  `protobuf:"varint,3,opt,name=category_id,json=categoryId,proto3" json:"category_id,omitempty"`
+	Unit       string `protobuf:"bytes,4,opt,name=unit,proto3" json:"unit,omitempty"`
+	Active     string `protobuf:"bytes,5,opt,name=active,proto3" json:"active,omitempty"`
+	SortBy     string `protobuf:"bytes,6,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
+	SortDir    string `protobuf:"bytes,7,opt,name=sort_dir,json=sortDir,proto3" json:"sort_dir,omitempty"`
+	Limit      int32  `protobuf:"varint,8,opt,name=limit,proto3" json:"limit,omitempty"`
+	Offset     int32  `protobuf:"varint,9,opt,name=offset,proto3" json:"offset,omitempty"`
+	// "" = any tax type, else "none" or "ppn".
+	TaxType string `protobuf:"bytes,10,opt,name=tax_type,json=taxType,proto3" json:"tax_type,omitempty"`
+	// "" = any, else "none", "value" or "percent".
+	DiscountType  string `protobuf:"bytes,11,opt,name=discount_type,json=discountType,proto3" json:"discount_type,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListServicesRequest) Reset() {
 	*x = ListServicesRequest{}
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[10]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -687,7 +2569,7 @@ func (x *ListServicesRequest) String() string {
 func (*ListServicesRequest) ProtoMessage() {}
 
 func (x *ListServicesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[10]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -700,7 +2582,7 @@ func (x *ListServicesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListServicesRequest.ProtoReflect.Descriptor instead.
 func (*ListServicesRequest) Descriptor() ([]byte, []int) {
-	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{10}
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *ListServicesRequest) GetIncludeInactive() bool {
@@ -710,16 +2592,88 @@ func (x *ListServicesRequest) GetIncludeInactive() bool {
 	return false
 }
 
+func (x *ListServicesRequest) GetQ() string {
+	if x != nil {
+		return x.Q
+	}
+	return ""
+}
+
+func (x *ListServicesRequest) GetCategoryId() int64 {
+	if x != nil {
+		return x.CategoryId
+	}
+	return 0
+}
+
+func (x *ListServicesRequest) GetUnit() string {
+	if x != nil {
+		return x.Unit
+	}
+	return ""
+}
+
+func (x *ListServicesRequest) GetActive() string {
+	if x != nil {
+		return x.Active
+	}
+	return ""
+}
+
+func (x *ListServicesRequest) GetSortBy() string {
+	if x != nil {
+		return x.SortBy
+	}
+	return ""
+}
+
+func (x *ListServicesRequest) GetSortDir() string {
+	if x != nil {
+		return x.SortDir
+	}
+	return ""
+}
+
+func (x *ListServicesRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *ListServicesRequest) GetOffset() int32 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+func (x *ListServicesRequest) GetTaxType() string {
+	if x != nil {
+		return x.TaxType
+	}
+	return ""
+}
+
+func (x *ListServicesRequest) GetDiscountType() string {
+	if x != nil {
+		return x.DiscountType
+	}
+	return ""
+}
+
 type ListServicesResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Services      []*ServiceItem         `protobuf:"bytes,1,rep,name=services,proto3" json:"services,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Services []*ServiceItem         `protobuf:"bytes,1,rep,name=services,proto3" json:"services,omitempty"`
+	// How many services the paged filter matches, before limit and offset (0 for the plain list).
+	Total         int64 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListServicesResponse) Reset() {
 	*x = ListServicesResponse{}
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[11]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -731,7 +2685,7 @@ func (x *ListServicesResponse) String() string {
 func (*ListServicesResponse) ProtoMessage() {}
 
 func (x *ListServicesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[11]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -744,7 +2698,7 @@ func (x *ListServicesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListServicesResponse.ProtoReflect.Descriptor instead.
 func (*ListServicesResponse) Descriptor() ([]byte, []int) {
-	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{11}
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *ListServicesResponse) GetServices() []*ServiceItem {
@@ -754,18 +2708,32 @@ func (x *ListServicesResponse) GetServices() []*ServiceItem {
 	return nil
 }
 
+func (x *ListServicesResponse) GetTotal() int64 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
 type CreateServiceRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Unit          string                 `protobuf:"bytes,2,opt,name=unit,proto3" json:"unit,omitempty"`
-	Price         int64                  `protobuf:"varint,3,opt,name=price,proto3" json:"price,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Name             string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Unit             string                 `protobuf:"bytes,2,opt,name=unit,proto3" json:"unit,omitempty"`
+	Price            int64                  `protobuf:"varint,3,opt,name=price,proto3" json:"price,omitempty"`
+	CategoryId       int64                  `protobuf:"varint,4,opt,name=category_id,json=categoryId,proto3" json:"category_id,omitempty"` // 0 = none
+	VariantGroupIds  *IdList                `protobuf:"bytes,5,opt,name=variant_group_ids,json=variantGroupIds,proto3" json:"variant_group_ids,omitempty"`
+	ModifierGroupIds *IdList                `protobuf:"bytes,6,opt,name=modifier_group_ids,json=modifierGroupIds,proto3" json:"modifier_group_ids,omitempty"`
+	TaxType          string                 `protobuf:"bytes,7,opt,name=tax_type,json=taxType,proto3" json:"tax_type,omitempty"` // "none" or "ppn"; empty = "none"
+	InternalNotes    string                 `protobuf:"bytes,8,opt,name=internal_notes,json=internalNotes,proto3" json:"internal_notes,omitempty"`
+	DiscountType     string                 `protobuf:"bytes,9,opt,name=discount_type,json=discountType,proto3" json:"discount_type,omitempty"`      // "none", "value" or "percent"; empty = "none"
+	DiscountValue    int64                  `protobuf:"varint,10,opt,name=discount_value,json=discountValue,proto3" json:"discount_value,omitempty"` // whole rupiah for "value", basis points for "percent"
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *CreateServiceRequest) Reset() {
 	*x = CreateServiceRequest{}
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[12]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -777,7 +2745,7 @@ func (x *CreateServiceRequest) String() string {
 func (*CreateServiceRequest) ProtoMessage() {}
 
 func (x *CreateServiceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[12]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -790,7 +2758,7 @@ func (x *CreateServiceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateServiceRequest.ProtoReflect.Descriptor instead.
 func (*CreateServiceRequest) Descriptor() ([]byte, []int) {
-	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{12}
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *CreateServiceRequest) GetName() string {
@@ -814,6 +2782,55 @@ func (x *CreateServiceRequest) GetPrice() int64 {
 	return 0
 }
 
+func (x *CreateServiceRequest) GetCategoryId() int64 {
+	if x != nil {
+		return x.CategoryId
+	}
+	return 0
+}
+
+func (x *CreateServiceRequest) GetVariantGroupIds() *IdList {
+	if x != nil {
+		return x.VariantGroupIds
+	}
+	return nil
+}
+
+func (x *CreateServiceRequest) GetModifierGroupIds() *IdList {
+	if x != nil {
+		return x.ModifierGroupIds
+	}
+	return nil
+}
+
+func (x *CreateServiceRequest) GetTaxType() string {
+	if x != nil {
+		return x.TaxType
+	}
+	return ""
+}
+
+func (x *CreateServiceRequest) GetInternalNotes() string {
+	if x != nil {
+		return x.InternalNotes
+	}
+	return ""
+}
+
+func (x *CreateServiceRequest) GetDiscountType() string {
+	if x != nil {
+		return x.DiscountType
+	}
+	return ""
+}
+
+func (x *CreateServiceRequest) GetDiscountValue() int64 {
+	if x != nil {
+		return x.DiscountValue
+	}
+	return 0
+}
+
 type CreateServiceResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Service       *ServiceItem           `protobuf:"bytes,1,opt,name=service,proto3" json:"service,omitempty"`
@@ -823,7 +2840,7 @@ type CreateServiceResponse struct {
 
 func (x *CreateServiceResponse) Reset() {
 	*x = CreateServiceResponse{}
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[13]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -835,7 +2852,7 @@ func (x *CreateServiceResponse) String() string {
 func (*CreateServiceResponse) ProtoMessage() {}
 
 func (x *CreateServiceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[13]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -848,7 +2865,7 @@ func (x *CreateServiceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateServiceResponse.ProtoReflect.Descriptor instead.
 func (*CreateServiceResponse) Descriptor() ([]byte, []int) {
-	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{13}
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *CreateServiceResponse) GetService() *ServiceItem {
@@ -859,19 +2876,26 @@ func (x *CreateServiceResponse) GetService() *ServiceItem {
 }
 
 type UpdateServiceRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Unit          string                 `protobuf:"bytes,3,opt,name=unit,proto3" json:"unit,omitempty"`
-	Price         int64                  `protobuf:"varint,4,opt,name=price,proto3" json:"price,omitempty"`
-	Active        bool                   `protobuf:"varint,5,opt,name=active,proto3" json:"active,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Id               int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name             string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Unit             string                 `protobuf:"bytes,3,opt,name=unit,proto3" json:"unit,omitempty"`
+	Price            int64                  `protobuf:"varint,4,opt,name=price,proto3" json:"price,omitempty"`
+	Active           bool                   `protobuf:"varint,5,opt,name=active,proto3" json:"active,omitempty"`
+	CategoryId       int64                  `protobuf:"varint,6,opt,name=category_id,json=categoryId,proto3" json:"category_id,omitempty"`                    // 0 = none
+	VariantGroupIds  *IdList                `protobuf:"bytes,7,opt,name=variant_group_ids,json=variantGroupIds,proto3" json:"variant_group_ids,omitempty"`    // not set = keep the links
+	ModifierGroupIds *IdList                `protobuf:"bytes,8,opt,name=modifier_group_ids,json=modifierGroupIds,proto3" json:"modifier_group_ids,omitempty"` // not set = keep the links
+	TaxType          string                 `protobuf:"bytes,9,opt,name=tax_type,json=taxType,proto3" json:"tax_type,omitempty"`                              // "none" or "ppn"; empty is refused (the gateway sends the stored one when the body leaves it out)
+	InternalNotes    string                 `protobuf:"bytes,10,opt,name=internal_notes,json=internalNotes,proto3" json:"internal_notes,omitempty"`
+	DiscountType     string                 `protobuf:"bytes,11,opt,name=discount_type,json=discountType,proto3" json:"discount_type,omitempty"` // "none", "value" or "percent"; empty is refused (the gateway sends the stored one)
+	DiscountValue    int64                  `protobuf:"varint,12,opt,name=discount_value,json=discountValue,proto3" json:"discount_value,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *UpdateServiceRequest) Reset() {
 	*x = UpdateServiceRequest{}
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[14]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -883,7 +2907,7 @@ func (x *UpdateServiceRequest) String() string {
 func (*UpdateServiceRequest) ProtoMessage() {}
 
 func (x *UpdateServiceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[14]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -896,7 +2920,7 @@ func (x *UpdateServiceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateServiceRequest.ProtoReflect.Descriptor instead.
 func (*UpdateServiceRequest) Descriptor() ([]byte, []int) {
-	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{14}
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *UpdateServiceRequest) GetId() int64 {
@@ -934,6 +2958,338 @@ func (x *UpdateServiceRequest) GetActive() bool {
 	return false
 }
 
+func (x *UpdateServiceRequest) GetCategoryId() int64 {
+	if x != nil {
+		return x.CategoryId
+	}
+	return 0
+}
+
+func (x *UpdateServiceRequest) GetVariantGroupIds() *IdList {
+	if x != nil {
+		return x.VariantGroupIds
+	}
+	return nil
+}
+
+func (x *UpdateServiceRequest) GetModifierGroupIds() *IdList {
+	if x != nil {
+		return x.ModifierGroupIds
+	}
+	return nil
+}
+
+func (x *UpdateServiceRequest) GetTaxType() string {
+	if x != nil {
+		return x.TaxType
+	}
+	return ""
+}
+
+func (x *UpdateServiceRequest) GetInternalNotes() string {
+	if x != nil {
+		return x.InternalNotes
+	}
+	return ""
+}
+
+func (x *UpdateServiceRequest) GetDiscountType() string {
+	if x != nil {
+		return x.DiscountType
+	}
+	return ""
+}
+
+func (x *UpdateServiceRequest) GetDiscountValue() int64 {
+	if x != nil {
+		return x.DiscountValue
+	}
+	return 0
+}
+
+// A group of services, as the POS lists them.
+type ServiceCategory struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name  string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// The name of an icon the apps know how to draw.
+	Icon          string `protobuf:"bytes,3,opt,name=icon,proto3" json:"icon,omitempty"`
+	SortOrder     int32  `protobuf:"varint,4,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ServiceCategory) Reset() {
+	*x = ServiceCategory{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ServiceCategory) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ServiceCategory) ProtoMessage() {}
+
+func (x *ServiceCategory) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ServiceCategory.ProtoReflect.Descriptor instead.
+func (*ServiceCategory) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{39}
+}
+
+func (x *ServiceCategory) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *ServiceCategory) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ServiceCategory) GetIcon() string {
+	if x != nil {
+		return x.Icon
+	}
+	return ""
+}
+
+func (x *ServiceCategory) GetSortOrder() int32 {
+	if x != nil {
+		return x.SortOrder
+	}
+	return 0
+}
+
+type TaxRate struct {
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	TaxType string                 `protobuf:"bytes,1,opt,name=tax_type,json=taxType,proto3" json:"tax_type,omitempty"`
+	// Basis points: 1100 = 11%. 0 for "none".
+	RateBps       int32 `protobuf:"varint,2,opt,name=rate_bps,json=rateBps,proto3" json:"rate_bps,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TaxRate) Reset() {
+	*x = TaxRate{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[40]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TaxRate) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TaxRate) ProtoMessage() {}
+
+func (x *TaxRate) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[40]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TaxRate.ProtoReflect.Descriptor instead.
+func (*TaxRate) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{40}
+}
+
+func (x *TaxRate) GetTaxType() string {
+	if x != nil {
+		return x.TaxType
+	}
+	return ""
+}
+
+func (x *TaxRate) GetRateBps() int32 {
+	if x != nil {
+		return x.RateBps
+	}
+	return 0
+}
+
+type ListTaxRatesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTaxRatesRequest) Reset() {
+	*x = ListTaxRatesRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTaxRatesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTaxRatesRequest) ProtoMessage() {}
+
+func (x *ListTaxRatesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTaxRatesRequest.ProtoReflect.Descriptor instead.
+func (*ListTaxRatesRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{41}
+}
+
+type ListTaxRatesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Rates         []*TaxRate             `protobuf:"bytes,1,rep,name=rates,proto3" json:"rates,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTaxRatesResponse) Reset() {
+	*x = ListTaxRatesResponse{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTaxRatesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTaxRatesResponse) ProtoMessage() {}
+
+func (x *ListTaxRatesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTaxRatesResponse.ProtoReflect.Descriptor instead.
+func (*ListTaxRatesResponse) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{42}
+}
+
+func (x *ListTaxRatesResponse) GetRates() []*TaxRate {
+	if x != nil {
+		return x.Rates
+	}
+	return nil
+}
+
+type ListServiceCategoriesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListServiceCategoriesRequest) Reset() {
+	*x = ListServiceCategoriesRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListServiceCategoriesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListServiceCategoriesRequest) ProtoMessage() {}
+
+func (x *ListServiceCategoriesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListServiceCategoriesRequest.ProtoReflect.Descriptor instead.
+func (*ListServiceCategoriesRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{43}
+}
+
+type ListServiceCategoriesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Categories    []*ServiceCategory     `protobuf:"bytes,1,rep,name=categories,proto3" json:"categories,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListServiceCategoriesResponse) Reset() {
+	*x = ListServiceCategoriesResponse{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[44]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListServiceCategoriesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListServiceCategoriesResponse) ProtoMessage() {}
+
+func (x *ListServiceCategoriesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[44]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListServiceCategoriesResponse.ProtoReflect.Descriptor instead.
+func (*ListServiceCategoriesResponse) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{44}
+}
+
+func (x *ListServiceCategoriesResponse) GetCategories() []*ServiceCategory {
+	if x != nil {
+		return x.Categories
+	}
+	return nil
+}
+
 type UpdateServiceResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Service       *ServiceItem           `protobuf:"bytes,1,opt,name=service,proto3" json:"service,omitempty"`
@@ -943,7 +3299,7 @@ type UpdateServiceResponse struct {
 
 func (x *UpdateServiceResponse) Reset() {
 	*x = UpdateServiceResponse{}
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[15]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -955,7 +3311,7 @@ func (x *UpdateServiceResponse) String() string {
 func (*UpdateServiceResponse) ProtoMessage() {}
 
 func (x *UpdateServiceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[15]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -968,7 +3324,7 @@ func (x *UpdateServiceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateServiceResponse.ProtoReflect.Descriptor instead.
 func (*UpdateServiceResponse) Descriptor() ([]byte, []int) {
-	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{15}
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *UpdateServiceResponse) GetService() *ServiceItem {
@@ -1006,7 +3362,7 @@ type OutletView struct {
 
 func (x *OutletView) Reset() {
 	*x = OutletView{}
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[16]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1018,7 +3374,7 @@ func (x *OutletView) String() string {
 func (*OutletView) ProtoMessage() {}
 
 func (x *OutletView) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[16]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1031,7 +3387,7 @@ func (x *OutletView) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OutletView.ProtoReflect.Descriptor instead.
 func (*OutletView) Descriptor() ([]byte, []int) {
-	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{16}
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *OutletView) GetId() int64 {
@@ -1144,7 +3500,7 @@ type NearbyOutletsRequest struct {
 
 func (x *NearbyOutletsRequest) Reset() {
 	*x = NearbyOutletsRequest{}
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[17]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1156,7 +3512,7 @@ func (x *NearbyOutletsRequest) String() string {
 func (*NearbyOutletsRequest) ProtoMessage() {}
 
 func (x *NearbyOutletsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[17]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1169,7 +3525,7 @@ func (x *NearbyOutletsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NearbyOutletsRequest.ProtoReflect.Descriptor instead.
 func (*NearbyOutletsRequest) Descriptor() ([]byte, []int) {
-	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{17}
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *NearbyOutletsRequest) GetHasLocation() bool {
@@ -1232,7 +3588,7 @@ type NearbyOutletsResponse struct {
 
 func (x *NearbyOutletsResponse) Reset() {
 	*x = NearbyOutletsResponse{}
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[18]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1244,7 +3600,7 @@ func (x *NearbyOutletsResponse) String() string {
 func (*NearbyOutletsResponse) ProtoMessage() {}
 
 func (x *NearbyOutletsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[18]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1257,7 +3613,7 @@ func (x *NearbyOutletsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NearbyOutletsResponse.ProtoReflect.Descriptor instead.
 func (*NearbyOutletsResponse) Descriptor() ([]byte, []int) {
-	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{18}
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *NearbyOutletsResponse) GetOutlets() []*OutletView {
@@ -1284,7 +3640,7 @@ type ResolveCoverageRequest struct {
 
 func (x *ResolveCoverageRequest) Reset() {
 	*x = ResolveCoverageRequest{}
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[19]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1296,7 +3652,7 @@ func (x *ResolveCoverageRequest) String() string {
 func (*ResolveCoverageRequest) ProtoMessage() {}
 
 func (x *ResolveCoverageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[19]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1309,7 +3665,7 @@ func (x *ResolveCoverageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResolveCoverageRequest.ProtoReflect.Descriptor instead.
 func (*ResolveCoverageRequest) Descriptor() ([]byte, []int) {
-	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{19}
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *ResolveCoverageRequest) GetLatitude() float64 {
@@ -1336,7 +3692,7 @@ type CoverageArea struct {
 
 func (x *CoverageArea) Reset() {
 	*x = CoverageArea{}
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[20]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1348,7 +3704,7 @@ func (x *CoverageArea) String() string {
 func (*CoverageArea) ProtoMessage() {}
 
 func (x *CoverageArea) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[20]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1361,7 +3717,7 @@ func (x *CoverageArea) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CoverageArea.ProtoReflect.Descriptor instead.
 func (*CoverageArea) Descriptor() ([]byte, []int) {
-	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{20}
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *CoverageArea) GetId() int64 {
@@ -1389,7 +3745,7 @@ type ResolveCoverageResponse struct {
 
 func (x *ResolveCoverageResponse) Reset() {
 	*x = ResolveCoverageResponse{}
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[21]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1401,7 +3757,7 @@ func (x *ResolveCoverageResponse) String() string {
 func (*ResolveCoverageResponse) ProtoMessage() {}
 
 func (x *ResolveCoverageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[21]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1414,7 +3770,7 @@ func (x *ResolveCoverageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResolveCoverageResponse.ProtoReflect.Descriptor instead.
 func (*ResolveCoverageResponse) Descriptor() ([]byte, []int) {
-	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{21}
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *ResolveCoverageResponse) GetCovered() bool {
@@ -1439,15 +3795,24 @@ type ServiceView struct {
 	Description string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
 	// Rupiah, whole.
 	Price int64 `protobuf:"varint,4,opt,name=price,proto3" json:"price,omitempty"`
+	// `price` is what the customer pays (after tax); these say how it came about.
+	PriceBeforeTax int64  `protobuf:"varint,14,opt,name=price_before_tax,json=priceBeforeTax,proto3" json:"price_before_tax,omitempty"`
+	PriceAfterTax  int64  `protobuf:"varint,15,opt,name=price_after_tax,json=priceAfterTax,proto3" json:"price_after_tax,omitempty"`
+	TaxType        string `protobuf:"bytes,16,opt,name=tax_type,json=taxType,proto3" json:"tax_type,omitempty"`
+	TaxRateBps     int32  `protobuf:"varint,17,opt,name=tax_rate_bps,json=taxRateBps,proto3" json:"tax_rate_bps,omitempty"`
+	// The discount comes off the list price (price_before_tax) before tax: price_after_discount is the tax base.
+	DiscountAmount     int64 `protobuf:"varint,18,opt,name=discount_amount,json=discountAmount,proto3" json:"discount_amount,omitempty"`
+	PriceAfterDiscount int64 `protobuf:"varint,19,opt,name=price_after_discount,json=priceAfterDiscount,proto3" json:"price_after_discount,omitempty"`
 	// "kg" or "pcs".
 	Unit string `protobuf:"bytes,5,opt,name=unit,proto3" json:"unit,omitempty"`
 	// "multiple" (priced by weight) or "single" (priced per piece).
 	ServiceType string `protobuf:"bytes,6,opt,name=service_type,json=serviceType,proto3" json:"service_type,omitempty"`
 	// "regular" or "alacarte".
-	ServiceCategory string  `protobuf:"bytes,7,opt,name=service_category,json=serviceCategory,proto3" json:"service_category,omitempty"`
-	MinKg           int32   `protobuf:"varint,8,opt,name=min_kg,json=minKg,proto3" json:"min_kg,omitempty"`
-	MaxKg           int32   `protobuf:"varint,9,opt,name=max_kg,json=maxKg,proto3" json:"max_kg,omitempty"`
-	Discount        float64 `protobuf:"fixed64,10,opt,name=discount,proto3" json:"discount,omitempty"`
+	ServiceCategory string `protobuf:"bytes,7,opt,name=service_category,json=serviceCategory,proto3" json:"service_category,omitempty"`
+	MinKg           int32  `protobuf:"varint,8,opt,name=min_kg,json=minKg,proto3" json:"min_kg,omitempty"`
+	MaxKg           int32  `protobuf:"varint,9,opt,name=max_kg,json=maxKg,proto3" json:"max_kg,omitempty"`
+	// The service's discount as the app has always read it (12.5 for 12.5%, or whole rupiah); `price` already has it taken off.
+	Discount float64 `protobuf:"fixed64,10,opt,name=discount,proto3" json:"discount,omitempty"`
 	// "percentage" or "fixed"; empty when there is no discount.
 	DiscountType string `protobuf:"bytes,11,opt,name=discount_type,json=discountType,proto3" json:"discount_type,omitempty"`
 	// Name of an icon in the app's icon set.
@@ -1459,7 +3824,7 @@ type ServiceView struct {
 
 func (x *ServiceView) Reset() {
 	*x = ServiceView{}
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[22]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1471,7 +3836,7 @@ func (x *ServiceView) String() string {
 func (*ServiceView) ProtoMessage() {}
 
 func (x *ServiceView) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[22]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1484,7 +3849,7 @@ func (x *ServiceView) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServiceView.ProtoReflect.Descriptor instead.
 func (*ServiceView) Descriptor() ([]byte, []int) {
-	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{22}
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *ServiceView) GetId() int64 {
@@ -1511,6 +3876,48 @@ func (x *ServiceView) GetDescription() string {
 func (x *ServiceView) GetPrice() int64 {
 	if x != nil {
 		return x.Price
+	}
+	return 0
+}
+
+func (x *ServiceView) GetPriceBeforeTax() int64 {
+	if x != nil {
+		return x.PriceBeforeTax
+	}
+	return 0
+}
+
+func (x *ServiceView) GetPriceAfterTax() int64 {
+	if x != nil {
+		return x.PriceAfterTax
+	}
+	return 0
+}
+
+func (x *ServiceView) GetTaxType() string {
+	if x != nil {
+		return x.TaxType
+	}
+	return ""
+}
+
+func (x *ServiceView) GetTaxRateBps() int32 {
+	if x != nil {
+		return x.TaxRateBps
+	}
+	return 0
+}
+
+func (x *ServiceView) GetDiscountAmount() int64 {
+	if x != nil {
+		return x.DiscountAmount
+	}
+	return 0
+}
+
+func (x *ServiceView) GetPriceAfterDiscount() int64 {
+	if x != nil {
+		return x.PriceAfterDiscount
 	}
 	return 0
 }
@@ -1593,7 +4000,7 @@ type BrowseServicesRequest struct {
 
 func (x *BrowseServicesRequest) Reset() {
 	*x = BrowseServicesRequest{}
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[23]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1605,7 +4012,7 @@ func (x *BrowseServicesRequest) String() string {
 func (*BrowseServicesRequest) ProtoMessage() {}
 
 func (x *BrowseServicesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[23]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1618,7 +4025,7 @@ func (x *BrowseServicesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BrowseServicesRequest.ProtoReflect.Descriptor instead.
 func (*BrowseServicesRequest) Descriptor() ([]byte, []int) {
-	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{23}
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *BrowseServicesRequest) GetServiceCategory() string {
@@ -1651,7 +4058,7 @@ type BrowseServicesResponse struct {
 
 func (x *BrowseServicesResponse) Reset() {
 	*x = BrowseServicesResponse{}
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[24]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1663,7 +4070,7 @@ func (x *BrowseServicesResponse) String() string {
 func (*BrowseServicesResponse) ProtoMessage() {}
 
 func (x *BrowseServicesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[24]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1676,7 +4083,7 @@ func (x *BrowseServicesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BrowseServicesResponse.ProtoReflect.Descriptor instead.
 func (*BrowseServicesResponse) Descriptor() ([]byte, []int) {
-	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{24}
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *BrowseServicesResponse) GetServices() []*ServiceView {
@@ -1704,7 +4111,7 @@ type ServiceTierPricing struct {
 
 func (x *ServiceTierPricing) Reset() {
 	*x = ServiceTierPricing{}
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[25]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1716,7 +4123,7 @@ func (x *ServiceTierPricing) String() string {
 func (*ServiceTierPricing) ProtoMessage() {}
 
 func (x *ServiceTierPricing) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[25]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1729,7 +4136,7 @@ func (x *ServiceTierPricing) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServiceTierPricing.ProtoReflect.Descriptor instead.
 func (*ServiceTierPricing) Descriptor() ([]byte, []int) {
-	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{25}
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *ServiceTierPricing) GetId() int64 {
@@ -1816,7 +4223,7 @@ type ServiceTier struct {
 
 func (x *ServiceTier) Reset() {
 	*x = ServiceTier{}
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[26]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1828,7 +4235,7 @@ func (x *ServiceTier) String() string {
 func (*ServiceTier) ProtoMessage() {}
 
 func (x *ServiceTier) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[26]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1841,7 +4248,7 @@ func (x *ServiceTier) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServiceTier.ProtoReflect.Descriptor instead.
 func (*ServiceTier) Descriptor() ([]byte, []int) {
-	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{26}
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *ServiceTier) GetId() int64 {
@@ -1895,7 +4302,7 @@ type ServiceAddon struct {
 
 func (x *ServiceAddon) Reset() {
 	*x = ServiceAddon{}
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[27]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1907,7 +4314,7 @@ func (x *ServiceAddon) String() string {
 func (*ServiceAddon) ProtoMessage() {}
 
 func (x *ServiceAddon) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[27]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1920,7 +4327,7 @@ func (x *ServiceAddon) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServiceAddon.ProtoReflect.Descriptor instead.
 func (*ServiceAddon) Descriptor() ([]byte, []int) {
-	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{27}
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *ServiceAddon) GetId() int64 {
@@ -1993,7 +4400,7 @@ type ServiceSection struct {
 
 func (x *ServiceSection) Reset() {
 	*x = ServiceSection{}
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[28]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2005,7 +4412,7 @@ func (x *ServiceSection) String() string {
 func (*ServiceSection) ProtoMessage() {}
 
 func (x *ServiceSection) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[28]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2018,7 +4425,7 @@ func (x *ServiceSection) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServiceSection.ProtoReflect.Descriptor instead.
 func (*ServiceSection) Descriptor() ([]byte, []int) {
-	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{28}
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *ServiceSection) GetTitle() string {
@@ -2060,7 +4467,7 @@ type ServiceDetail struct {
 
 func (x *ServiceDetail) Reset() {
 	*x = ServiceDetail{}
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[29]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2072,7 +4479,7 @@ func (x *ServiceDetail) String() string {
 func (*ServiceDetail) ProtoMessage() {}
 
 func (x *ServiceDetail) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[29]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2085,7 +4492,7 @@ func (x *ServiceDetail) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServiceDetail.ProtoReflect.Descriptor instead.
 func (*ServiceDetail) Descriptor() ([]byte, []int) {
-	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{29}
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{59}
 }
 
 func (x *ServiceDetail) GetService() *ServiceView {
@@ -2118,7 +4525,7 @@ type GetServiceDetailRequest struct {
 
 func (x *GetServiceDetailRequest) Reset() {
 	*x = GetServiceDetailRequest{}
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[30]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2130,7 +4537,7 @@ func (x *GetServiceDetailRequest) String() string {
 func (*GetServiceDetailRequest) ProtoMessage() {}
 
 func (x *GetServiceDetailRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[30]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2143,7 +4550,7 @@ func (x *GetServiceDetailRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetServiceDetailRequest.ProtoReflect.Descriptor instead.
 func (*GetServiceDetailRequest) Descriptor() ([]byte, []int) {
-	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{30}
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *GetServiceDetailRequest) GetId() int64 {
@@ -2162,7 +4569,7 @@ type GetServiceDetailResponse struct {
 
 func (x *GetServiceDetailResponse) Reset() {
 	*x = GetServiceDetailResponse{}
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[31]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[61]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2174,7 +4581,7 @@ func (x *GetServiceDetailResponse) String() string {
 func (*GetServiceDetailResponse) ProtoMessage() {}
 
 func (x *GetServiceDetailResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[31]
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[61]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2187,7 +4594,7 @@ func (x *GetServiceDetailResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetServiceDetailResponse.ProtoReflect.Descriptor instead.
 func (*GetServiceDetailResponse) Descriptor() ([]byte, []int) {
-	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{31}
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *GetServiceDetailResponse) GetDetail() *ServiceDetail {
@@ -2197,11 +4604,5250 @@ func (x *GetServiceDetailResponse) GetDetail() *ServiceDetail {
 	return nil
 }
 
+type Material struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Sku           string                 `protobuf:"bytes,2,opt,name=sku,proto3" json:"sku,omitempty"`
+	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Category      string                 `protobuf:"bytes,4,opt,name=category,proto3" json:"category,omitempty"`                                 // chemical | packaging | consumable | other
+	Unit          string                 `protobuf:"bytes,5,opt,name=unit,proto3" json:"unit,omitempty"`                                         // ml | g | pcs | sheet, the base unit of every quantity
+	PurchasePrice int64                  `protobuf:"varint,6,opt,name=purchase_price,json=purchasePrice,proto3" json:"purchase_price,omitempty"` // whole rupiah
+	PurchaseQty   string                 `protobuf:"bytes,7,opt,name=purchase_qty,json=purchaseQty,proto3" json:"purchase_qty,omitempty"`        // exact decimal, up to 4 places
+	// purchase_price / purchase_qty, rounded half away from zero to 6 places for display only.
+	UnitCost      string                 `protobuf:"bytes,8,opt,name=unit_cost,json=unitCost,proto3" json:"unit_cost,omitempty"`
+	Active        bool                   `protobuf:"varint,9,opt,name=active,proto3" json:"active,omitempty"`
+	Notes         string                 `protobuf:"bytes,10,opt,name=notes,proto3" json:"notes,omitempty"`
+	UsedIn        int32                  `protobuf:"varint,11,opt,name=used_in,json=usedIn,proto3" json:"used_in,omitempty"` // recipe lines using it
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Material) Reset() {
+	*x = Material{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[62]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Material) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Material) ProtoMessage() {}
+
+func (x *Material) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[62]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Material.ProtoReflect.Descriptor instead.
+func (*Material) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{62}
+}
+
+func (x *Material) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *Material) GetSku() string {
+	if x != nil {
+		return x.Sku
+	}
+	return ""
+}
+
+func (x *Material) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Material) GetCategory() string {
+	if x != nil {
+		return x.Category
+	}
+	return ""
+}
+
+func (x *Material) GetUnit() string {
+	if x != nil {
+		return x.Unit
+	}
+	return ""
+}
+
+func (x *Material) GetPurchasePrice() int64 {
+	if x != nil {
+		return x.PurchasePrice
+	}
+	return 0
+}
+
+func (x *Material) GetPurchaseQty() string {
+	if x != nil {
+		return x.PurchaseQty
+	}
+	return ""
+}
+
+func (x *Material) GetUnitCost() string {
+	if x != nil {
+		return x.UnitCost
+	}
+	return ""
+}
+
+func (x *Material) GetActive() bool {
+	if x != nil {
+		return x.Active
+	}
+	return false
+}
+
+func (x *Material) GetNotes() string {
+	if x != nil {
+		return x.Notes
+	}
+	return ""
+}
+
+func (x *Material) GetUsedIn() int32 {
+	if x != nil {
+		return x.UsedIn
+	}
+	return 0
+}
+
+func (x *Material) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *Material) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+type ListMaterialsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Q             string                 `protobuf:"bytes,1,opt,name=q,proto3" json:"q,omitempty"`
+	Category      string                 `protobuf:"bytes,2,opt,name=category,proto3" json:"category,omitempty"`
+	Active        string                 `protobuf:"bytes,3,opt,name=active,proto3" json:"active,omitempty"` // "", "true" or "false"
+	SortBy        string                 `protobuf:"bytes,4,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
+	SortDir       string                 `protobuf:"bytes,5,opt,name=sort_dir,json=sortDir,proto3" json:"sort_dir,omitempty"`
+	Limit         int32                  `protobuf:"varint,6,opt,name=limit,proto3" json:"limit,omitempty"`
+	Offset        int32                  `protobuf:"varint,7,opt,name=offset,proto3" json:"offset,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListMaterialsRequest) Reset() {
+	*x = ListMaterialsRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[63]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListMaterialsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListMaterialsRequest) ProtoMessage() {}
+
+func (x *ListMaterialsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[63]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListMaterialsRequest.ProtoReflect.Descriptor instead.
+func (*ListMaterialsRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{63}
+}
+
+func (x *ListMaterialsRequest) GetQ() string {
+	if x != nil {
+		return x.Q
+	}
+	return ""
+}
+
+func (x *ListMaterialsRequest) GetCategory() string {
+	if x != nil {
+		return x.Category
+	}
+	return ""
+}
+
+func (x *ListMaterialsRequest) GetActive() string {
+	if x != nil {
+		return x.Active
+	}
+	return ""
+}
+
+func (x *ListMaterialsRequest) GetSortBy() string {
+	if x != nil {
+		return x.SortBy
+	}
+	return ""
+}
+
+func (x *ListMaterialsRequest) GetSortDir() string {
+	if x != nil {
+		return x.SortDir
+	}
+	return ""
+}
+
+func (x *ListMaterialsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *ListMaterialsRequest) GetOffset() int32 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+type ListMaterialsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Materials     []*Material            `protobuf:"bytes,1,rep,name=materials,proto3" json:"materials,omitempty"`
+	Total         int64                  `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListMaterialsResponse) Reset() {
+	*x = ListMaterialsResponse{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[64]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListMaterialsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListMaterialsResponse) ProtoMessage() {}
+
+func (x *ListMaterialsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[64]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListMaterialsResponse.ProtoReflect.Descriptor instead.
+func (*ListMaterialsResponse) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{64}
+}
+
+func (x *ListMaterialsResponse) GetMaterials() []*Material {
+	if x != nil {
+		return x.Materials
+	}
+	return nil
+}
+
+func (x *ListMaterialsResponse) GetTotal() int64 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
+type GetMaterialRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetMaterialRequest) Reset() {
+	*x = GetMaterialRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[65]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetMaterialRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMaterialRequest) ProtoMessage() {}
+
+func (x *GetMaterialRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[65]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMaterialRequest.ProtoReflect.Descriptor instead.
+func (*GetMaterialRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{65}
+}
+
+func (x *GetMaterialRequest) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+type SaveMaterialRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"` // 0 on a create
+	Material      *Material              `protobuf:"bytes,2,opt,name=material,proto3" json:"material,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SaveMaterialRequest) Reset() {
+	*x = SaveMaterialRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[66]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SaveMaterialRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveMaterialRequest) ProtoMessage() {}
+
+func (x *SaveMaterialRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[66]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveMaterialRequest.ProtoReflect.Descriptor instead.
+func (*SaveMaterialRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{66}
+}
+
+func (x *SaveMaterialRequest) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *SaveMaterialRequest) GetMaterial() *Material {
+	if x != nil {
+		return x.Material
+	}
+	return nil
+}
+
+type MaterialResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Material      *Material              `protobuf:"bytes,1,opt,name=material,proto3" json:"material,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MaterialResponse) Reset() {
+	*x = MaterialResponse{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[67]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MaterialResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MaterialResponse) ProtoMessage() {}
+
+func (x *MaterialResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[67]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MaterialResponse.ProtoReflect.Descriptor instead.
+func (*MaterialResponse) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{67}
+}
+
+func (x *MaterialResponse) GetMaterial() *Material {
+	if x != nil {
+		return x.Material
+	}
+	return nil
+}
+
+type Banner struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Title         string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	InternalNotes string                 `protobuf:"bytes,3,opt,name=internal_notes,json=internalNotes,proto3" json:"internal_notes,omitempty"` // never sent to the customer app
+	ImageUrl      string                 `protobuf:"bytes,4,opt,name=image_url,json=imageUrl,proto3" json:"image_url,omitempty"`
+	TargetType    string                 `protobuf:"bytes,5,opt,name=target_type,json=targetType,proto3" json:"target_type,omitempty"`    // none | service | outlet | screen | external
+	TargetValue   string                 `protobuf:"bytes,6,opt,name=target_value,json=targetValue,proto3" json:"target_value,omitempty"` // a service or outlet id, a screen key, an https address; empty for none
+	Status        string                 `protobuf:"bytes,7,opt,name=status,proto3" json:"status,omitempty"`                              // active | inactive
+	SortIndex     int32                  `protobuf:"varint,8,opt,name=sort_index,json=sortIndex,proto3" json:"sort_index,omitempty"`
+	StartsAt      *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=starts_at,json=startsAt,proto3" json:"starts_at,omitempty"`             // unset = open-ended
+	EndsAt        *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=ends_at,json=endsAt,proto3" json:"ends_at,omitempty"`                  // unset = open-ended
+	OutletIds     []int64                `protobuf:"varint,11,rep,packed,name=outlet_ids,json=outletIds,proto3" json:"outlet_ids,omitempty"` // empty = every outlet
+	Outlets       []*BannerOutlet        `protobuf:"bytes,12,rep,name=outlets,proto3" json:"outlets,omitempty"`
+	IsLive        bool                   `protobuf:"varint,13,opt,name=is_live,json=isLive,proto3" json:"is_live,omitempty"` // derived: active and the server's clock inside the window
+	Deeplink      string                 `protobuf:"bytes,14,opt,name=deeplink,proto3" json:"deeplink,omitempty"`            // derived: what a tap opens; empty for none
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Banner) Reset() {
+	*x = Banner{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[68]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Banner) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Banner) ProtoMessage() {}
+
+func (x *Banner) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[68]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Banner.ProtoReflect.Descriptor instead.
+func (*Banner) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{68}
+}
+
+func (x *Banner) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *Banner) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *Banner) GetInternalNotes() string {
+	if x != nil {
+		return x.InternalNotes
+	}
+	return ""
+}
+
+func (x *Banner) GetImageUrl() string {
+	if x != nil {
+		return x.ImageUrl
+	}
+	return ""
+}
+
+func (x *Banner) GetTargetType() string {
+	if x != nil {
+		return x.TargetType
+	}
+	return ""
+}
+
+func (x *Banner) GetTargetValue() string {
+	if x != nil {
+		return x.TargetValue
+	}
+	return ""
+}
+
+func (x *Banner) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *Banner) GetSortIndex() int32 {
+	if x != nil {
+		return x.SortIndex
+	}
+	return 0
+}
+
+func (x *Banner) GetStartsAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.StartsAt
+	}
+	return nil
+}
+
+func (x *Banner) GetEndsAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.EndsAt
+	}
+	return nil
+}
+
+func (x *Banner) GetOutletIds() []int64 {
+	if x != nil {
+		return x.OutletIds
+	}
+	return nil
+}
+
+func (x *Banner) GetOutlets() []*BannerOutlet {
+	if x != nil {
+		return x.Outlets
+	}
+	return nil
+}
+
+func (x *Banner) GetIsLive() bool {
+	if x != nil {
+		return x.IsLive
+	}
+	return false
+}
+
+func (x *Banner) GetDeeplink() string {
+	if x != nil {
+		return x.Deeplink
+	}
+	return ""
+}
+
+func (x *Banner) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *Banner) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+type BannerOutlet struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BannerOutlet) Reset() {
+	*x = BannerOutlet{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[69]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BannerOutlet) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BannerOutlet) ProtoMessage() {}
+
+func (x *BannerOutlet) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[69]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BannerOutlet.ProtoReflect.Descriptor instead.
+func (*BannerOutlet) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{69}
+}
+
+func (x *BannerOutlet) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *BannerOutlet) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+type ListBannersRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Q             string                 `protobuf:"bytes,1,opt,name=q,proto3" json:"q,omitempty"`
+	Status        string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`                      // "", active or inactive
+	Live          string                 `protobuf:"bytes,3,opt,name=live,proto3" json:"live,omitempty"`                          // "", "true" or "false"
+	OutletId      int64                  `protobuf:"varint,4,opt,name=outlet_id,json=outletId,proto3" json:"outlet_id,omitempty"` // banners that apply to this outlet; 0 = no filter
+	SortBy        string                 `protobuf:"bytes,5,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
+	SortDir       string                 `protobuf:"bytes,6,opt,name=sort_dir,json=sortDir,proto3" json:"sort_dir,omitempty"`
+	Limit         int32                  `protobuf:"varint,7,opt,name=limit,proto3" json:"limit,omitempty"`
+	Offset        int32                  `protobuf:"varint,8,opt,name=offset,proto3" json:"offset,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListBannersRequest) Reset() {
+	*x = ListBannersRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[70]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListBannersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListBannersRequest) ProtoMessage() {}
+
+func (x *ListBannersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[70]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListBannersRequest.ProtoReflect.Descriptor instead.
+func (*ListBannersRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{70}
+}
+
+func (x *ListBannersRequest) GetQ() string {
+	if x != nil {
+		return x.Q
+	}
+	return ""
+}
+
+func (x *ListBannersRequest) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *ListBannersRequest) GetLive() string {
+	if x != nil {
+		return x.Live
+	}
+	return ""
+}
+
+func (x *ListBannersRequest) GetOutletId() int64 {
+	if x != nil {
+		return x.OutletId
+	}
+	return 0
+}
+
+func (x *ListBannersRequest) GetSortBy() string {
+	if x != nil {
+		return x.SortBy
+	}
+	return ""
+}
+
+func (x *ListBannersRequest) GetSortDir() string {
+	if x != nil {
+		return x.SortDir
+	}
+	return ""
+}
+
+func (x *ListBannersRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *ListBannersRequest) GetOffset() int32 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+type ListBannersResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Banners       []*Banner              `protobuf:"bytes,1,rep,name=banners,proto3" json:"banners,omitempty"`
+	Total         int64                  `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListBannersResponse) Reset() {
+	*x = ListBannersResponse{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[71]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListBannersResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListBannersResponse) ProtoMessage() {}
+
+func (x *ListBannersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[71]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListBannersResponse.ProtoReflect.Descriptor instead.
+func (*ListBannersResponse) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{71}
+}
+
+func (x *ListBannersResponse) GetBanners() []*Banner {
+	if x != nil {
+		return x.Banners
+	}
+	return nil
+}
+
+func (x *ListBannersResponse) GetTotal() int64 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
+type GetBannerRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetBannerRequest) Reset() {
+	*x = GetBannerRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[72]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetBannerRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetBannerRequest) ProtoMessage() {}
+
+func (x *GetBannerRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[72]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetBannerRequest.ProtoReflect.Descriptor instead.
+func (*GetBannerRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{72}
+}
+
+func (x *GetBannerRequest) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+type SaveBannerRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"` // 0 on a create
+	Banner        *Banner                `protobuf:"bytes,2,opt,name=banner,proto3" json:"banner,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SaveBannerRequest) Reset() {
+	*x = SaveBannerRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[73]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SaveBannerRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveBannerRequest) ProtoMessage() {}
+
+func (x *SaveBannerRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[73]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveBannerRequest.ProtoReflect.Descriptor instead.
+func (*SaveBannerRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{73}
+}
+
+func (x *SaveBannerRequest) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *SaveBannerRequest) GetBanner() *Banner {
+	if x != nil {
+		return x.Banner
+	}
+	return nil
+}
+
+type BannerResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Banner        *Banner                `protobuf:"bytes,1,opt,name=banner,proto3" json:"banner,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BannerResponse) Reset() {
+	*x = BannerResponse{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[74]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BannerResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BannerResponse) ProtoMessage() {}
+
+func (x *BannerResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[74]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BannerResponse.ProtoReflect.Descriptor instead.
+func (*BannerResponse) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{74}
+}
+
+func (x *BannerResponse) GetBanner() *Banner {
+	if x != nil {
+		return x.Banner
+	}
+	return nil
+}
+
+type SetBannerStatusRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Status        string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetBannerStatusRequest) Reset() {
+	*x = SetBannerStatusRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[75]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetBannerStatusRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetBannerStatusRequest) ProtoMessage() {}
+
+func (x *SetBannerStatusRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[75]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetBannerStatusRequest.ProtoReflect.Descriptor instead.
+func (*SetBannerStatusRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{75}
+}
+
+func (x *SetBannerStatusRequest) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *SetBannerStatusRequest) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+type ReorderBannersRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Ids           []int64                `protobuf:"varint,1,rep,packed,name=ids,proto3" json:"ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReorderBannersRequest) Reset() {
+	*x = ReorderBannersRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[76]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReorderBannersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReorderBannersRequest) ProtoMessage() {}
+
+func (x *ReorderBannersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[76]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReorderBannersRequest.ProtoReflect.Descriptor instead.
+func (*ReorderBannersRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{76}
+}
+
+func (x *ReorderBannersRequest) GetIds() []int64 {
+	if x != nil {
+		return x.Ids
+	}
+	return nil
+}
+
+type ListBannerScreensRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListBannerScreensRequest) Reset() {
+	*x = ListBannerScreensRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[77]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListBannerScreensRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListBannerScreensRequest) ProtoMessage() {}
+
+func (x *ListBannerScreensRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[77]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListBannerScreensRequest.ProtoReflect.Descriptor instead.
+func (*ListBannerScreensRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{77}
+}
+
+type ListBannerScreensResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Screens       []string               `protobuf:"bytes,1,rep,name=screens,proto3" json:"screens,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListBannerScreensResponse) Reset() {
+	*x = ListBannerScreensResponse{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[78]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListBannerScreensResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListBannerScreensResponse) ProtoMessage() {}
+
+func (x *ListBannerScreensResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[78]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListBannerScreensResponse.ProtoReflect.Descriptor instead.
+func (*ListBannerScreensResponse) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{78}
+}
+
+func (x *ListBannerScreensResponse) GetScreens() []string {
+	if x != nil {
+		return x.Screens
+	}
+	return nil
+}
+
+type ListLiveBannersRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OutletId      int64                  `protobuf:"varint,1,opt,name=outlet_id,json=outletId,proto3" json:"outlet_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListLiveBannersRequest) Reset() {
+	*x = ListLiveBannersRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[79]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListLiveBannersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListLiveBannersRequest) ProtoMessage() {}
+
+func (x *ListLiveBannersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[79]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListLiveBannersRequest.ProtoReflect.Descriptor instead.
+func (*ListLiveBannersRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{79}
+}
+
+func (x *ListLiveBannersRequest) GetOutletId() int64 {
+	if x != nil {
+		return x.OutletId
+	}
+	return 0
+}
+
+type ListLiveBannersResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Banners       []*Banner              `protobuf:"bytes,1,rep,name=banners,proto3" json:"banners,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListLiveBannersResponse) Reset() {
+	*x = ListLiveBannersResponse{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[80]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListLiveBannersResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListLiveBannersResponse) ProtoMessage() {}
+
+func (x *ListLiveBannersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[80]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListLiveBannersResponse.ProtoReflect.Descriptor instead.
+func (*ListLiveBannersResponse) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{80}
+}
+
+func (x *ListLiveBannersResponse) GetBanners() []*Banner {
+	if x != nil {
+		return x.Banners
+	}
+	return nil
+}
+
+type Voucher struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Code          string                 `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"` // upper-case letters and digits; empty for a public voucher
+	Title         string                 `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
+	Description   string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	InternalNotes string                 `protobuf:"bytes,5,opt,name=internal_notes,json=internalNotes,proto3" json:"internal_notes,omitempty"` // never sent to the customer app
+	DiscountType  string                 `protobuf:"bytes,6,opt,name=discount_type,json=discountType,proto3" json:"discount_type,omitempty"`    // percentage | amount
+	Value         int64                  `protobuf:"varint,7,opt,name=value,proto3" json:"value,omitempty"`                                     // 1..100 for a percentage, rupiah for an amount
+	MaxDiscount   int64                  `protobuf:"varint,8,opt,name=max_discount,json=maxDiscount,proto3" json:"max_discount,omitempty"`      // rupiah cap of a percentage; 0 = none
+	MinSpend      int64                  `protobuf:"varint,9,opt,name=min_spend,json=minSpend,proto3" json:"min_spend,omitempty"`               // rupiah; 0 = none
+	MaxClaims     int32                  `protobuf:"varint,10,opt,name=max_claims,json=maxClaims,proto3" json:"max_claims,omitempty"`           // 0 = no limit (a coded voucher only)
+	ClaimsCount   int64                  `protobuf:"varint,11,opt,name=claims_count,json=claimsCount,proto3" json:"claims_count,omitempty"`     // derived: how many customers hold it
+	UsageLimit    int32                  `protobuf:"varint,12,opt,name=usage_limit,json=usageLimit,proto3" json:"usage_limit,omitempty"`        // how many times one customer may spend it
+	Status        string                 `protobuf:"bytes,13,opt,name=status,proto3" json:"status,omitempty"`                                   // active | inactive
+	Color         string                 `protobuf:"bytes,14,opt,name=color,proto3" json:"color,omitempty"`                                     // "#RRGGBB"
+	ImageUrl      string                 `protobuf:"bytes,15,opt,name=image_url,json=imageUrl,proto3" json:"image_url,omitempty"`
+	StartsAt      *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=starts_at,json=startsAt,proto3" json:"starts_at,omitempty"`            // unset = open-ended
+	EndsAt        *timestamppb.Timestamp `protobuf:"bytes,17,opt,name=ends_at,json=endsAt,proto3" json:"ends_at,omitempty"`                  // unset = open-ended
+	OutletIds     []int64                `protobuf:"varint,18,rep,packed,name=outlet_ids,json=outletIds,proto3" json:"outlet_ids,omitempty"` // empty = every outlet
+	Outlets       []*BannerOutlet        `protobuf:"bytes,19,rep,name=outlets,proto3" json:"outlets,omitempty"`
+	ServiceIds    []int64                `protobuf:"varint,20,rep,packed,name=service_ids,json=serviceIds,proto3" json:"service_ids,omitempty"` // empty = every service
+	Services      []*VoucherService      `protobuf:"bytes,21,rep,name=services,proto3" json:"services,omitempty"`
+	IsLive        bool                   `protobuf:"varint,22,opt,name=is_live,json=isLive,proto3" json:"is_live,omitempty"` // derived: active and the server's clock inside the window
+	Type          string                 `protobuf:"bytes,23,opt,name=type,proto3" json:"type,omitempty"`                    // derived: public | code
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,24,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,25,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Voucher) Reset() {
+	*x = Voucher{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[81]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Voucher) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Voucher) ProtoMessage() {}
+
+func (x *Voucher) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[81]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Voucher.ProtoReflect.Descriptor instead.
+func (*Voucher) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{81}
+}
+
+func (x *Voucher) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *Voucher) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *Voucher) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *Voucher) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *Voucher) GetInternalNotes() string {
+	if x != nil {
+		return x.InternalNotes
+	}
+	return ""
+}
+
+func (x *Voucher) GetDiscountType() string {
+	if x != nil {
+		return x.DiscountType
+	}
+	return ""
+}
+
+func (x *Voucher) GetValue() int64 {
+	if x != nil {
+		return x.Value
+	}
+	return 0
+}
+
+func (x *Voucher) GetMaxDiscount() int64 {
+	if x != nil {
+		return x.MaxDiscount
+	}
+	return 0
+}
+
+func (x *Voucher) GetMinSpend() int64 {
+	if x != nil {
+		return x.MinSpend
+	}
+	return 0
+}
+
+func (x *Voucher) GetMaxClaims() int32 {
+	if x != nil {
+		return x.MaxClaims
+	}
+	return 0
+}
+
+func (x *Voucher) GetClaimsCount() int64 {
+	if x != nil {
+		return x.ClaimsCount
+	}
+	return 0
+}
+
+func (x *Voucher) GetUsageLimit() int32 {
+	if x != nil {
+		return x.UsageLimit
+	}
+	return 0
+}
+
+func (x *Voucher) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *Voucher) GetColor() string {
+	if x != nil {
+		return x.Color
+	}
+	return ""
+}
+
+func (x *Voucher) GetImageUrl() string {
+	if x != nil {
+		return x.ImageUrl
+	}
+	return ""
+}
+
+func (x *Voucher) GetStartsAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.StartsAt
+	}
+	return nil
+}
+
+func (x *Voucher) GetEndsAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.EndsAt
+	}
+	return nil
+}
+
+func (x *Voucher) GetOutletIds() []int64 {
+	if x != nil {
+		return x.OutletIds
+	}
+	return nil
+}
+
+func (x *Voucher) GetOutlets() []*BannerOutlet {
+	if x != nil {
+		return x.Outlets
+	}
+	return nil
+}
+
+func (x *Voucher) GetServiceIds() []int64 {
+	if x != nil {
+		return x.ServiceIds
+	}
+	return nil
+}
+
+func (x *Voucher) GetServices() []*VoucherService {
+	if x != nil {
+		return x.Services
+	}
+	return nil
+}
+
+func (x *Voucher) GetIsLive() bool {
+	if x != nil {
+		return x.IsLive
+	}
+	return false
+}
+
+func (x *Voucher) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *Voucher) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *Voucher) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+type VoucherService struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *VoucherService) Reset() {
+	*x = VoucherService{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[82]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *VoucherService) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*VoucherService) ProtoMessage() {}
+
+func (x *VoucherService) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[82]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use VoucherService.ProtoReflect.Descriptor instead.
+func (*VoucherService) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{82}
+}
+
+func (x *VoucherService) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *VoucherService) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+type ListVouchersRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Q             string                 `protobuf:"bytes,1,opt,name=q,proto3" json:"q,omitempty"`
+	Status        string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`                                 // "", active or inactive
+	Live          string                 `protobuf:"bytes,3,opt,name=live,proto3" json:"live,omitempty"`                                     // "", "true" or "false"
+	Period        string                 `protobuf:"bytes,4,opt,name=period,proto3" json:"period,omitempty"`                                 // "", running, upcoming, ended or unlimited
+	DiscountType  string                 `protobuf:"bytes,5,opt,name=discount_type,json=discountType,proto3" json:"discount_type,omitempty"` // "", percentage or amount
+	OutletId      int64                  `protobuf:"varint,6,opt,name=outlet_id,json=outletId,proto3" json:"outlet_id,omitempty"`            // vouchers that can be spent at this outlet; 0 = no filter
+	SortBy        string                 `protobuf:"bytes,7,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
+	SortDir       string                 `protobuf:"bytes,8,opt,name=sort_dir,json=sortDir,proto3" json:"sort_dir,omitempty"`
+	Limit         int32                  `protobuf:"varint,9,opt,name=limit,proto3" json:"limit,omitempty"`
+	Offset        int32                  `protobuf:"varint,10,opt,name=offset,proto3" json:"offset,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListVouchersRequest) Reset() {
+	*x = ListVouchersRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[83]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListVouchersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListVouchersRequest) ProtoMessage() {}
+
+func (x *ListVouchersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[83]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListVouchersRequest.ProtoReflect.Descriptor instead.
+func (*ListVouchersRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{83}
+}
+
+func (x *ListVouchersRequest) GetQ() string {
+	if x != nil {
+		return x.Q
+	}
+	return ""
+}
+
+func (x *ListVouchersRequest) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *ListVouchersRequest) GetLive() string {
+	if x != nil {
+		return x.Live
+	}
+	return ""
+}
+
+func (x *ListVouchersRequest) GetPeriod() string {
+	if x != nil {
+		return x.Period
+	}
+	return ""
+}
+
+func (x *ListVouchersRequest) GetDiscountType() string {
+	if x != nil {
+		return x.DiscountType
+	}
+	return ""
+}
+
+func (x *ListVouchersRequest) GetOutletId() int64 {
+	if x != nil {
+		return x.OutletId
+	}
+	return 0
+}
+
+func (x *ListVouchersRequest) GetSortBy() string {
+	if x != nil {
+		return x.SortBy
+	}
+	return ""
+}
+
+func (x *ListVouchersRequest) GetSortDir() string {
+	if x != nil {
+		return x.SortDir
+	}
+	return ""
+}
+
+func (x *ListVouchersRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *ListVouchersRequest) GetOffset() int32 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+type ListVouchersResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Vouchers      []*Voucher             `protobuf:"bytes,1,rep,name=vouchers,proto3" json:"vouchers,omitempty"`
+	Total         int64                  `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListVouchersResponse) Reset() {
+	*x = ListVouchersResponse{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[84]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListVouchersResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListVouchersResponse) ProtoMessage() {}
+
+func (x *ListVouchersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[84]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListVouchersResponse.ProtoReflect.Descriptor instead.
+func (*ListVouchersResponse) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{84}
+}
+
+func (x *ListVouchersResponse) GetVouchers() []*Voucher {
+	if x != nil {
+		return x.Vouchers
+	}
+	return nil
+}
+
+func (x *ListVouchersResponse) GetTotal() int64 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
+type GetVoucherRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetVoucherRequest) Reset() {
+	*x = GetVoucherRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[85]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetVoucherRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetVoucherRequest) ProtoMessage() {}
+
+func (x *GetVoucherRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[85]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetVoucherRequest.ProtoReflect.Descriptor instead.
+func (*GetVoucherRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{85}
+}
+
+func (x *GetVoucherRequest) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+type SaveVoucherRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"` // 0 on a create
+	Voucher       *Voucher               `protobuf:"bytes,2,opt,name=voucher,proto3" json:"voucher,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SaveVoucherRequest) Reset() {
+	*x = SaveVoucherRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[86]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SaveVoucherRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveVoucherRequest) ProtoMessage() {}
+
+func (x *SaveVoucherRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[86]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveVoucherRequest.ProtoReflect.Descriptor instead.
+func (*SaveVoucherRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{86}
+}
+
+func (x *SaveVoucherRequest) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *SaveVoucherRequest) GetVoucher() *Voucher {
+	if x != nil {
+		return x.Voucher
+	}
+	return nil
+}
+
+type VoucherResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Voucher       *Voucher               `protobuf:"bytes,1,opt,name=voucher,proto3" json:"voucher,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *VoucherResponse) Reset() {
+	*x = VoucherResponse{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[87]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *VoucherResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*VoucherResponse) ProtoMessage() {}
+
+func (x *VoucherResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[87]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use VoucherResponse.ProtoReflect.Descriptor instead.
+func (*VoucherResponse) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{87}
+}
+
+func (x *VoucherResponse) GetVoucher() *Voucher {
+	if x != nil {
+		return x.Voucher
+	}
+	return nil
+}
+
+type SetVoucherStatusRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Status        string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetVoucherStatusRequest) Reset() {
+	*x = SetVoucherStatusRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[88]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetVoucherStatusRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetVoucherStatusRequest) ProtoMessage() {}
+
+func (x *SetVoucherStatusRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[88]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetVoucherStatusRequest.ProtoReflect.Descriptor instead.
+func (*SetVoucherStatusRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{88}
+}
+
+func (x *SetVoucherStatusRequest) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *SetVoucherStatusRequest) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+type ListVoucherColorsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListVoucherColorsRequest) Reset() {
+	*x = ListVoucherColorsRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[89]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListVoucherColorsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListVoucherColorsRequest) ProtoMessage() {}
+
+func (x *ListVoucherColorsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[89]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListVoucherColorsRequest.ProtoReflect.Descriptor instead.
+func (*ListVoucherColorsRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{89}
+}
+
+type ListVoucherColorsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Colors        []string               `protobuf:"bytes,1,rep,name=colors,proto3" json:"colors,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListVoucherColorsResponse) Reset() {
+	*x = ListVoucherColorsResponse{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[90]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListVoucherColorsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListVoucherColorsResponse) ProtoMessage() {}
+
+func (x *ListVoucherColorsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[90]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListVoucherColorsResponse.ProtoReflect.Descriptor instead.
+func (*ListVoucherColorsResponse) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{90}
+}
+
+func (x *ListVoucherColorsResponse) GetColors() []string {
+	if x != nil {
+		return x.Colors
+	}
+	return nil
+}
+
+type VoucherGrant struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	VoucherId     int64                  `protobuf:"varint,2,opt,name=voucher_id,json=voucherId,proto3" json:"voucher_id,omitempty"`
+	CustomerId    int64                  `protobuf:"varint,3,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	CustomerName  string                 `protobuf:"bytes,4,opt,name=customer_name,json=customerName,proto3" json:"customer_name,omitempty"` // as it was when the voucher was granted
+	CustomerPhone string                 `protobuf:"bytes,5,opt,name=customer_phone,json=customerPhone,proto3" json:"customer_phone,omitempty"`
+	Source        string                 `protobuf:"bytes,6,opt,name=source,proto3" json:"source,omitempty"`                        // claim | inject
+	GrantedBy     string                 `protobuf:"bytes,7,opt,name=granted_by,json=grantedBy,proto3" json:"granted_by,omitempty"` // the admin who injected it; empty for a claim
+	GrantedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=granted_at,json=grantedAt,proto3" json:"granted_at,omitempty"`
+	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"` // unset = until the voucher ends
+	UsesRemaining int32                  `protobuf:"varint,10,opt,name=uses_remaining,json=usesRemaining,proto3" json:"uses_remaining,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *VoucherGrant) Reset() {
+	*x = VoucherGrant{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[91]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *VoucherGrant) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*VoucherGrant) ProtoMessage() {}
+
+func (x *VoucherGrant) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[91]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use VoucherGrant.ProtoReflect.Descriptor instead.
+func (*VoucherGrant) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{91}
+}
+
+func (x *VoucherGrant) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *VoucherGrant) GetVoucherId() int64 {
+	if x != nil {
+		return x.VoucherId
+	}
+	return 0
+}
+
+func (x *VoucherGrant) GetCustomerId() int64 {
+	if x != nil {
+		return x.CustomerId
+	}
+	return 0
+}
+
+func (x *VoucherGrant) GetCustomerName() string {
+	if x != nil {
+		return x.CustomerName
+	}
+	return ""
+}
+
+func (x *VoucherGrant) GetCustomerPhone() string {
+	if x != nil {
+		return x.CustomerPhone
+	}
+	return ""
+}
+
+func (x *VoucherGrant) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
+}
+
+func (x *VoucherGrant) GetGrantedBy() string {
+	if x != nil {
+		return x.GrantedBy
+	}
+	return ""
+}
+
+func (x *VoucherGrant) GetGrantedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.GrantedAt
+	}
+	return nil
+}
+
+func (x *VoucherGrant) GetExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return nil
+}
+
+func (x *VoucherGrant) GetUsesRemaining() int32 {
+	if x != nil {
+		return x.UsesRemaining
+	}
+	return 0
+}
+
+type ListVoucherGrantsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	VoucherId     int64                  `protobuf:"varint,1,opt,name=voucher_id,json=voucherId,proto3" json:"voucher_id,omitempty"`
+	Q             string                 `protobuf:"bytes,2,opt,name=q,proto3" json:"q,omitempty"` // part of the customer's name or phone
+	Limit         int32                  `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
+	Offset        int32                  `protobuf:"varint,4,opt,name=offset,proto3" json:"offset,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListVoucherGrantsRequest) Reset() {
+	*x = ListVoucherGrantsRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[92]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListVoucherGrantsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListVoucherGrantsRequest) ProtoMessage() {}
+
+func (x *ListVoucherGrantsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[92]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListVoucherGrantsRequest.ProtoReflect.Descriptor instead.
+func (*ListVoucherGrantsRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{92}
+}
+
+func (x *ListVoucherGrantsRequest) GetVoucherId() int64 {
+	if x != nil {
+		return x.VoucherId
+	}
+	return 0
+}
+
+func (x *ListVoucherGrantsRequest) GetQ() string {
+	if x != nil {
+		return x.Q
+	}
+	return ""
+}
+
+func (x *ListVoucherGrantsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *ListVoucherGrantsRequest) GetOffset() int32 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+type ListVoucherGrantsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Grants        []*VoucherGrant        `protobuf:"bytes,1,rep,name=grants,proto3" json:"grants,omitempty"`
+	Total         int64                  `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListVoucherGrantsResponse) Reset() {
+	*x = ListVoucherGrantsResponse{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[93]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListVoucherGrantsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListVoucherGrantsResponse) ProtoMessage() {}
+
+func (x *ListVoucherGrantsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[93]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListVoucherGrantsResponse.ProtoReflect.Descriptor instead.
+func (*ListVoucherGrantsResponse) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{93}
+}
+
+func (x *ListVoucherGrantsResponse) GetGrants() []*VoucherGrant {
+	if x != nil {
+		return x.Grants
+	}
+	return nil
+}
+
+func (x *ListVoucherGrantsResponse) GetTotal() int64 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
+type InjectCustomer struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Phone         string                 `protobuf:"bytes,3,opt,name=phone,proto3" json:"phone,omitempty"`
+	Active        bool                   `protobuf:"varint,4,opt,name=active,proto3" json:"active,omitempty"` // false for a customer who is switched off or banned
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InjectCustomer) Reset() {
+	*x = InjectCustomer{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[94]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InjectCustomer) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InjectCustomer) ProtoMessage() {}
+
+func (x *InjectCustomer) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[94]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InjectCustomer.ProtoReflect.Descriptor instead.
+func (*InjectCustomer) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{94}
+}
+
+func (x *InjectCustomer) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *InjectCustomer) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *InjectCustomer) GetPhone() string {
+	if x != nil {
+		return x.Phone
+	}
+	return ""
+}
+
+func (x *InjectCustomer) GetActive() bool {
+	if x != nil {
+		return x.Active
+	}
+	return false
+}
+
+type InjectVoucherRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	VoucherId     int64                  `protobuf:"varint,1,opt,name=voucher_id,json=voucherId,proto3" json:"voucher_id,omitempty"`
+	Customers     []*InjectCustomer      `protobuf:"bytes,2,rep,name=customers,proto3" json:"customers,omitempty"`                  // the ones the user service found
+	NotFound      int32                  `protobuf:"varint,3,opt,name=not_found,json=notFound,proto3" json:"not_found,omitempty"`   // how many named customers it could not find
+	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"` // unset = until the voucher ends
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InjectVoucherRequest) Reset() {
+	*x = InjectVoucherRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[95]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InjectVoucherRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InjectVoucherRequest) ProtoMessage() {}
+
+func (x *InjectVoucherRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[95]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InjectVoucherRequest.ProtoReflect.Descriptor instead.
+func (*InjectVoucherRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{95}
+}
+
+func (x *InjectVoucherRequest) GetVoucherId() int64 {
+	if x != nil {
+		return x.VoucherId
+	}
+	return 0
+}
+
+func (x *InjectVoucherRequest) GetCustomers() []*InjectCustomer {
+	if x != nil {
+		return x.Customers
+	}
+	return nil
+}
+
+func (x *InjectVoucherRequest) GetNotFound() int32 {
+	if x != nil {
+		return x.NotFound
+	}
+	return 0
+}
+
+func (x *InjectVoucherRequest) GetExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return nil
+}
+
+type VoucherInjection struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	Id                 int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	VoucherId          int64                  `protobuf:"varint,2,opt,name=voucher_id,json=voucherId,proto3" json:"voucher_id,omitempty"`
+	VoucherTitle       string                 `protobuf:"bytes,3,opt,name=voucher_title,json=voucherTitle,proto3" json:"voucher_title,omitempty"` // as it was when it was sent
+	VoucherCode        string                 `protobuf:"bytes,4,opt,name=voucher_code,json=voucherCode,proto3" json:"voucher_code,omitempty"`
+	ActorId            string                 `protobuf:"bytes,5,opt,name=actor_id,json=actorId,proto3" json:"actor_id,omitempty"`
+	ActorName          string                 `protobuf:"bytes,6,opt,name=actor_name,json=actorName,proto3" json:"actor_name,omitempty"`
+	TargetCount        int32                  `protobuf:"varint,7,opt,name=target_count,json=targetCount,proto3" json:"target_count,omitempty"`
+	InjectedCount      int32                  `protobuf:"varint,8,opt,name=injected_count,json=injectedCount,proto3" json:"injected_count,omitempty"`
+	SkippedAlreadyHeld int32                  `protobuf:"varint,9,opt,name=skipped_already_held,json=skippedAlreadyHeld,proto3" json:"skipped_already_held,omitempty"`
+	SkippedOverLimit   int32                  `protobuf:"varint,10,opt,name=skipped_over_limit,json=skippedOverLimit,proto3" json:"skipped_over_limit,omitempty"`
+	SkippedNotFound    int32                  `protobuf:"varint,11,opt,name=skipped_not_found,json=skippedNotFound,proto3" json:"skipped_not_found,omitempty"`
+	SkippedInactive    int32                  `protobuf:"varint,12,opt,name=skipped_inactive,json=skippedInactive,proto3" json:"skipped_inactive,omitempty"`
+	CreatedAt          *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *VoucherInjection) Reset() {
+	*x = VoucherInjection{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[96]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *VoucherInjection) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*VoucherInjection) ProtoMessage() {}
+
+func (x *VoucherInjection) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[96]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use VoucherInjection.ProtoReflect.Descriptor instead.
+func (*VoucherInjection) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{96}
+}
+
+func (x *VoucherInjection) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *VoucherInjection) GetVoucherId() int64 {
+	if x != nil {
+		return x.VoucherId
+	}
+	return 0
+}
+
+func (x *VoucherInjection) GetVoucherTitle() string {
+	if x != nil {
+		return x.VoucherTitle
+	}
+	return ""
+}
+
+func (x *VoucherInjection) GetVoucherCode() string {
+	if x != nil {
+		return x.VoucherCode
+	}
+	return ""
+}
+
+func (x *VoucherInjection) GetActorId() string {
+	if x != nil {
+		return x.ActorId
+	}
+	return ""
+}
+
+func (x *VoucherInjection) GetActorName() string {
+	if x != nil {
+		return x.ActorName
+	}
+	return ""
+}
+
+func (x *VoucherInjection) GetTargetCount() int32 {
+	if x != nil {
+		return x.TargetCount
+	}
+	return 0
+}
+
+func (x *VoucherInjection) GetInjectedCount() int32 {
+	if x != nil {
+		return x.InjectedCount
+	}
+	return 0
+}
+
+func (x *VoucherInjection) GetSkippedAlreadyHeld() int32 {
+	if x != nil {
+		return x.SkippedAlreadyHeld
+	}
+	return 0
+}
+
+func (x *VoucherInjection) GetSkippedOverLimit() int32 {
+	if x != nil {
+		return x.SkippedOverLimit
+	}
+	return 0
+}
+
+func (x *VoucherInjection) GetSkippedNotFound() int32 {
+	if x != nil {
+		return x.SkippedNotFound
+	}
+	return 0
+}
+
+func (x *VoucherInjection) GetSkippedInactive() int32 {
+	if x != nil {
+		return x.SkippedInactive
+	}
+	return 0
+}
+
+func (x *VoucherInjection) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+type InjectVoucherResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Injection     *VoucherInjection      `protobuf:"bytes,1,opt,name=injection,proto3" json:"injection,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InjectVoucherResponse) Reset() {
+	*x = InjectVoucherResponse{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[97]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InjectVoucherResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InjectVoucherResponse) ProtoMessage() {}
+
+func (x *InjectVoucherResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[97]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InjectVoucherResponse.ProtoReflect.Descriptor instead.
+func (*InjectVoucherResponse) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{97}
+}
+
+func (x *InjectVoucherResponse) GetInjection() *VoucherInjection {
+	if x != nil {
+		return x.Injection
+	}
+	return nil
+}
+
+type ListVoucherInjectionsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	VoucherId     int64                  `protobuf:"varint,1,opt,name=voucher_id,json=voucherId,proto3" json:"voucher_id,omitempty"` // 0 = every voucher
+	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	Offset        int32                  `protobuf:"varint,3,opt,name=offset,proto3" json:"offset,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListVoucherInjectionsRequest) Reset() {
+	*x = ListVoucherInjectionsRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[98]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListVoucherInjectionsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListVoucherInjectionsRequest) ProtoMessage() {}
+
+func (x *ListVoucherInjectionsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[98]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListVoucherInjectionsRequest.ProtoReflect.Descriptor instead.
+func (*ListVoucherInjectionsRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{98}
+}
+
+func (x *ListVoucherInjectionsRequest) GetVoucherId() int64 {
+	if x != nil {
+		return x.VoucherId
+	}
+	return 0
+}
+
+func (x *ListVoucherInjectionsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *ListVoucherInjectionsRequest) GetOffset() int32 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+type ListVoucherInjectionsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Injections    []*VoucherInjection    `protobuf:"bytes,1,rep,name=injections,proto3" json:"injections,omitempty"`
+	Total         int64                  `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListVoucherInjectionsResponse) Reset() {
+	*x = ListVoucherInjectionsResponse{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[99]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListVoucherInjectionsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListVoucherInjectionsResponse) ProtoMessage() {}
+
+func (x *ListVoucherInjectionsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[99]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListVoucherInjectionsResponse.ProtoReflect.Descriptor instead.
+func (*ListVoucherInjectionsResponse) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{99}
+}
+
+func (x *ListVoucherInjectionsResponse) GetInjections() []*VoucherInjection {
+	if x != nil {
+		return x.Injections
+	}
+	return nil
+}
+
+func (x *ListVoucherInjectionsResponse) GetTotal() int64 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
+// A voucher as one customer holds it. Nothing private is in it: no internal note, no status, no claim counts.
+type MyVoucher struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Code          string                 `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"`
+	Title         string                 `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
+	Description   string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	DiscountType  string                 `protobuf:"bytes,5,opt,name=discount_type,json=discountType,proto3" json:"discount_type,omitempty"`
+	Value         int64                  `protobuf:"varint,6,opt,name=value,proto3" json:"value,omitempty"`
+	MaxDiscount   int64                  `protobuf:"varint,7,opt,name=max_discount,json=maxDiscount,proto3" json:"max_discount,omitempty"`
+	MinSpend      int64                  `protobuf:"varint,8,opt,name=min_spend,json=minSpend,proto3" json:"min_spend,omitempty"`
+	Color         string                 `protobuf:"bytes,9,opt,name=color,proto3" json:"color,omitempty"`
+	ImageUrl      string                 `protobuf:"bytes,10,opt,name=image_url,json=imageUrl,proto3" json:"image_url,omitempty"`
+	StartsAt      *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=starts_at,json=startsAt,proto3" json:"starts_at,omitempty"`
+	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`         // the earlier of the voucher's end and the customer's own expiry; unset = none
+	OutletIds     []int64                `protobuf:"varint,13,rep,packed,name=outlet_ids,json=outletIds,proto3" json:"outlet_ids,omitempty"` // empty = every outlet
+	Outlets       []*BannerOutlet        `protobuf:"bytes,14,rep,name=outlets,proto3" json:"outlets,omitempty"`
+	ServiceIds    []int64                `protobuf:"varint,15,rep,packed,name=service_ids,json=serviceIds,proto3" json:"service_ids,omitempty"` // empty = every service
+	Services      []*VoucherService      `protobuf:"bytes,16,rep,name=services,proto3" json:"services,omitempty"`
+	Source        string                 `protobuf:"bytes,17,opt,name=source,proto3" json:"source,omitempty"`                        // public | claim | inject
+	ClaimedAt     *timestamppb.Timestamp `protobuf:"bytes,18,opt,name=claimed_at,json=claimedAt,proto3" json:"claimed_at,omitempty"` // unset for a public voucher
+	UsesRemaining int32                  `protobuf:"varint,19,opt,name=uses_remaining,json=usesRemaining,proto3" json:"uses_remaining,omitempty"`
+	UsageLimit    int32                  `protobuf:"varint,20,opt,name=usage_limit,json=usageLimit,proto3" json:"usage_limit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MyVoucher) Reset() {
+	*x = MyVoucher{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[100]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MyVoucher) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MyVoucher) ProtoMessage() {}
+
+func (x *MyVoucher) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[100]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MyVoucher.ProtoReflect.Descriptor instead.
+func (*MyVoucher) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{100}
+}
+
+func (x *MyVoucher) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *MyVoucher) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *MyVoucher) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *MyVoucher) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *MyVoucher) GetDiscountType() string {
+	if x != nil {
+		return x.DiscountType
+	}
+	return ""
+}
+
+func (x *MyVoucher) GetValue() int64 {
+	if x != nil {
+		return x.Value
+	}
+	return 0
+}
+
+func (x *MyVoucher) GetMaxDiscount() int64 {
+	if x != nil {
+		return x.MaxDiscount
+	}
+	return 0
+}
+
+func (x *MyVoucher) GetMinSpend() int64 {
+	if x != nil {
+		return x.MinSpend
+	}
+	return 0
+}
+
+func (x *MyVoucher) GetColor() string {
+	if x != nil {
+		return x.Color
+	}
+	return ""
+}
+
+func (x *MyVoucher) GetImageUrl() string {
+	if x != nil {
+		return x.ImageUrl
+	}
+	return ""
+}
+
+func (x *MyVoucher) GetStartsAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.StartsAt
+	}
+	return nil
+}
+
+func (x *MyVoucher) GetExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return nil
+}
+
+func (x *MyVoucher) GetOutletIds() []int64 {
+	if x != nil {
+		return x.OutletIds
+	}
+	return nil
+}
+
+func (x *MyVoucher) GetOutlets() []*BannerOutlet {
+	if x != nil {
+		return x.Outlets
+	}
+	return nil
+}
+
+func (x *MyVoucher) GetServiceIds() []int64 {
+	if x != nil {
+		return x.ServiceIds
+	}
+	return nil
+}
+
+func (x *MyVoucher) GetServices() []*VoucherService {
+	if x != nil {
+		return x.Services
+	}
+	return nil
+}
+
+func (x *MyVoucher) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
+}
+
+func (x *MyVoucher) GetClaimedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ClaimedAt
+	}
+	return nil
+}
+
+func (x *MyVoucher) GetUsesRemaining() int32 {
+	if x != nil {
+		return x.UsesRemaining
+	}
+	return 0
+}
+
+func (x *MyVoucher) GetUsageLimit() int32 {
+	if x != nil {
+		return x.UsageLimit
+	}
+	return 0
+}
+
+type ListMyVouchersRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListMyVouchersRequest) Reset() {
+	*x = ListMyVouchersRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[101]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListMyVouchersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListMyVouchersRequest) ProtoMessage() {}
+
+func (x *ListMyVouchersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[101]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListMyVouchersRequest.ProtoReflect.Descriptor instead.
+func (*ListMyVouchersRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{101}
+}
+
+type ListMyVouchersResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Vouchers      []*MyVoucher           `protobuf:"bytes,1,rep,name=vouchers,proto3" json:"vouchers,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListMyVouchersResponse) Reset() {
+	*x = ListMyVouchersResponse{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[102]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListMyVouchersResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListMyVouchersResponse) ProtoMessage() {}
+
+func (x *ListMyVouchersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[102]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListMyVouchersResponse.ProtoReflect.Descriptor instead.
+func (*ListMyVouchersResponse) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{102}
+}
+
+func (x *ListMyVouchersResponse) GetVouchers() []*MyVoucher {
+	if x != nil {
+		return x.Vouchers
+	}
+	return nil
+}
+
+type ClaimVoucherRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Code          string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
+	CustomerName  string                 `protobuf:"bytes,2,opt,name=customer_name,json=customerName,proto3" json:"customer_name,omitempty"` // the customer's own, as the gateway read them from the user service
+	CustomerPhone string                 `protobuf:"bytes,3,opt,name=customer_phone,json=customerPhone,proto3" json:"customer_phone,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClaimVoucherRequest) Reset() {
+	*x = ClaimVoucherRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[103]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClaimVoucherRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClaimVoucherRequest) ProtoMessage() {}
+
+func (x *ClaimVoucherRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[103]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClaimVoucherRequest.ProtoReflect.Descriptor instead.
+func (*ClaimVoucherRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{103}
+}
+
+func (x *ClaimVoucherRequest) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *ClaimVoucherRequest) GetCustomerName() string {
+	if x != nil {
+		return x.CustomerName
+	}
+	return ""
+}
+
+func (x *ClaimVoucherRequest) GetCustomerPhone() string {
+	if x != nil {
+		return x.CustomerPhone
+	}
+	return ""
+}
+
+type MyVoucherResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Voucher       *MyVoucher             `protobuf:"bytes,1,opt,name=voucher,proto3" json:"voucher,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MyVoucherResponse) Reset() {
+	*x = MyVoucherResponse{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[104]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MyVoucherResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MyVoucherResponse) ProtoMessage() {}
+
+func (x *MyVoucherResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[104]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MyVoucherResponse.ProtoReflect.Descriptor instead.
+func (*MyVoucherResponse) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{104}
+}
+
+func (x *MyVoucherResponse) GetVoucher() *MyVoucher {
+	if x != nil {
+		return x.Voucher
+	}
+	return nil
+}
+
+type BomRef struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OwnerType     string                 `protobuf:"bytes,1,opt,name=owner_type,json=ownerType,proto3" json:"owner_type,omitempty"` // service | variant_option | modifier_option
+	OwnerId       int64                  `protobuf:"varint,2,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BomRef) Reset() {
+	*x = BomRef{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[105]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BomRef) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BomRef) ProtoMessage() {}
+
+func (x *BomRef) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[105]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BomRef.ProtoReflect.Descriptor instead.
+func (*BomRef) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{105}
+}
+
+func (x *BomRef) GetOwnerType() string {
+	if x != nil {
+		return x.OwnerType
+	}
+	return ""
+}
+
+func (x *BomRef) GetOwnerId() int64 {
+	if x != nil {
+		return x.OwnerId
+	}
+	return 0
+}
+
+type BomLine struct {
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	MaterialId  int64                  `protobuf:"varint,1,opt,name=material_id,json=materialId,proto3" json:"material_id,omitempty"`
+	Sku         string                 `protobuf:"bytes,2,opt,name=sku,proto3" json:"sku,omitempty"`
+	Name        string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Unit        string                 `protobuf:"bytes,4,opt,name=unit,proto3" json:"unit,omitempty"`
+	Qty         string                 `protobuf:"bytes,5,opt,name=qty,proto3" json:"qty,omitempty"`                                    // exact decimal
+	Per         string                 `protobuf:"bytes,6,opt,name=per,proto3" json:"per,omitempty"`                                    // unit | line
+	LossPercent string                 `protobuf:"bytes,7,opt,name=loss_percent,json=lossPercent,proto3" json:"loss_percent,omitempty"` // exact decimal
+	UnitCost    string                 `protobuf:"bytes,8,opt,name=unit_cost,json=unitCost,proto3" json:"unit_cost,omitempty"`          // display, 6 places
+	// The cost of this line for one unit sold (a per-line line: once), display, 6 places.
+	Cost          string `protobuf:"bytes,9,opt,name=cost,proto3" json:"cost,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BomLine) Reset() {
+	*x = BomLine{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[106]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BomLine) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BomLine) ProtoMessage() {}
+
+func (x *BomLine) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[106]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BomLine.ProtoReflect.Descriptor instead.
+func (*BomLine) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{106}
+}
+
+func (x *BomLine) GetMaterialId() int64 {
+	if x != nil {
+		return x.MaterialId
+	}
+	return 0
+}
+
+func (x *BomLine) GetSku() string {
+	if x != nil {
+		return x.Sku
+	}
+	return ""
+}
+
+func (x *BomLine) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *BomLine) GetUnit() string {
+	if x != nil {
+		return x.Unit
+	}
+	return ""
+}
+
+func (x *BomLine) GetQty() string {
+	if x != nil {
+		return x.Qty
+	}
+	return ""
+}
+
+func (x *BomLine) GetPer() string {
+	if x != nil {
+		return x.Per
+	}
+	return ""
+}
+
+func (x *BomLine) GetLossPercent() string {
+	if x != nil {
+		return x.LossPercent
+	}
+	return ""
+}
+
+func (x *BomLine) GetUnitCost() string {
+	if x != nil {
+		return x.UnitCost
+	}
+	return ""
+}
+
+func (x *BomLine) GetCost() string {
+	if x != nil {
+		return x.Cost
+	}
+	return ""
+}
+
+type Bom struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	OwnerType string                 `protobuf:"bytes,1,opt,name=owner_type,json=ownerType,proto3" json:"owner_type,omitempty"`
+	OwnerId   int64                  `protobuf:"varint,2,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
+	Lines     []*BomLine             `protobuf:"bytes,3,rep,name=lines,proto3" json:"lines,omitempty"`
+	// The exact sum of the per-unit lines, and of the per-line lines, rounded to 6 places for display.
+	Cost          string `protobuf:"bytes,4,opt,name=cost,proto3" json:"cost,omitempty"`
+	LineCost      string `protobuf:"bytes,5,opt,name=line_cost,json=lineCost,proto3" json:"line_cost,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Bom) Reset() {
+	*x = Bom{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[107]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Bom) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Bom) ProtoMessage() {}
+
+func (x *Bom) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[107]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Bom.ProtoReflect.Descriptor instead.
+func (*Bom) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{107}
+}
+
+func (x *Bom) GetOwnerType() string {
+	if x != nil {
+		return x.OwnerType
+	}
+	return ""
+}
+
+func (x *Bom) GetOwnerId() int64 {
+	if x != nil {
+		return x.OwnerId
+	}
+	return 0
+}
+
+func (x *Bom) GetLines() []*BomLine {
+	if x != nil {
+		return x.Lines
+	}
+	return nil
+}
+
+func (x *Bom) GetCost() string {
+	if x != nil {
+		return x.Cost
+	}
+	return ""
+}
+
+func (x *Bom) GetLineCost() string {
+	if x != nil {
+		return x.LineCost
+	}
+	return ""
+}
+
+type SetBomRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Owner         *BomRef                `protobuf:"bytes,1,opt,name=owner,proto3" json:"owner,omitempty"`
+	Lines         []*BomLine             `protobuf:"bytes,2,rep,name=lines,proto3" json:"lines,omitempty"` // only material_id, qty, per and loss_percent are read
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetBomRequest) Reset() {
+	*x = SetBomRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[108]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetBomRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetBomRequest) ProtoMessage() {}
+
+func (x *SetBomRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[108]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetBomRequest.ProtoReflect.Descriptor instead.
+func (*SetBomRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{108}
+}
+
+func (x *SetBomRequest) GetOwner() *BomRef {
+	if x != nil {
+		return x.Owner
+	}
+	return nil
+}
+
+func (x *SetBomRequest) GetLines() []*BomLine {
+	if x != nil {
+		return x.Lines
+	}
+	return nil
+}
+
+type GetServiceCostingRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ServiceId     int64                  `protobuf:"varint,1,opt,name=service_id,json=serviceId,proto3" json:"service_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetServiceCostingRequest) Reset() {
+	*x = GetServiceCostingRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[109]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetServiceCostingRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetServiceCostingRequest) ProtoMessage() {}
+
+func (x *GetServiceCostingRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[109]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetServiceCostingRequest.ProtoReflect.Descriptor instead.
+func (*GetServiceCostingRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{109}
+}
+
+func (x *GetServiceCostingRequest) GetServiceId() int64 {
+	if x != nil {
+		return x.ServiceId
+	}
+	return 0
+}
+
+type CostedComponent struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name  string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// A variant option's extra price or a modifier option's price, whole rupiah.
+	Price         int64  `protobuf:"varint,3,opt,name=price,proto3" json:"price,omitempty"`
+	PerUnit       string `protobuf:"bytes,4,opt,name=per_unit,json=perUnit,proto3" json:"per_unit,omitempty"` // display, 6 places
+	PerLine       string `protobuf:"bytes,5,opt,name=per_line,json=perLine,proto3" json:"per_line,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CostedComponent) Reset() {
+	*x = CostedComponent{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[110]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CostedComponent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CostedComponent) ProtoMessage() {}
+
+func (x *CostedComponent) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[110]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CostedComponent.ProtoReflect.Descriptor instead.
+func (*CostedComponent) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{110}
+}
+
+func (x *CostedComponent) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *CostedComponent) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *CostedComponent) GetPrice() int64 {
+	if x != nil {
+		return x.Price
+	}
+	return 0
+}
+
+func (x *CostedComponent) GetPerUnit() string {
+	if x != nil {
+		return x.PerUnit
+	}
+	return ""
+}
+
+func (x *CostedComponent) GetPerLine() string {
+	if x != nil {
+		return x.PerLine
+	}
+	return ""
+}
+
+type CostedGroup struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Options       []*CostedComponent     `protobuf:"bytes,3,rep,name=options,proto3" json:"options,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CostedGroup) Reset() {
+	*x = CostedGroup{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[111]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CostedGroup) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CostedGroup) ProtoMessage() {}
+
+func (x *CostedGroup) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[111]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CostedGroup.ProtoReflect.Descriptor instead.
+func (*CostedGroup) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{111}
+}
+
+func (x *CostedGroup) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *CostedGroup) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *CostedGroup) GetOptions() []*CostedComponent {
+	if x != nil {
+		return x.Options
+	}
+	return nil
+}
+
+type ServiceCosting struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	ServiceId      int64                  `protobuf:"varint,1,opt,name=service_id,json=serviceId,proto3" json:"service_id,omitempty"`
+	ServiceName    string                 `protobuf:"bytes,2,opt,name=service_name,json=serviceName,proto3" json:"service_name,omitempty"`
+	Unit           string                 `protobuf:"bytes,3,opt,name=unit,proto3" json:"unit,omitempty"`
+	Price          int64                  `protobuf:"varint,4,opt,name=price,proto3" json:"price,omitempty"`
+	BasePerUnit    string                 `protobuf:"bytes,5,opt,name=base_per_unit,json=basePerUnit,proto3" json:"base_per_unit,omitempty"`
+	BasePerLine    string                 `protobuf:"bytes,6,opt,name=base_per_line,json=basePerLine,proto3" json:"base_per_line,omitempty"`
+	BaseLines      []*BomLine             `protobuf:"bytes,7,rep,name=base_lines,json=baseLines,proto3" json:"base_lines,omitempty"`
+	VariantGroups  []*CostedGroup         `protobuf:"bytes,8,rep,name=variant_groups,json=variantGroups,proto3" json:"variant_groups,omitempty"`
+	ModifierGroups []*CostedGroup         `protobuf:"bytes,9,rep,name=modifier_groups,json=modifierGroups,proto3" json:"modifier_groups,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ServiceCosting) Reset() {
+	*x = ServiceCosting{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[112]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ServiceCosting) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ServiceCosting) ProtoMessage() {}
+
+func (x *ServiceCosting) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[112]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ServiceCosting.ProtoReflect.Descriptor instead.
+func (*ServiceCosting) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{112}
+}
+
+func (x *ServiceCosting) GetServiceId() int64 {
+	if x != nil {
+		return x.ServiceId
+	}
+	return 0
+}
+
+func (x *ServiceCosting) GetServiceName() string {
+	if x != nil {
+		return x.ServiceName
+	}
+	return ""
+}
+
+func (x *ServiceCosting) GetUnit() string {
+	if x != nil {
+		return x.Unit
+	}
+	return ""
+}
+
+func (x *ServiceCosting) GetPrice() int64 {
+	if x != nil {
+		return x.Price
+	}
+	return 0
+}
+
+func (x *ServiceCosting) GetBasePerUnit() string {
+	if x != nil {
+		return x.BasePerUnit
+	}
+	return ""
+}
+
+func (x *ServiceCosting) GetBasePerLine() string {
+	if x != nil {
+		return x.BasePerLine
+	}
+	return ""
+}
+
+func (x *ServiceCosting) GetBaseLines() []*BomLine {
+	if x != nil {
+		return x.BaseLines
+	}
+	return nil
+}
+
+func (x *ServiceCosting) GetVariantGroups() []*CostedGroup {
+	if x != nil {
+		return x.VariantGroups
+	}
+	return nil
+}
+
+func (x *ServiceCosting) GetModifierGroups() []*CostedGroup {
+	if x != nil {
+		return x.ModifierGroups
+	}
+	return nil
+}
+
+type CalcCostingRequest struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	ServiceId         int64                  `protobuf:"varint,1,opt,name=service_id,json=serviceId,proto3" json:"service_id,omitempty"`
+	VariantOptionIds  []int64                `protobuf:"varint,2,rep,packed,name=variant_option_ids,json=variantOptionIds,proto3" json:"variant_option_ids,omitempty"`
+	ModifierOptionIds []int64                `protobuf:"varint,3,rep,packed,name=modifier_option_ids,json=modifierOptionIds,proto3" json:"modifier_option_ids,omitempty"`
+	Qty               string                 `protobuf:"bytes,4,opt,name=qty,proto3" json:"qty,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *CalcCostingRequest) Reset() {
+	*x = CalcCostingRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[113]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CalcCostingRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CalcCostingRequest) ProtoMessage() {}
+
+func (x *CalcCostingRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[113]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CalcCostingRequest.ProtoReflect.Descriptor instead.
+func (*CalcCostingRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{113}
+}
+
+func (x *CalcCostingRequest) GetServiceId() int64 {
+	if x != nil {
+		return x.ServiceId
+	}
+	return 0
+}
+
+func (x *CalcCostingRequest) GetVariantOptionIds() []int64 {
+	if x != nil {
+		return x.VariantOptionIds
+	}
+	return nil
+}
+
+func (x *CalcCostingRequest) GetModifierOptionIds() []int64 {
+	if x != nil {
+		return x.ModifierOptionIds
+	}
+	return nil
+}
+
+func (x *CalcCostingRequest) GetQty() string {
+	if x != nil {
+		return x.Qty
+	}
+	return ""
+}
+
+type CostedLine struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Source        string                 `protobuf:"bytes,1,opt,name=source,proto3" json:"source,omitempty"` // service | variant | modifier
+	SourceName    string                 `protobuf:"bytes,2,opt,name=source_name,json=sourceName,proto3" json:"source_name,omitempty"`
+	MaterialId    int64                  `protobuf:"varint,3,opt,name=material_id,json=materialId,proto3" json:"material_id,omitempty"`
+	Sku           string                 `protobuf:"bytes,4,opt,name=sku,proto3" json:"sku,omitempty"`
+	Name          string                 `protobuf:"bytes,5,opt,name=name,proto3" json:"name,omitempty"`
+	Unit          string                 `protobuf:"bytes,6,opt,name=unit,proto3" json:"unit,omitempty"`
+	Per           string                 `protobuf:"bytes,7,opt,name=per,proto3" json:"per,omitempty"`
+	QtyUsed       string                 `protobuf:"bytes,8,opt,name=qty_used,json=qtyUsed,proto3" json:"qty_used,omitempty"` // total base units consumed by the order line, display, 6 places
+	UnitCost      string                 `protobuf:"bytes,9,opt,name=unit_cost,json=unitCost,proto3" json:"unit_cost,omitempty"`
+	Cost          string                 `protobuf:"bytes,10,opt,name=cost,proto3" json:"cost,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CostedLine) Reset() {
+	*x = CostedLine{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[114]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CostedLine) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CostedLine) ProtoMessage() {}
+
+func (x *CostedLine) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[114]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CostedLine.ProtoReflect.Descriptor instead.
+func (*CostedLine) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{114}
+}
+
+func (x *CostedLine) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
+}
+
+func (x *CostedLine) GetSourceName() string {
+	if x != nil {
+		return x.SourceName
+	}
+	return ""
+}
+
+func (x *CostedLine) GetMaterialId() int64 {
+	if x != nil {
+		return x.MaterialId
+	}
+	return 0
+}
+
+func (x *CostedLine) GetSku() string {
+	if x != nil {
+		return x.Sku
+	}
+	return ""
+}
+
+func (x *CostedLine) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *CostedLine) GetUnit() string {
+	if x != nil {
+		return x.Unit
+	}
+	return ""
+}
+
+func (x *CostedLine) GetPer() string {
+	if x != nil {
+		return x.Per
+	}
+	return ""
+}
+
+func (x *CostedLine) GetQtyUsed() string {
+	if x != nil {
+		return x.QtyUsed
+	}
+	return ""
+}
+
+func (x *CostedLine) GetUnitCost() string {
+	if x != nil {
+		return x.UnitCost
+	}
+	return ""
+}
+
+func (x *CostedLine) GetCost() string {
+	if x != nil {
+		return x.Cost
+	}
+	return ""
+}
+
+type CalcCostingResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ServiceId     int64                  `protobuf:"varint,1,opt,name=service_id,json=serviceId,proto3" json:"service_id,omitempty"`
+	ServiceName   string                 `protobuf:"bytes,2,opt,name=service_name,json=serviceName,proto3" json:"service_name,omitempty"`
+	Unit          string                 `protobuf:"bytes,3,opt,name=unit,proto3" json:"unit,omitempty"`
+	Qty           string                 `protobuf:"bytes,4,opt,name=qty,proto3" json:"qty,omitempty"`
+	UnitPrice     int64                  `protobuf:"varint,5,opt,name=unit_price,json=unitPrice,proto3" json:"unit_price,omitempty"`
+	Revenue       int64                  `protobuf:"varint,6,opt,name=revenue,proto3" json:"revenue,omitempty"`
+	Lines         []*CostedLine          `protobuf:"bytes,7,rep,name=lines,proto3" json:"lines,omitempty"`
+	Cost          int64                  `protobuf:"varint,8,opt,name=cost,proto3" json:"cost,omitempty"`
+	GrossProfit   int64                  `protobuf:"varint,9,opt,name=gross_profit,json=grossProfit,proto3" json:"gross_profit,omitempty"`
+	MarginPercent string                 `protobuf:"bytes,10,opt,name=margin_percent,json=marginPercent,proto3" json:"margin_percent,omitempty"` // 2 places
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CalcCostingResponse) Reset() {
+	*x = CalcCostingResponse{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[115]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CalcCostingResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CalcCostingResponse) ProtoMessage() {}
+
+func (x *CalcCostingResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[115]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CalcCostingResponse.ProtoReflect.Descriptor instead.
+func (*CalcCostingResponse) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{115}
+}
+
+func (x *CalcCostingResponse) GetServiceId() int64 {
+	if x != nil {
+		return x.ServiceId
+	}
+	return 0
+}
+
+func (x *CalcCostingResponse) GetServiceName() string {
+	if x != nil {
+		return x.ServiceName
+	}
+	return ""
+}
+
+func (x *CalcCostingResponse) GetUnit() string {
+	if x != nil {
+		return x.Unit
+	}
+	return ""
+}
+
+func (x *CalcCostingResponse) GetQty() string {
+	if x != nil {
+		return x.Qty
+	}
+	return ""
+}
+
+func (x *CalcCostingResponse) GetUnitPrice() int64 {
+	if x != nil {
+		return x.UnitPrice
+	}
+	return 0
+}
+
+func (x *CalcCostingResponse) GetRevenue() int64 {
+	if x != nil {
+		return x.Revenue
+	}
+	return 0
+}
+
+func (x *CalcCostingResponse) GetLines() []*CostedLine {
+	if x != nil {
+		return x.Lines
+	}
+	return nil
+}
+
+func (x *CalcCostingResponse) GetCost() int64 {
+	if x != nil {
+		return x.Cost
+	}
+	return 0
+}
+
+func (x *CalcCostingResponse) GetGrossProfit() int64 {
+	if x != nil {
+		return x.GrossProfit
+	}
+	return 0
+}
+
+func (x *CalcCostingResponse) GetMarginPercent() string {
+	if x != nil {
+		return x.MarginPercent
+	}
+	return ""
+}
+
+type StockRow struct {
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	OutletId   int64                  `protobuf:"varint,1,opt,name=outlet_id,json=outletId,proto3" json:"outlet_id,omitempty"`
+	MaterialId int64                  `protobuf:"varint,2,opt,name=material_id,json=materialId,proto3" json:"material_id,omitempty"`
+	Sku        string                 `protobuf:"bytes,3,opt,name=sku,proto3" json:"sku,omitempty"`
+	Name       string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
+	Unit       string                 `protobuf:"bytes,5,opt,name=unit,proto3" json:"unit,omitempty"`
+	Qty        string                 `protobuf:"bytes,6,opt,name=qty,proto3" json:"qty,omitempty"`      // exact decimal; may be negative
+	Value      int64                  `protobuf:"varint,7,opt,name=value,proto3" json:"value,omitempty"` // whole rupiah
+	// value / qty, rounded to 6 places for display; the material's standard unit cost while nothing is on hand.
+	AvgCost       string `protobuf:"bytes,8,opt,name=avg_cost,json=avgCost,proto3" json:"avg_cost,omitempty"`
+	MinQty        string `protobuf:"bytes,9,opt,name=min_qty,json=minQty,proto3" json:"min_qty,omitempty"`
+	Low           bool   `protobuf:"varint,10,opt,name=low,proto3" json:"low,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StockRow) Reset() {
+	*x = StockRow{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[116]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StockRow) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StockRow) ProtoMessage() {}
+
+func (x *StockRow) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[116]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StockRow.ProtoReflect.Descriptor instead.
+func (*StockRow) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{116}
+}
+
+func (x *StockRow) GetOutletId() int64 {
+	if x != nil {
+		return x.OutletId
+	}
+	return 0
+}
+
+func (x *StockRow) GetMaterialId() int64 {
+	if x != nil {
+		return x.MaterialId
+	}
+	return 0
+}
+
+func (x *StockRow) GetSku() string {
+	if x != nil {
+		return x.Sku
+	}
+	return ""
+}
+
+func (x *StockRow) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *StockRow) GetUnit() string {
+	if x != nil {
+		return x.Unit
+	}
+	return ""
+}
+
+func (x *StockRow) GetQty() string {
+	if x != nil {
+		return x.Qty
+	}
+	return ""
+}
+
+func (x *StockRow) GetValue() int64 {
+	if x != nil {
+		return x.Value
+	}
+	return 0
+}
+
+func (x *StockRow) GetAvgCost() string {
+	if x != nil {
+		return x.AvgCost
+	}
+	return ""
+}
+
+func (x *StockRow) GetMinQty() string {
+	if x != nil {
+		return x.MinQty
+	}
+	return ""
+}
+
+func (x *StockRow) GetLow() bool {
+	if x != nil {
+		return x.Low
+	}
+	return false
+}
+
+type ListStockRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OutletId      int64                  `protobuf:"varint,1,opt,name=outlet_id,json=outletId,proto3" json:"outlet_id,omitempty"` // 0 = every outlet
+	Q             string                 `protobuf:"bytes,2,opt,name=q,proto3" json:"q,omitempty"`
+	Low           bool                   `protobuf:"varint,3,opt,name=low,proto3" json:"low,omitempty"`
+	SortBy        string                 `protobuf:"bytes,4,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
+	SortDir       string                 `protobuf:"bytes,5,opt,name=sort_dir,json=sortDir,proto3" json:"sort_dir,omitempty"`
+	Limit         int32                  `protobuf:"varint,6,opt,name=limit,proto3" json:"limit,omitempty"`
+	Offset        int32                  `protobuf:"varint,7,opt,name=offset,proto3" json:"offset,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListStockRequest) Reset() {
+	*x = ListStockRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[117]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListStockRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListStockRequest) ProtoMessage() {}
+
+func (x *ListStockRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[117]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListStockRequest.ProtoReflect.Descriptor instead.
+func (*ListStockRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{117}
+}
+
+func (x *ListStockRequest) GetOutletId() int64 {
+	if x != nil {
+		return x.OutletId
+	}
+	return 0
+}
+
+func (x *ListStockRequest) GetQ() string {
+	if x != nil {
+		return x.Q
+	}
+	return ""
+}
+
+func (x *ListStockRequest) GetLow() bool {
+	if x != nil {
+		return x.Low
+	}
+	return false
+}
+
+func (x *ListStockRequest) GetSortBy() string {
+	if x != nil {
+		return x.SortBy
+	}
+	return ""
+}
+
+func (x *ListStockRequest) GetSortDir() string {
+	if x != nil {
+		return x.SortDir
+	}
+	return ""
+}
+
+func (x *ListStockRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *ListStockRequest) GetOffset() int32 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+type ListStockResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Rows          []*StockRow            `protobuf:"bytes,1,rep,name=rows,proto3" json:"rows,omitempty"`
+	Total         int64                  `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListStockResponse) Reset() {
+	*x = ListStockResponse{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[118]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListStockResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListStockResponse) ProtoMessage() {}
+
+func (x *ListStockResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[118]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListStockResponse.ProtoReflect.Descriptor instead.
+func (*ListStockResponse) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{118}
+}
+
+func (x *ListStockResponse) GetRows() []*StockRow {
+	if x != nil {
+		return x.Rows
+	}
+	return nil
+}
+
+func (x *ListStockResponse) GetTotal() int64 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
+type StockMovement struct {
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	Id           int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	OutletId     int64                  `protobuf:"varint,2,opt,name=outlet_id,json=outletId,proto3" json:"outlet_id,omitempty"`
+	MaterialId   int64                  `protobuf:"varint,3,opt,name=material_id,json=materialId,proto3" json:"material_id,omitempty"`
+	Sku          string                 `protobuf:"bytes,4,opt,name=sku,proto3" json:"sku,omitempty"`
+	Name         string                 `protobuf:"bytes,5,opt,name=name,proto3" json:"name,omitempty"`
+	Unit         string                 `protobuf:"bytes,6,opt,name=unit,proto3" json:"unit,omitempty"`
+	Kind         string                 `protobuf:"bytes,7,opt,name=kind,proto3" json:"kind,omitempty"`
+	Reason       string                 `protobuf:"bytes,8,opt,name=reason,proto3" json:"reason,omitempty"`
+	QtyDelta     string                 `protobuf:"bytes,9,opt,name=qty_delta,json=qtyDelta,proto3" json:"qty_delta,omitempty"`
+	ValueDelta   int64                  `protobuf:"varint,10,opt,name=value_delta,json=valueDelta,proto3" json:"value_delta,omitempty"`
+	BalanceQty   string                 `protobuf:"bytes,11,opt,name=balance_qty,json=balanceQty,proto3" json:"balance_qty,omitempty"`
+	BalanceValue int64                  `protobuf:"varint,12,opt,name=balance_value,json=balanceValue,proto3" json:"balance_value,omitempty"`
+	RefType      string                 `protobuf:"bytes,13,opt,name=ref_type,json=refType,proto3" json:"ref_type,omitempty"`
+	RefId        string                 `protobuf:"bytes,14,opt,name=ref_id,json=refId,proto3" json:"ref_id,omitempty"`
+	Supplier     string                 `protobuf:"bytes,15,opt,name=supplier,proto3" json:"supplier,omitempty"`
+	DocNo        string                 `protobuf:"bytes,16,opt,name=doc_no,json=docNo,proto3" json:"doc_no,omitempty"`
+	Note         string                 `protobuf:"bytes,17,opt,name=note,proto3" json:"note,omitempty"`
+	CreatedBy    string                 `protobuf:"bytes,18,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
+	CreatedAt    *timestamppb.Timestamp `protobuf:"bytes,19,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	// For a movement made from an order: the order's TRX code (TRX-25102026-K7M2), as it was when the movement was written. Empty for
+	// other movements and for those from before codes existed. ref_id stays the order's id.
+	RefCode       string `protobuf:"bytes,20,opt,name=ref_code,json=refCode,proto3" json:"ref_code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StockMovement) Reset() {
+	*x = StockMovement{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[119]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StockMovement) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StockMovement) ProtoMessage() {}
+
+func (x *StockMovement) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[119]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StockMovement.ProtoReflect.Descriptor instead.
+func (*StockMovement) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{119}
+}
+
+func (x *StockMovement) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *StockMovement) GetOutletId() int64 {
+	if x != nil {
+		return x.OutletId
+	}
+	return 0
+}
+
+func (x *StockMovement) GetMaterialId() int64 {
+	if x != nil {
+		return x.MaterialId
+	}
+	return 0
+}
+
+func (x *StockMovement) GetSku() string {
+	if x != nil {
+		return x.Sku
+	}
+	return ""
+}
+
+func (x *StockMovement) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *StockMovement) GetUnit() string {
+	if x != nil {
+		return x.Unit
+	}
+	return ""
+}
+
+func (x *StockMovement) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *StockMovement) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *StockMovement) GetQtyDelta() string {
+	if x != nil {
+		return x.QtyDelta
+	}
+	return ""
+}
+
+func (x *StockMovement) GetValueDelta() int64 {
+	if x != nil {
+		return x.ValueDelta
+	}
+	return 0
+}
+
+func (x *StockMovement) GetBalanceQty() string {
+	if x != nil {
+		return x.BalanceQty
+	}
+	return ""
+}
+
+func (x *StockMovement) GetBalanceValue() int64 {
+	if x != nil {
+		return x.BalanceValue
+	}
+	return 0
+}
+
+func (x *StockMovement) GetRefType() string {
+	if x != nil {
+		return x.RefType
+	}
+	return ""
+}
+
+func (x *StockMovement) GetRefId() string {
+	if x != nil {
+		return x.RefId
+	}
+	return ""
+}
+
+func (x *StockMovement) GetSupplier() string {
+	if x != nil {
+		return x.Supplier
+	}
+	return ""
+}
+
+func (x *StockMovement) GetDocNo() string {
+	if x != nil {
+		return x.DocNo
+	}
+	return ""
+}
+
+func (x *StockMovement) GetNote() string {
+	if x != nil {
+		return x.Note
+	}
+	return ""
+}
+
+func (x *StockMovement) GetCreatedBy() string {
+	if x != nil {
+		return x.CreatedBy
+	}
+	return ""
+}
+
+func (x *StockMovement) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *StockMovement) GetRefCode() string {
+	if x != nil {
+		return x.RefCode
+	}
+	return ""
+}
+
+type ListMovementsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OutletId      int64                  `protobuf:"varint,1,opt,name=outlet_id,json=outletId,proto3" json:"outlet_id,omitempty"`
+	MaterialId    int64                  `protobuf:"varint,2,opt,name=material_id,json=materialId,proto3" json:"material_id,omitempty"`
+	Kind          string                 `protobuf:"bytes,3,opt,name=kind,proto3" json:"kind,omitempty"`
+	Q             string                 `protobuf:"bytes,4,opt,name=q,proto3" json:"q,omitempty"`
+	From          string                 `protobuf:"bytes,5,opt,name=from,proto3" json:"from,omitempty"` // YYYY-MM-DD, Asia/Jakarta
+	To            string                 `protobuf:"bytes,6,opt,name=to,proto3" json:"to,omitempty"`
+	SortBy        string                 `protobuf:"bytes,7,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
+	SortDir       string                 `protobuf:"bytes,8,opt,name=sort_dir,json=sortDir,proto3" json:"sort_dir,omitempty"`
+	Limit         int32                  `protobuf:"varint,9,opt,name=limit,proto3" json:"limit,omitempty"`
+	Offset        int32                  `protobuf:"varint,10,opt,name=offset,proto3" json:"offset,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListMovementsRequest) Reset() {
+	*x = ListMovementsRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[120]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListMovementsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListMovementsRequest) ProtoMessage() {}
+
+func (x *ListMovementsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[120]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListMovementsRequest.ProtoReflect.Descriptor instead.
+func (*ListMovementsRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{120}
+}
+
+func (x *ListMovementsRequest) GetOutletId() int64 {
+	if x != nil {
+		return x.OutletId
+	}
+	return 0
+}
+
+func (x *ListMovementsRequest) GetMaterialId() int64 {
+	if x != nil {
+		return x.MaterialId
+	}
+	return 0
+}
+
+func (x *ListMovementsRequest) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *ListMovementsRequest) GetQ() string {
+	if x != nil {
+		return x.Q
+	}
+	return ""
+}
+
+func (x *ListMovementsRequest) GetFrom() string {
+	if x != nil {
+		return x.From
+	}
+	return ""
+}
+
+func (x *ListMovementsRequest) GetTo() string {
+	if x != nil {
+		return x.To
+	}
+	return ""
+}
+
+func (x *ListMovementsRequest) GetSortBy() string {
+	if x != nil {
+		return x.SortBy
+	}
+	return ""
+}
+
+func (x *ListMovementsRequest) GetSortDir() string {
+	if x != nil {
+		return x.SortDir
+	}
+	return ""
+}
+
+func (x *ListMovementsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *ListMovementsRequest) GetOffset() int32 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+type ListMovementsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Movements     []*StockMovement       `protobuf:"bytes,1,rep,name=movements,proto3" json:"movements,omitempty"`
+	Total         int64                  `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListMovementsResponse) Reset() {
+	*x = ListMovementsResponse{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[121]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListMovementsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListMovementsResponse) ProtoMessage() {}
+
+func (x *ListMovementsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[121]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListMovementsResponse.ProtoReflect.Descriptor instead.
+func (*ListMovementsResponse) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{121}
+}
+
+func (x *ListMovementsResponse) GetMovements() []*StockMovement {
+	if x != nil {
+		return x.Movements
+	}
+	return nil
+}
+
+func (x *ListMovementsResponse) GetTotal() int64 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
+type ReceiveStockRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OutletId       int64                  `protobuf:"varint,1,opt,name=outlet_id,json=outletId,proto3" json:"outlet_id,omitempty"`
+	MaterialId     int64                  `protobuf:"varint,2,opt,name=material_id,json=materialId,proto3" json:"material_id,omitempty"`
+	Qty            string                 `protobuf:"bytes,3,opt,name=qty,proto3" json:"qty,omitempty"`
+	TotalCost      int64                  `protobuf:"varint,4,opt,name=total_cost,json=totalCost,proto3" json:"total_cost,omitempty"`
+	Supplier       string                 `protobuf:"bytes,5,opt,name=supplier,proto3" json:"supplier,omitempty"`
+	DocNo          string                 `protobuf:"bytes,6,opt,name=doc_no,json=docNo,proto3" json:"doc_no,omitempty"`
+	Note           string                 `protobuf:"bytes,7,opt,name=note,proto3" json:"note,omitempty"`
+	IdempotencyKey string                 `protobuf:"bytes,8,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ReceiveStockRequest) Reset() {
+	*x = ReceiveStockRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[122]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReceiveStockRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReceiveStockRequest) ProtoMessage() {}
+
+func (x *ReceiveStockRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[122]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReceiveStockRequest.ProtoReflect.Descriptor instead.
+func (*ReceiveStockRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{122}
+}
+
+func (x *ReceiveStockRequest) GetOutletId() int64 {
+	if x != nil {
+		return x.OutletId
+	}
+	return 0
+}
+
+func (x *ReceiveStockRequest) GetMaterialId() int64 {
+	if x != nil {
+		return x.MaterialId
+	}
+	return 0
+}
+
+func (x *ReceiveStockRequest) GetQty() string {
+	if x != nil {
+		return x.Qty
+	}
+	return ""
+}
+
+func (x *ReceiveStockRequest) GetTotalCost() int64 {
+	if x != nil {
+		return x.TotalCost
+	}
+	return 0
+}
+
+func (x *ReceiveStockRequest) GetSupplier() string {
+	if x != nil {
+		return x.Supplier
+	}
+	return ""
+}
+
+func (x *ReceiveStockRequest) GetDocNo() string {
+	if x != nil {
+		return x.DocNo
+	}
+	return ""
+}
+
+func (x *ReceiveStockRequest) GetNote() string {
+	if x != nil {
+		return x.Note
+	}
+	return ""
+}
+
+func (x *ReceiveStockRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+type WasteStockRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OutletId       int64                  `protobuf:"varint,1,opt,name=outlet_id,json=outletId,proto3" json:"outlet_id,omitempty"`
+	MaterialId     int64                  `protobuf:"varint,2,opt,name=material_id,json=materialId,proto3" json:"material_id,omitempty"`
+	Qty            string                 `protobuf:"bytes,3,opt,name=qty,proto3" json:"qty,omitempty"`
+	Reason         string                 `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
+	Note           string                 `protobuf:"bytes,5,opt,name=note,proto3" json:"note,omitempty"`
+	IdempotencyKey string                 `protobuf:"bytes,6,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *WasteStockRequest) Reset() {
+	*x = WasteStockRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[123]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WasteStockRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WasteStockRequest) ProtoMessage() {}
+
+func (x *WasteStockRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[123]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WasteStockRequest.ProtoReflect.Descriptor instead.
+func (*WasteStockRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{123}
+}
+
+func (x *WasteStockRequest) GetOutletId() int64 {
+	if x != nil {
+		return x.OutletId
+	}
+	return 0
+}
+
+func (x *WasteStockRequest) GetMaterialId() int64 {
+	if x != nil {
+		return x.MaterialId
+	}
+	return 0
+}
+
+func (x *WasteStockRequest) GetQty() string {
+	if x != nil {
+		return x.Qty
+	}
+	return ""
+}
+
+func (x *WasteStockRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *WasteStockRequest) GetNote() string {
+	if x != nil {
+		return x.Note
+	}
+	return ""
+}
+
+func (x *WasteStockRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+type AdjustStockRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OutletId       int64                  `protobuf:"varint,1,opt,name=outlet_id,json=outletId,proto3" json:"outlet_id,omitempty"`
+	MaterialId     int64                  `protobuf:"varint,2,opt,name=material_id,json=materialId,proto3" json:"material_id,omitempty"`
+	CountedQty     string                 `protobuf:"bytes,3,opt,name=counted_qty,json=countedQty,proto3" json:"counted_qty,omitempty"`
+	Note           string                 `protobuf:"bytes,4,opt,name=note,proto3" json:"note,omitempty"`
+	IdempotencyKey string                 `protobuf:"bytes,5,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *AdjustStockRequest) Reset() {
+	*x = AdjustStockRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[124]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AdjustStockRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AdjustStockRequest) ProtoMessage() {}
+
+func (x *AdjustStockRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[124]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AdjustStockRequest.ProtoReflect.Descriptor instead.
+func (*AdjustStockRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{124}
+}
+
+func (x *AdjustStockRequest) GetOutletId() int64 {
+	if x != nil {
+		return x.OutletId
+	}
+	return 0
+}
+
+func (x *AdjustStockRequest) GetMaterialId() int64 {
+	if x != nil {
+		return x.MaterialId
+	}
+	return 0
+}
+
+func (x *AdjustStockRequest) GetCountedQty() string {
+	if x != nil {
+		return x.CountedQty
+	}
+	return ""
+}
+
+func (x *AdjustStockRequest) GetNote() string {
+	if x != nil {
+		return x.Note
+	}
+	return ""
+}
+
+func (x *AdjustStockRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+type TransferStockRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	FromOutletId   int64                  `protobuf:"varint,1,opt,name=from_outlet_id,json=fromOutletId,proto3" json:"from_outlet_id,omitempty"`
+	ToOutletId     int64                  `protobuf:"varint,2,opt,name=to_outlet_id,json=toOutletId,proto3" json:"to_outlet_id,omitempty"`
+	MaterialId     int64                  `protobuf:"varint,3,opt,name=material_id,json=materialId,proto3" json:"material_id,omitempty"`
+	Qty            string                 `protobuf:"bytes,4,opt,name=qty,proto3" json:"qty,omitempty"`
+	Note           string                 `protobuf:"bytes,5,opt,name=note,proto3" json:"note,omitempty"`
+	IdempotencyKey string                 `protobuf:"bytes,6,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *TransferStockRequest) Reset() {
+	*x = TransferStockRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[125]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TransferStockRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TransferStockRequest) ProtoMessage() {}
+
+func (x *TransferStockRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[125]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TransferStockRequest.ProtoReflect.Descriptor instead.
+func (*TransferStockRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{125}
+}
+
+func (x *TransferStockRequest) GetFromOutletId() int64 {
+	if x != nil {
+		return x.FromOutletId
+	}
+	return 0
+}
+
+func (x *TransferStockRequest) GetToOutletId() int64 {
+	if x != nil {
+		return x.ToOutletId
+	}
+	return 0
+}
+
+func (x *TransferStockRequest) GetMaterialId() int64 {
+	if x != nil {
+		return x.MaterialId
+	}
+	return 0
+}
+
+func (x *TransferStockRequest) GetQty() string {
+	if x != nil {
+		return x.Qty
+	}
+	return ""
+}
+
+func (x *TransferStockRequest) GetNote() string {
+	if x != nil {
+		return x.Note
+	}
+	return ""
+}
+
+func (x *TransferStockRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+type SetMinStockRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OutletId      int64                  `protobuf:"varint,1,opt,name=outlet_id,json=outletId,proto3" json:"outlet_id,omitempty"`
+	MaterialId    int64                  `protobuf:"varint,2,opt,name=material_id,json=materialId,proto3" json:"material_id,omitempty"`
+	MinQty        string                 `protobuf:"bytes,3,opt,name=min_qty,json=minQty,proto3" json:"min_qty,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetMinStockRequest) Reset() {
+	*x = SetMinStockRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[126]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetMinStockRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetMinStockRequest) ProtoMessage() {}
+
+func (x *SetMinStockRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[126]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetMinStockRequest.ProtoReflect.Descriptor instead.
+func (*SetMinStockRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{126}
+}
+
+func (x *SetMinStockRequest) GetOutletId() int64 {
+	if x != nil {
+		return x.OutletId
+	}
+	return 0
+}
+
+func (x *SetMinStockRequest) GetMaterialId() int64 {
+	if x != nil {
+		return x.MaterialId
+	}
+	return 0
+}
+
+func (x *SetMinStockRequest) GetMinQty() string {
+	if x != nil {
+		return x.MinQty
+	}
+	return ""
+}
+
+// created is false when the idempotency key had been used and the original movement is returned. For a count that equals the
+// book there is no movement at all.
+type StockMovementResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Movement      *StockMovement         `protobuf:"bytes,1,opt,name=movement,proto3" json:"movement,omitempty"`
+	Created       bool                   `protobuf:"varint,2,opt,name=created,proto3" json:"created,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StockMovementResponse) Reset() {
+	*x = StockMovementResponse{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[127]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StockMovementResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StockMovementResponse) ProtoMessage() {}
+
+func (x *StockMovementResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[127]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StockMovementResponse.ProtoReflect.Descriptor instead.
+func (*StockMovementResponse) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{127}
+}
+
+func (x *StockMovementResponse) GetMovement() *StockMovement {
+	if x != nil {
+		return x.Movement
+	}
+	return nil
+}
+
+func (x *StockMovementResponse) GetCreated() bool {
+	if x != nil {
+		return x.Created
+	}
+	return false
+}
+
+type TransferStockResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Out           *StockMovement         `protobuf:"bytes,1,opt,name=out,proto3" json:"out,omitempty"`
+	In            *StockMovement         `protobuf:"bytes,2,opt,name=in,proto3" json:"in,omitempty"`
+	Created       bool                   `protobuf:"varint,3,opt,name=created,proto3" json:"created,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TransferStockResponse) Reset() {
+	*x = TransferStockResponse{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[128]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TransferStockResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TransferStockResponse) ProtoMessage() {}
+
+func (x *TransferStockResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[128]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TransferStockResponse.ProtoReflect.Descriptor instead.
+func (*TransferStockResponse) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{128}
+}
+
+func (x *TransferStockResponse) GetOut() *StockMovement {
+	if x != nil {
+		return x.Out
+	}
+	return nil
+}
+
+func (x *TransferStockResponse) GetIn() *StockMovement {
+	if x != nil {
+		return x.In
+	}
+	return nil
+}
+
+func (x *TransferStockResponse) GetCreated() bool {
+	if x != nil {
+		return x.Created
+	}
+	return false
+}
+
+type StockRowResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Row           *StockRow              `protobuf:"bytes,1,opt,name=row,proto3" json:"row,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StockRowResponse) Reset() {
+	*x = StockRowResponse{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[129]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StockRowResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StockRowResponse) ProtoMessage() {}
+
+func (x *StockRowResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[129]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StockRowResponse.ProtoReflect.Descriptor instead.
+func (*StockRowResponse) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{129}
+}
+
+func (x *StockRowResponse) GetRow() *StockRow {
+	if x != nil {
+		return x.Row
+	}
+	return nil
+}
+
+type OrderStockLine struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	ServiceId         int64                  `protobuf:"varint,1,opt,name=service_id,json=serviceId,proto3" json:"service_id,omitempty"`
+	Qty               string                 `protobuf:"bytes,2,opt,name=qty,proto3" json:"qty,omitempty"` // the line's quantity as the shortest exact decimal
+	VariantOptionIds  []int64                `protobuf:"varint,3,rep,packed,name=variant_option_ids,json=variantOptionIds,proto3" json:"variant_option_ids,omitempty"`
+	ModifierOptionIds []int64                `protobuf:"varint,4,rep,packed,name=modifier_option_ids,json=modifierOptionIds,proto3" json:"modifier_option_ids,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *OrderStockLine) Reset() {
+	*x = OrderStockLine{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[130]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OrderStockLine) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OrderStockLine) ProtoMessage() {}
+
+func (x *OrderStockLine) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[130]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OrderStockLine.ProtoReflect.Descriptor instead.
+func (*OrderStockLine) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{130}
+}
+
+func (x *OrderStockLine) GetServiceId() int64 {
+	if x != nil {
+		return x.ServiceId
+	}
+	return 0
+}
+
+func (x *OrderStockLine) GetQty() string {
+	if x != nil {
+		return x.Qty
+	}
+	return ""
+}
+
+func (x *OrderStockLine) GetVariantOptionIds() []int64 {
+	if x != nil {
+		return x.VariantOptionIds
+	}
+	return nil
+}
+
+func (x *OrderStockLine) GetModifierOptionIds() []int64 {
+	if x != nil {
+		return x.ModifierOptionIds
+	}
+	return nil
+}
+
+type ApplyOrderStockRequest struct {
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	OrderId  string                 `protobuf:"bytes,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
+	OutletId int64                  `protobuf:"varint,2,opt,name=outlet_id,json=outletId,proto3" json:"outlet_id,omitempty"`
+	Action   string                 `protobuf:"bytes,3,opt,name=action,proto3" json:"action,omitempty"` // consume | reverse
+	Lines    []*OrderStockLine      `protobuf:"bytes,4,rep,name=lines,proto3" json:"lines,omitempty"`
+	Actor    string                 `protobuf:"bytes,5,opt,name=actor,proto3" json:"actor,omitempty"`
+	// The order's TRX code, written on every movement made for it.
+	OrderCode     string `protobuf:"bytes,6,opt,name=order_code,json=orderCode,proto3" json:"order_code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ApplyOrderStockRequest) Reset() {
+	*x = ApplyOrderStockRequest{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[131]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ApplyOrderStockRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ApplyOrderStockRequest) ProtoMessage() {}
+
+func (x *ApplyOrderStockRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[131]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ApplyOrderStockRequest.ProtoReflect.Descriptor instead.
+func (*ApplyOrderStockRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{131}
+}
+
+func (x *ApplyOrderStockRequest) GetOrderId() string {
+	if x != nil {
+		return x.OrderId
+	}
+	return ""
+}
+
+func (x *ApplyOrderStockRequest) GetOutletId() int64 {
+	if x != nil {
+		return x.OutletId
+	}
+	return 0
+}
+
+func (x *ApplyOrderStockRequest) GetAction() string {
+	if x != nil {
+		return x.Action
+	}
+	return ""
+}
+
+func (x *ApplyOrderStockRequest) GetLines() []*OrderStockLine {
+	if x != nil {
+		return x.Lines
+	}
+	return nil
+}
+
+func (x *ApplyOrderStockRequest) GetActor() string {
+	if x != nil {
+		return x.Actor
+	}
+	return ""
+}
+
+func (x *ApplyOrderStockRequest) GetOrderCode() string {
+	if x != nil {
+		return x.OrderCode
+	}
+	return ""
+}
+
+type ApplyOrderStockResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Movements     int32                  `protobuf:"varint,1,opt,name=movements,proto3" json:"movements,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ApplyOrderStockResponse) Reset() {
+	*x = ApplyOrderStockResponse{}
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[132]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ApplyOrderStockResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ApplyOrderStockResponse) ProtoMessage() {}
+
+func (x *ApplyOrderStockResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_catalog_v1_catalog_proto_msgTypes[132]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ApplyOrderStockResponse.ProtoReflect.Descriptor instead.
+func (*ApplyOrderStockResponse) Descriptor() ([]byte, []int) {
+	return file_wuzz_catalog_v1_catalog_proto_rawDescGZIP(), []int{132}
+}
+
+func (x *ApplyOrderStockResponse) GetMovements() int32 {
+	if x != nil {
+		return x.Movements
+	}
+	return 0
+}
+
 var File_wuzz_catalog_v1_catalog_proto protoreflect.FileDescriptor
 
 const file_wuzz_catalog_v1_catalog_proto_rawDesc = "" +
 	"\n" +
-	"\x1dwuzz/catalog/v1/catalog.proto\x12\x0fwuzz.catalog.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa4\x02\n" +
+	"\x1dwuzz/catalog/v1/catalog.proto\x12\x0fwuzz.catalog.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xbf\x04\n" +
 	"\x06Outlet\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x18\n" +
@@ -2213,7 +9859,25 @@ const file_wuzz_catalog_v1_catalog_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xe9\x01\n" +
+	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x16\n" +
+	"\x06images\x18\n" +
+	" \x03(\tR\x06images\x12\x1a\n" +
+	"\bcategory\x18\v \x01(\tR\bcategory\x12\x1b\n" +
+	"\topen_time\x18\f \x01(\tR\bopenTime\x12\x1d\n" +
+	"\n" +
+	"close_time\x18\r \x01(\tR\tcloseTime\x12%\n" +
+	"\x0edelivery_types\x18\x0e \x03(\tR\rdeliveryTypes\x12\x1e\n" +
+	"\vis_open_now\x18\x0f \x01(\bR\tisOpenNow\x12\x1a\n" +
+	"\btimezone\x18\x10 \x01(\tR\btimezone\x120\n" +
+	"\x05hours\x18\x11 \x03(\v2\x1a.wuzz.catalog.v1.OutletDayR\x05hours\x12\x14\n" +
+	"\x05email\x18\x12 \x01(\tR\x05email\"\x94\x01\n" +
+	"\tOutletDay\x12\x18\n" +
+	"\aweekday\x18\x01 \x01(\x05R\aweekday\x12\x16\n" +
+	"\x06closed\x18\x02 \x01(\bR\x06closed\x12\x1b\n" +
+	"\topen_time\x18\x03 \x01(\tR\bopenTime\x12\x1d\n" +
+	"\n" +
+	"close_time\x18\x04 \x01(\tR\tcloseTime\x12\x19\n" +
+	"\bopen_24h\x18\x05 \x01(\bR\aopen24h\"\xac\x06\n" +
 	"\vServiceItem\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
@@ -2223,24 +9887,163 @@ const file_wuzz_catalog_v1_catalog_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"Q\n" +
+	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1f\n" +
+	"\vcategory_id\x18\b \x01(\x03R\n" +
+	"categoryId\x12\x12\n" +
+	"\x04icon\x18\t \x01(\tR\x04icon\x12 \n" +
+	"\vdescription\x18\n" +
+	" \x01(\tR\vdescription\x12D\n" +
+	"\x0evariant_groups\x18\v \x03(\v2\x1d.wuzz.catalog.v1.VariantGroupR\rvariantGroups\x12G\n" +
+	"\x0fmodifier_groups\x18\f \x03(\v2\x1e.wuzz.catalog.v1.ModifierGroupR\x0emodifierGroups\x12\x19\n" +
+	"\btax_type\x18\r \x01(\tR\ataxType\x12%\n" +
+	"\x0einternal_notes\x18\x0e \x01(\tR\rinternalNotes\x12(\n" +
+	"\x10price_before_tax\x18\x0f \x01(\x03R\x0epriceBeforeTax\x12&\n" +
+	"\x0fprice_after_tax\x18\x10 \x01(\x03R\rpriceAfterTax\x12 \n" +
+	"\ftax_rate_bps\x18\x11 \x01(\x05R\n" +
+	"taxRateBps\x12#\n" +
+	"\rdiscount_type\x18\x12 \x01(\tR\fdiscountType\x12%\n" +
+	"\x0ediscount_value\x18\x13 \x01(\x03R\rdiscountValue\x12'\n" +
+	"\x0fdiscount_amount\x18\x14 \x01(\x03R\x0ediscountAmount\x120\n" +
+	"\x14price_after_discount\x18\x15 \x01(\x03R\x12priceAfterDiscount\"\x1a\n" +
+	"\x06IdList\x12\x10\n" +
+	"\x03ids\x18\x01 \x03(\x03R\x03ids\"0\n" +
+	"\n" +
+	"ServiceRef\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\"\x81\x02\n" +
+	"\rVariantOption\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1f\n" +
+	"\vprice_delta\x18\x03 \x01(\x03R\n" +
+	"priceDelta\x12\x1d\n" +
+	"\n" +
+	"is_default\x18\x04 \x01(\bR\tisDefault\x12\x16\n" +
+	"\x06active\x18\x05 \x01(\bR\x06active\x12\x1d\n" +
+	"\n" +
+	"sort_index\x18\x06 \x01(\x05R\tsortIndex\x12%\n" +
+	"\x0eestimated_time\x18\a \x01(\x05R\restimatedTime\x12.\n" +
+	"\x13estimated_time_unit\x18\b \x01(\tR\x11estimatedTimeUnit\"\xe1\x02\n" +
+	"\fVariantGroup\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12%\n" +
+	"\x0einternal_notes\x18\x03 \x01(\tR\rinternalNotes\x12\x1d\n" +
+	"\n" +
+	"sort_index\x18\x04 \x01(\x05R\tsortIndex\x128\n" +
+	"\aoptions\x18\x05 \x03(\v2\x1e.wuzz.catalog.v1.VariantOptionR\aoptions\x127\n" +
+	"\bservices\x18\x06 \x03(\v2\x1b.wuzz.catalog.v1.ServiceRefR\bservices\x129\n" +
+	"\n" +
+	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xa3\x01\n" +
+	"\x0eModifierOption\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
+	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x14\n" +
+	"\x05price\x18\x04 \x01(\x03R\x05price\x12\x16\n" +
+	"\x06active\x18\x05 \x01(\bR\x06active\x12\x1d\n" +
+	"\n" +
+	"sort_index\x18\x06 \x01(\x05R\tsortIndex\"\xf5\x02\n" +
+	"\rModifierGroup\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12%\n" +
+	"\x0einternal_notes\x18\x03 \x01(\tR\rinternalNotes\x12\x10\n" +
+	"\x03min\x18\x04 \x01(\x05R\x03min\x12\x15\n" +
+	"\x03max\x18\x05 \x01(\x05H\x00R\x03max\x88\x01\x01\x129\n" +
+	"\aoptions\x18\x06 \x03(\v2\x1f.wuzz.catalog.v1.ModifierOptionR\aoptions\x127\n" +
+	"\bservices\x18\a \x03(\v2\x1b.wuzz.catalog.v1.ServiceRefR\bservices\x129\n" +
+	"\n" +
+	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x06\n" +
+	"\x04_max\"\xbf\x01\n" +
+	"\x18ListVariantGroupsRequest\x12\f\n" +
+	"\x01q\x18\x01 \x01(\tR\x01q\x12\x17\n" +
+	"\asort_by\x18\x02 \x01(\tR\x06sortBy\x12\x19\n" +
+	"\bsort_dir\x18\x03 \x01(\tR\asortDir\x12\x14\n" +
+	"\x05limit\x18\x04 \x01(\x05R\x05limit\x12\x16\n" +
+	"\x06offset\x18\x05 \x01(\x05R\x06offset\x12\x1d\n" +
+	"\n" +
+	"service_id\x18\x06 \x01(\x03R\tserviceId\x12\x14\n" +
+	"\x05usage\x18\a \x01(\tR\x05usage\"h\n" +
+	"\x19ListVariantGroupsResponse\x125\n" +
+	"\x06groups\x18\x01 \x03(\v2\x1d.wuzz.catalog.v1.VariantGroupR\x06groups\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\x03R\x05total\"(\n" +
+	"\x16GetVariantGroupRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\"K\n" +
+	"\x14VariantGroupResponse\x123\n" +
+	"\x05group\x18\x01 \x01(\v2\x1d.wuzz.catalog.v1.VariantGroupR\x05group\"^\n" +
+	"\x17SaveVariantGroupRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x123\n" +
+	"\x05group\x18\x02 \x01(\v2\x1d.wuzz.catalog.v1.VariantGroupR\x05group\"%\n" +
+	"\x13DeleteOutletRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\"\x16\n" +
+	"\x14DeleteOutletResponse\"&\n" +
+	"\x14DeleteServiceRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\"\x17\n" +
+	"\x15DeleteServiceResponse\"$\n" +
+	"\x12DeleteGroupRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\"\x15\n" +
+	"\x13DeleteGroupResponse\"\xe2\x01\n" +
+	"\x19ListModifierGroupsRequest\x12\f\n" +
+	"\x01q\x18\x01 \x01(\tR\x01q\x12\x17\n" +
+	"\asort_by\x18\x02 \x01(\tR\x06sortBy\x12\x19\n" +
+	"\bsort_dir\x18\x03 \x01(\tR\asortDir\x12 \n" +
+	"\vrequirement\x18\x04 \x01(\tR\vrequirement\x12\x14\n" +
+	"\x05limit\x18\x05 \x01(\x05R\x05limit\x12\x16\n" +
+	"\x06offset\x18\x06 \x01(\x05R\x06offset\x12\x1d\n" +
+	"\n" +
+	"service_id\x18\a \x01(\x03R\tserviceId\x12\x14\n" +
+	"\x05usage\x18\b \x01(\tR\x05usage\"j\n" +
+	"\x1aListModifierGroupsResponse\x126\n" +
+	"\x06groups\x18\x01 \x03(\v2\x1e.wuzz.catalog.v1.ModifierGroupR\x06groups\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\x03R\x05total\")\n" +
+	"\x17GetModifierGroupRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\"M\n" +
+	"\x15ModifierGroupResponse\x124\n" +
+	"\x05group\x18\x01 \x01(\v2\x1e.wuzz.catalog.v1.ModifierGroupR\x05group\"`\n" +
+	"\x18SaveModifierGroupRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x124\n" +
+	"\x05group\x18\x02 \x01(\v2\x1e.wuzz.catalog.v1.ModifierGroupR\x05group\"\x8a\x02\n" +
 	"\x12ListOutletsRequest\x12\x10\n" +
 	"\x03ids\x18\x01 \x03(\x03R\x03ids\x12)\n" +
-	"\x10include_inactive\x18\x02 \x01(\bR\x0fincludeInactive\"H\n" +
+	"\x10include_inactive\x18\x02 \x01(\bR\x0fincludeInactive\x12/\n" +
+	"\x06bounds\x18\x03 \x01(\v2\x17.wuzz.catalog.v1.BoundsR\x06bounds\x12\f\n" +
+	"\x01q\x18\x04 \x01(\tR\x01q\x12\x16\n" +
+	"\x06active\x18\x05 \x01(\tR\x06active\x12\x17\n" +
+	"\asort_by\x18\x06 \x01(\tR\x06sortBy\x12\x19\n" +
+	"\bsort_dir\x18\a \x01(\tR\asortDir\x12\x14\n" +
+	"\x05limit\x18\b \x01(\x05R\x05limit\x12\x16\n" +
+	"\x06offset\x18\t \x01(\x05R\x06offset\"\\\n" +
+	"\x06Bounds\x12\x14\n" +
+	"\x05south\x18\x01 \x01(\x01R\x05south\x12\x12\n" +
+	"\x04west\x18\x02 \x01(\x01R\x04west\x12\x14\n" +
+	"\x05north\x18\x03 \x01(\x01R\x05north\x12\x12\n" +
+	"\x04east\x18\x04 \x01(\x01R\x04east\"^\n" +
 	"\x13ListOutletsResponse\x121\n" +
-	"\aoutlets\x18\x01 \x03(\v2\x17.wuzz.catalog.v1.OutletR\aoutlets\"\"\n" +
+	"\aoutlets\x18\x01 \x03(\v2\x17.wuzz.catalog.v1.OutletR\aoutlets\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\x03R\x05total\"\"\n" +
 	"\x10GetOutletRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\"D\n" +
 	"\x11GetOutletResponse\x12/\n" +
-	"\x06outlet\x18\x01 \x01(\v2\x17.wuzz.catalog.v1.OutletR\x06outlet\"\x93\x01\n" +
+	"\x06outlet\x18\x01 \x01(\v2\x17.wuzz.catalog.v1.OutletR\x06outlet\"\x8e\x03\n" +
 	"\x13CreateOutletRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
 	"\aaddress\x18\x02 \x01(\tR\aaddress\x12\x14\n" +
 	"\x05phone\x18\x03 \x01(\tR\x05phone\x12\x1a\n" +
 	"\blatitude\x18\x04 \x01(\x01R\blatitude\x12\x1c\n" +
-	"\tlongitude\x18\x05 \x01(\x01R\tlongitude\"G\n" +
+	"\tlongitude\x18\x05 \x01(\x01R\tlongitude\x12\x16\n" +
+	"\x06images\x18\x06 \x03(\tR\x06images\x12\x1a\n" +
+	"\bcategory\x18\a \x01(\tR\bcategory\x12\x1b\n" +
+	"\topen_time\x18\b \x01(\tR\bopenTime\x12\x1d\n" +
+	"\n" +
+	"close_time\x18\t \x01(\tR\tcloseTime\x12%\n" +
+	"\x0edelivery_types\x18\n" +
+	" \x03(\tR\rdeliveryTypes\x12\x1a\n" +
+	"\btimezone\x18\v \x01(\tR\btimezone\x120\n" +
+	"\x05hours\x18\f \x03(\v2\x1a.wuzz.catalog.v1.OutletDayR\x05hours\x12\x14\n" +
+	"\x05email\x18\r \x01(\tR\x05email\"G\n" +
 	"\x14CreateOutletResponse\x12/\n" +
-	"\x06outlet\x18\x01 \x01(\v2\x17.wuzz.catalog.v1.OutletR\x06outlet\"\xbb\x01\n" +
+	"\x06outlet\x18\x01 \x01(\v2\x17.wuzz.catalog.v1.OutletR\x06outlet\"\xb6\x03\n" +
 	"\x13UpdateOutletRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x18\n" +
@@ -2248,25 +10051,83 @@ const file_wuzz_catalog_v1_catalog_proto_rawDesc = "" +
 	"\x05phone\x18\x04 \x01(\tR\x05phone\x12\x1a\n" +
 	"\blatitude\x18\x05 \x01(\x01R\blatitude\x12\x1c\n" +
 	"\tlongitude\x18\x06 \x01(\x01R\tlongitude\x12\x16\n" +
-	"\x06active\x18\a \x01(\bR\x06active\"G\n" +
+	"\x06active\x18\a \x01(\bR\x06active\x12\x16\n" +
+	"\x06images\x18\b \x03(\tR\x06images\x12\x1a\n" +
+	"\bcategory\x18\t \x01(\tR\bcategory\x12\x1b\n" +
+	"\topen_time\x18\n" +
+	" \x01(\tR\bopenTime\x12\x1d\n" +
+	"\n" +
+	"close_time\x18\v \x01(\tR\tcloseTime\x12%\n" +
+	"\x0edelivery_types\x18\f \x03(\tR\rdeliveryTypes\x12\x1a\n" +
+	"\btimezone\x18\r \x01(\tR\btimezone\x120\n" +
+	"\x05hours\x18\x0e \x03(\v2\x1a.wuzz.catalog.v1.OutletDayR\x05hours\x12\x14\n" +
+	"\x05email\x18\x0f \x01(\tR\x05email\"G\n" +
 	"\x14UpdateOutletResponse\x12/\n" +
-	"\x06outlet\x18\x01 \x01(\v2\x17.wuzz.catalog.v1.OutletR\x06outlet\"@\n" +
+	"\x06outlet\x18\x01 \x01(\v2\x17.wuzz.catalog.v1.OutletR\x06outlet\"\xbd\x02\n" +
 	"\x13ListServicesRequest\x12)\n" +
-	"\x10include_inactive\x18\x01 \x01(\bR\x0fincludeInactive\"P\n" +
+	"\x10include_inactive\x18\x01 \x01(\bR\x0fincludeInactive\x12\f\n" +
+	"\x01q\x18\x02 \x01(\tR\x01q\x12\x1f\n" +
+	"\vcategory_id\x18\x03 \x01(\x03R\n" +
+	"categoryId\x12\x12\n" +
+	"\x04unit\x18\x04 \x01(\tR\x04unit\x12\x16\n" +
+	"\x06active\x18\x05 \x01(\tR\x06active\x12\x17\n" +
+	"\asort_by\x18\x06 \x01(\tR\x06sortBy\x12\x19\n" +
+	"\bsort_dir\x18\a \x01(\tR\asortDir\x12\x14\n" +
+	"\x05limit\x18\b \x01(\x05R\x05limit\x12\x16\n" +
+	"\x06offset\x18\t \x01(\x05R\x06offset\x12\x19\n" +
+	"\btax_type\x18\n" +
+	" \x01(\tR\ataxType\x12#\n" +
+	"\rdiscount_type\x18\v \x01(\tR\fdiscountType\"f\n" +
 	"\x14ListServicesResponse\x128\n" +
-	"\bservices\x18\x01 \x03(\v2\x1c.wuzz.catalog.v1.ServiceItemR\bservices\"T\n" +
+	"\bservices\x18\x01 \x03(\v2\x1c.wuzz.catalog.v1.ServiceItemR\bservices\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\x03R\x05total\"\x8f\x03\n" +
 	"\x14CreateServiceRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04unit\x18\x02 \x01(\tR\x04unit\x12\x14\n" +
-	"\x05price\x18\x03 \x01(\x03R\x05price\"O\n" +
+	"\x05price\x18\x03 \x01(\x03R\x05price\x12\x1f\n" +
+	"\vcategory_id\x18\x04 \x01(\x03R\n" +
+	"categoryId\x12C\n" +
+	"\x11variant_group_ids\x18\x05 \x01(\v2\x17.wuzz.catalog.v1.IdListR\x0fvariantGroupIds\x12E\n" +
+	"\x12modifier_group_ids\x18\x06 \x01(\v2\x17.wuzz.catalog.v1.IdListR\x10modifierGroupIds\x12\x19\n" +
+	"\btax_type\x18\a \x01(\tR\ataxType\x12%\n" +
+	"\x0einternal_notes\x18\b \x01(\tR\rinternalNotes\x12#\n" +
+	"\rdiscount_type\x18\t \x01(\tR\fdiscountType\x12%\n" +
+	"\x0ediscount_value\x18\n" +
+	" \x01(\x03R\rdiscountValue\"O\n" +
 	"\x15CreateServiceResponse\x126\n" +
-	"\aservice\x18\x01 \x01(\v2\x1c.wuzz.catalog.v1.ServiceItemR\aservice\"|\n" +
+	"\aservice\x18\x01 \x01(\v2\x1c.wuzz.catalog.v1.ServiceItemR\aservice\"\xb7\x03\n" +
 	"\x14UpdateServiceRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
 	"\x04unit\x18\x03 \x01(\tR\x04unit\x12\x14\n" +
 	"\x05price\x18\x04 \x01(\x03R\x05price\x12\x16\n" +
-	"\x06active\x18\x05 \x01(\bR\x06active\"O\n" +
+	"\x06active\x18\x05 \x01(\bR\x06active\x12\x1f\n" +
+	"\vcategory_id\x18\x06 \x01(\x03R\n" +
+	"categoryId\x12C\n" +
+	"\x11variant_group_ids\x18\a \x01(\v2\x17.wuzz.catalog.v1.IdListR\x0fvariantGroupIds\x12E\n" +
+	"\x12modifier_group_ids\x18\b \x01(\v2\x17.wuzz.catalog.v1.IdListR\x10modifierGroupIds\x12\x19\n" +
+	"\btax_type\x18\t \x01(\tR\ataxType\x12%\n" +
+	"\x0einternal_notes\x18\n" +
+	" \x01(\tR\rinternalNotes\x12#\n" +
+	"\rdiscount_type\x18\v \x01(\tR\fdiscountType\x12%\n" +
+	"\x0ediscount_value\x18\f \x01(\x03R\rdiscountValue\"h\n" +
+	"\x0fServiceCategory\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
+	"\x04icon\x18\x03 \x01(\tR\x04icon\x12\x1d\n" +
+	"\n" +
+	"sort_order\x18\x04 \x01(\x05R\tsortOrder\"?\n" +
+	"\aTaxRate\x12\x19\n" +
+	"\btax_type\x18\x01 \x01(\tR\ataxType\x12\x19\n" +
+	"\brate_bps\x18\x02 \x01(\x05R\arateBps\"\x15\n" +
+	"\x13ListTaxRatesRequest\"F\n" +
+	"\x14ListTaxRatesResponse\x12.\n" +
+	"\x05rates\x18\x01 \x03(\v2\x18.wuzz.catalog.v1.TaxRateR\x05rates\"\x1e\n" +
+	"\x1cListServiceCategoriesRequest\"a\n" +
+	"\x1dListServiceCategoriesResponse\x12@\n" +
+	"\n" +
+	"categories\x18\x01 \x03(\v2 .wuzz.catalog.v1.ServiceCategoryR\n" +
+	"categories\"O\n" +
 	"\x15UpdateServiceResponse\x126\n" +
 	"\aservice\x18\x01 \x01(\v2\x1c.wuzz.catalog.v1.ServiceItemR\aservice\"\x86\x03\n" +
 	"\n" +
@@ -2306,12 +10167,19 @@ const file_wuzz_catalog_v1_catalog_proto_rawDesc = "" +
 	"\x04name\x18\x02 \x01(\tR\x04name\"f\n" +
 	"\x17ResolveCoverageResponse\x12\x18\n" +
 	"\acovered\x18\x01 \x01(\bR\acovered\x121\n" +
-	"\x04area\x18\x02 \x01(\v2\x1d.wuzz.catalog.v1.CoverageAreaR\x04area\"\xe4\x02\n" +
+	"\x04area\x18\x02 \x01(\v2\x1d.wuzz.catalog.v1.CoverageAreaR\x04area\"\xce\x04\n" +
 	"\vServiceView\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x14\n" +
-	"\x05price\x18\x04 \x01(\x03R\x05price\x12\x12\n" +
+	"\x05price\x18\x04 \x01(\x03R\x05price\x12(\n" +
+	"\x10price_before_tax\x18\x0e \x01(\x03R\x0epriceBeforeTax\x12&\n" +
+	"\x0fprice_after_tax\x18\x0f \x01(\x03R\rpriceAfterTax\x12\x19\n" +
+	"\btax_type\x18\x10 \x01(\tR\ataxType\x12 \n" +
+	"\ftax_rate_bps\x18\x11 \x01(\x05R\n" +
+	"taxRateBps\x12'\n" +
+	"\x0fdiscount_amount\x18\x12 \x01(\x03R\x0ediscountAmount\x120\n" +
+	"\x14price_after_discount\x18\x13 \x01(\x03R\x12priceAfterDiscount\x12\x12\n" +
 	"\x04unit\x18\x05 \x01(\tR\x04unit\x12!\n" +
 	"\fservice_type\x18\x06 \x01(\tR\vserviceType\x12)\n" +
 	"\x10service_category\x18\a \x01(\tR\x0fserviceCategory\x12\x15\n" +
@@ -2369,19 +10237,551 @@ const file_wuzz_catalog_v1_catalog_proto_rawDesc = "" +
 	"\x17GetServiceDetailRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\"R\n" +
 	"\x18GetServiceDetailResponse\x126\n" +
-	"\x06detail\x18\x01 \x01(\v2\x1e.wuzz.catalog.v1.ServiceDetailR\x06detail2\xa7\b\n" +
+	"\x06detail\x18\x01 \x01(\v2\x1e.wuzz.catalog.v1.ServiceDetailR\x06detail\"\x94\x03\n" +
+	"\bMaterial\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x10\n" +
+	"\x03sku\x18\x02 \x01(\tR\x03sku\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12\x1a\n" +
+	"\bcategory\x18\x04 \x01(\tR\bcategory\x12\x12\n" +
+	"\x04unit\x18\x05 \x01(\tR\x04unit\x12%\n" +
+	"\x0epurchase_price\x18\x06 \x01(\x03R\rpurchasePrice\x12!\n" +
+	"\fpurchase_qty\x18\a \x01(\tR\vpurchaseQty\x12\x1b\n" +
+	"\tunit_cost\x18\b \x01(\tR\bunitCost\x12\x16\n" +
+	"\x06active\x18\t \x01(\bR\x06active\x12\x14\n" +
+	"\x05notes\x18\n" +
+	" \x01(\tR\x05notes\x12\x17\n" +
+	"\aused_in\x18\v \x01(\x05R\x06usedIn\x129\n" +
+	"\n" +
+	"created_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xba\x01\n" +
+	"\x14ListMaterialsRequest\x12\f\n" +
+	"\x01q\x18\x01 \x01(\tR\x01q\x12\x1a\n" +
+	"\bcategory\x18\x02 \x01(\tR\bcategory\x12\x16\n" +
+	"\x06active\x18\x03 \x01(\tR\x06active\x12\x17\n" +
+	"\asort_by\x18\x04 \x01(\tR\x06sortBy\x12\x19\n" +
+	"\bsort_dir\x18\x05 \x01(\tR\asortDir\x12\x14\n" +
+	"\x05limit\x18\x06 \x01(\x05R\x05limit\x12\x16\n" +
+	"\x06offset\x18\a \x01(\x05R\x06offset\"f\n" +
+	"\x15ListMaterialsResponse\x127\n" +
+	"\tmaterials\x18\x01 \x03(\v2\x19.wuzz.catalog.v1.MaterialR\tmaterials\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\x03R\x05total\"$\n" +
+	"\x12GetMaterialRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\"\\\n" +
+	"\x13SaveMaterialRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x125\n" +
+	"\bmaterial\x18\x02 \x01(\v2\x19.wuzz.catalog.v1.MaterialR\bmaterial\"I\n" +
+	"\x10MaterialResponse\x125\n" +
+	"\bmaterial\x18\x01 \x01(\v2\x19.wuzz.catalog.v1.MaterialR\bmaterial\"\xde\x04\n" +
+	"\x06Banner\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x14\n" +
+	"\x05title\x18\x02 \x01(\tR\x05title\x12%\n" +
+	"\x0einternal_notes\x18\x03 \x01(\tR\rinternalNotes\x12\x1b\n" +
+	"\timage_url\x18\x04 \x01(\tR\bimageUrl\x12\x1f\n" +
+	"\vtarget_type\x18\x05 \x01(\tR\n" +
+	"targetType\x12!\n" +
+	"\ftarget_value\x18\x06 \x01(\tR\vtargetValue\x12\x16\n" +
+	"\x06status\x18\a \x01(\tR\x06status\x12\x1d\n" +
+	"\n" +
+	"sort_index\x18\b \x01(\x05R\tsortIndex\x127\n" +
+	"\tstarts_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\bstartsAt\x123\n" +
+	"\aends_at\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\x06endsAt\x12\x1d\n" +
+	"\n" +
+	"outlet_ids\x18\v \x03(\x03R\toutletIds\x127\n" +
+	"\aoutlets\x18\f \x03(\v2\x1d.wuzz.catalog.v1.BannerOutletR\aoutlets\x12\x17\n" +
+	"\ais_live\x18\r \x01(\bR\x06isLive\x12\x1a\n" +
+	"\bdeeplink\x18\x0e \x01(\tR\bdeeplink\x129\n" +
+	"\n" +
+	"created_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"2\n" +
+	"\fBannerOutlet\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\"\xcd\x01\n" +
+	"\x12ListBannersRequest\x12\f\n" +
+	"\x01q\x18\x01 \x01(\tR\x01q\x12\x16\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\x12\x12\n" +
+	"\x04live\x18\x03 \x01(\tR\x04live\x12\x1b\n" +
+	"\toutlet_id\x18\x04 \x01(\x03R\boutletId\x12\x17\n" +
+	"\asort_by\x18\x05 \x01(\tR\x06sortBy\x12\x19\n" +
+	"\bsort_dir\x18\x06 \x01(\tR\asortDir\x12\x14\n" +
+	"\x05limit\x18\a \x01(\x05R\x05limit\x12\x16\n" +
+	"\x06offset\x18\b \x01(\x05R\x06offset\"^\n" +
+	"\x13ListBannersResponse\x121\n" +
+	"\abanners\x18\x01 \x03(\v2\x17.wuzz.catalog.v1.BannerR\abanners\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\x03R\x05total\"\"\n" +
+	"\x10GetBannerRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\"T\n" +
+	"\x11SaveBannerRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12/\n" +
+	"\x06banner\x18\x02 \x01(\v2\x17.wuzz.catalog.v1.BannerR\x06banner\"A\n" +
+	"\x0eBannerResponse\x12/\n" +
+	"\x06banner\x18\x01 \x01(\v2\x17.wuzz.catalog.v1.BannerR\x06banner\"@\n" +
+	"\x16SetBannerStatusRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x16\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\")\n" +
+	"\x15ReorderBannersRequest\x12\x10\n" +
+	"\x03ids\x18\x01 \x03(\x03R\x03ids\"\x1a\n" +
+	"\x18ListBannerScreensRequest\"5\n" +
+	"\x19ListBannerScreensResponse\x12\x18\n" +
+	"\ascreens\x18\x01 \x03(\tR\ascreens\"5\n" +
+	"\x16ListLiveBannersRequest\x12\x1b\n" +
+	"\toutlet_id\x18\x01 \x01(\x03R\boutletId\"L\n" +
+	"\x17ListLiveBannersResponse\x121\n" +
+	"\abanners\x18\x01 \x03(\v2\x17.wuzz.catalog.v1.BannerR\abanners\"\xfc\x06\n" +
+	"\aVoucher\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
+	"\x04code\x18\x02 \x01(\tR\x04code\x12\x14\n" +
+	"\x05title\x18\x03 \x01(\tR\x05title\x12 \n" +
+	"\vdescription\x18\x04 \x01(\tR\vdescription\x12%\n" +
+	"\x0einternal_notes\x18\x05 \x01(\tR\rinternalNotes\x12#\n" +
+	"\rdiscount_type\x18\x06 \x01(\tR\fdiscountType\x12\x14\n" +
+	"\x05value\x18\a \x01(\x03R\x05value\x12!\n" +
+	"\fmax_discount\x18\b \x01(\x03R\vmaxDiscount\x12\x1b\n" +
+	"\tmin_spend\x18\t \x01(\x03R\bminSpend\x12\x1d\n" +
+	"\n" +
+	"max_claims\x18\n" +
+	" \x01(\x05R\tmaxClaims\x12!\n" +
+	"\fclaims_count\x18\v \x01(\x03R\vclaimsCount\x12\x1f\n" +
+	"\vusage_limit\x18\f \x01(\x05R\n" +
+	"usageLimit\x12\x16\n" +
+	"\x06status\x18\r \x01(\tR\x06status\x12\x14\n" +
+	"\x05color\x18\x0e \x01(\tR\x05color\x12\x1b\n" +
+	"\timage_url\x18\x0f \x01(\tR\bimageUrl\x127\n" +
+	"\tstarts_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\bstartsAt\x123\n" +
+	"\aends_at\x18\x11 \x01(\v2\x1a.google.protobuf.TimestampR\x06endsAt\x12\x1d\n" +
+	"\n" +
+	"outlet_ids\x18\x12 \x03(\x03R\toutletIds\x127\n" +
+	"\aoutlets\x18\x13 \x03(\v2\x1d.wuzz.catalog.v1.BannerOutletR\aoutlets\x12\x1f\n" +
+	"\vservice_ids\x18\x14 \x03(\x03R\n" +
+	"serviceIds\x12;\n" +
+	"\bservices\x18\x15 \x03(\v2\x1f.wuzz.catalog.v1.VoucherServiceR\bservices\x12\x17\n" +
+	"\ais_live\x18\x16 \x01(\bR\x06isLive\x12\x12\n" +
+	"\x04type\x18\x17 \x01(\tR\x04type\x129\n" +
+	"\n" +
+	"created_at\x18\x18 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\x19 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"4\n" +
+	"\x0eVoucherService\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\"\x8b\x02\n" +
+	"\x13ListVouchersRequest\x12\f\n" +
+	"\x01q\x18\x01 \x01(\tR\x01q\x12\x16\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\x12\x12\n" +
+	"\x04live\x18\x03 \x01(\tR\x04live\x12\x16\n" +
+	"\x06period\x18\x04 \x01(\tR\x06period\x12#\n" +
+	"\rdiscount_type\x18\x05 \x01(\tR\fdiscountType\x12\x1b\n" +
+	"\toutlet_id\x18\x06 \x01(\x03R\boutletId\x12\x17\n" +
+	"\asort_by\x18\a \x01(\tR\x06sortBy\x12\x19\n" +
+	"\bsort_dir\x18\b \x01(\tR\asortDir\x12\x14\n" +
+	"\x05limit\x18\t \x01(\x05R\x05limit\x12\x16\n" +
+	"\x06offset\x18\n" +
+	" \x01(\x05R\x06offset\"b\n" +
+	"\x14ListVouchersResponse\x124\n" +
+	"\bvouchers\x18\x01 \x03(\v2\x18.wuzz.catalog.v1.VoucherR\bvouchers\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\x03R\x05total\"#\n" +
+	"\x11GetVoucherRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\"X\n" +
+	"\x12SaveVoucherRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x122\n" +
+	"\avoucher\x18\x02 \x01(\v2\x18.wuzz.catalog.v1.VoucherR\avoucher\"E\n" +
+	"\x0fVoucherResponse\x122\n" +
+	"\avoucher\x18\x01 \x01(\v2\x18.wuzz.catalog.v1.VoucherR\avoucher\"A\n" +
+	"\x17SetVoucherStatusRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x16\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\"\x1a\n" +
+	"\x18ListVoucherColorsRequest\"3\n" +
+	"\x19ListVoucherColorsResponse\x12\x16\n" +
+	"\x06colors\x18\x01 \x03(\tR\x06colors\"\xfe\x02\n" +
+	"\fVoucherGrant\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x1d\n" +
+	"\n" +
+	"voucher_id\x18\x02 \x01(\x03R\tvoucherId\x12\x1f\n" +
+	"\vcustomer_id\x18\x03 \x01(\x03R\n" +
+	"customerId\x12#\n" +
+	"\rcustomer_name\x18\x04 \x01(\tR\fcustomerName\x12%\n" +
+	"\x0ecustomer_phone\x18\x05 \x01(\tR\rcustomerPhone\x12\x16\n" +
+	"\x06source\x18\x06 \x01(\tR\x06source\x12\x1d\n" +
+	"\n" +
+	"granted_by\x18\a \x01(\tR\tgrantedBy\x129\n" +
+	"\n" +
+	"granted_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tgrantedAt\x129\n" +
+	"\n" +
+	"expires_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x12%\n" +
+	"\x0euses_remaining\x18\n" +
+	" \x01(\x05R\rusesRemaining\"u\n" +
+	"\x18ListVoucherGrantsRequest\x12\x1d\n" +
+	"\n" +
+	"voucher_id\x18\x01 \x01(\x03R\tvoucherId\x12\f\n" +
+	"\x01q\x18\x02 \x01(\tR\x01q\x12\x14\n" +
+	"\x05limit\x18\x03 \x01(\x05R\x05limit\x12\x16\n" +
+	"\x06offset\x18\x04 \x01(\x05R\x06offset\"h\n" +
+	"\x19ListVoucherGrantsResponse\x125\n" +
+	"\x06grants\x18\x01 \x03(\v2\x1d.wuzz.catalog.v1.VoucherGrantR\x06grants\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\x03R\x05total\"b\n" +
+	"\x0eInjectCustomer\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
+	"\x05phone\x18\x03 \x01(\tR\x05phone\x12\x16\n" +
+	"\x06active\x18\x04 \x01(\bR\x06active\"\xcc\x01\n" +
+	"\x14InjectVoucherRequest\x12\x1d\n" +
+	"\n" +
+	"voucher_id\x18\x01 \x01(\x03R\tvoucherId\x12=\n" +
+	"\tcustomers\x18\x02 \x03(\v2\x1f.wuzz.catalog.v1.InjectCustomerR\tcustomers\x12\x1b\n" +
+	"\tnot_found\x18\x03 \x01(\x05R\bnotFound\x129\n" +
+	"\n" +
+	"expires_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\"\xff\x03\n" +
+	"\x10VoucherInjection\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x1d\n" +
+	"\n" +
+	"voucher_id\x18\x02 \x01(\x03R\tvoucherId\x12#\n" +
+	"\rvoucher_title\x18\x03 \x01(\tR\fvoucherTitle\x12!\n" +
+	"\fvoucher_code\x18\x04 \x01(\tR\vvoucherCode\x12\x19\n" +
+	"\bactor_id\x18\x05 \x01(\tR\aactorId\x12\x1d\n" +
+	"\n" +
+	"actor_name\x18\x06 \x01(\tR\tactorName\x12!\n" +
+	"\ftarget_count\x18\a \x01(\x05R\vtargetCount\x12%\n" +
+	"\x0einjected_count\x18\b \x01(\x05R\rinjectedCount\x120\n" +
+	"\x14skipped_already_held\x18\t \x01(\x05R\x12skippedAlreadyHeld\x12,\n" +
+	"\x12skipped_over_limit\x18\n" +
+	" \x01(\x05R\x10skippedOverLimit\x12*\n" +
+	"\x11skipped_not_found\x18\v \x01(\x05R\x0fskippedNotFound\x12)\n" +
+	"\x10skipped_inactive\x18\f \x01(\x05R\x0fskippedInactive\x129\n" +
+	"\n" +
+	"created_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"X\n" +
+	"\x15InjectVoucherResponse\x12?\n" +
+	"\tinjection\x18\x01 \x01(\v2!.wuzz.catalog.v1.VoucherInjectionR\tinjection\"k\n" +
+	"\x1cListVoucherInjectionsRequest\x12\x1d\n" +
+	"\n" +
+	"voucher_id\x18\x01 \x01(\x03R\tvoucherId\x12\x14\n" +
+	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x16\n" +
+	"\x06offset\x18\x03 \x01(\x05R\x06offset\"x\n" +
+	"\x1dListVoucherInjectionsResponse\x12A\n" +
+	"\n" +
+	"injections\x18\x01 \x03(\v2!.wuzz.catalog.v1.VoucherInjectionR\n" +
+	"injections\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\x03R\x05total\"\xda\x05\n" +
+	"\tMyVoucher\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
+	"\x04code\x18\x02 \x01(\tR\x04code\x12\x14\n" +
+	"\x05title\x18\x03 \x01(\tR\x05title\x12 \n" +
+	"\vdescription\x18\x04 \x01(\tR\vdescription\x12#\n" +
+	"\rdiscount_type\x18\x05 \x01(\tR\fdiscountType\x12\x14\n" +
+	"\x05value\x18\x06 \x01(\x03R\x05value\x12!\n" +
+	"\fmax_discount\x18\a \x01(\x03R\vmaxDiscount\x12\x1b\n" +
+	"\tmin_spend\x18\b \x01(\x03R\bminSpend\x12\x14\n" +
+	"\x05color\x18\t \x01(\tR\x05color\x12\x1b\n" +
+	"\timage_url\x18\n" +
+	" \x01(\tR\bimageUrl\x127\n" +
+	"\tstarts_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\bstartsAt\x129\n" +
+	"\n" +
+	"expires_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x12\x1d\n" +
+	"\n" +
+	"outlet_ids\x18\r \x03(\x03R\toutletIds\x127\n" +
+	"\aoutlets\x18\x0e \x03(\v2\x1d.wuzz.catalog.v1.BannerOutletR\aoutlets\x12\x1f\n" +
+	"\vservice_ids\x18\x0f \x03(\x03R\n" +
+	"serviceIds\x12;\n" +
+	"\bservices\x18\x10 \x03(\v2\x1f.wuzz.catalog.v1.VoucherServiceR\bservices\x12\x16\n" +
+	"\x06source\x18\x11 \x01(\tR\x06source\x129\n" +
+	"\n" +
+	"claimed_at\x18\x12 \x01(\v2\x1a.google.protobuf.TimestampR\tclaimedAt\x12%\n" +
+	"\x0euses_remaining\x18\x13 \x01(\x05R\rusesRemaining\x12\x1f\n" +
+	"\vusage_limit\x18\x14 \x01(\x05R\n" +
+	"usageLimit\"\x17\n" +
+	"\x15ListMyVouchersRequest\"P\n" +
+	"\x16ListMyVouchersResponse\x126\n" +
+	"\bvouchers\x18\x01 \x03(\v2\x1a.wuzz.catalog.v1.MyVoucherR\bvouchers\"u\n" +
+	"\x13ClaimVoucherRequest\x12\x12\n" +
+	"\x04code\x18\x01 \x01(\tR\x04code\x12#\n" +
+	"\rcustomer_name\x18\x02 \x01(\tR\fcustomerName\x12%\n" +
+	"\x0ecustomer_phone\x18\x03 \x01(\tR\rcustomerPhone\"I\n" +
+	"\x11MyVoucherResponse\x124\n" +
+	"\avoucher\x18\x01 \x01(\v2\x1a.wuzz.catalog.v1.MyVoucherR\avoucher\"B\n" +
+	"\x06BomRef\x12\x1d\n" +
+	"\n" +
+	"owner_type\x18\x01 \x01(\tR\townerType\x12\x19\n" +
+	"\bowner_id\x18\x02 \x01(\x03R\aownerId\"\xdc\x01\n" +
+	"\aBomLine\x12\x1f\n" +
+	"\vmaterial_id\x18\x01 \x01(\x03R\n" +
+	"materialId\x12\x10\n" +
+	"\x03sku\x18\x02 \x01(\tR\x03sku\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12\x12\n" +
+	"\x04unit\x18\x04 \x01(\tR\x04unit\x12\x10\n" +
+	"\x03qty\x18\x05 \x01(\tR\x03qty\x12\x10\n" +
+	"\x03per\x18\x06 \x01(\tR\x03per\x12!\n" +
+	"\floss_percent\x18\a \x01(\tR\vlossPercent\x12\x1b\n" +
+	"\tunit_cost\x18\b \x01(\tR\bunitCost\x12\x12\n" +
+	"\x04cost\x18\t \x01(\tR\x04cost\"\xa0\x01\n" +
+	"\x03Bom\x12\x1d\n" +
+	"\n" +
+	"owner_type\x18\x01 \x01(\tR\townerType\x12\x19\n" +
+	"\bowner_id\x18\x02 \x01(\x03R\aownerId\x12.\n" +
+	"\x05lines\x18\x03 \x03(\v2\x18.wuzz.catalog.v1.BomLineR\x05lines\x12\x12\n" +
+	"\x04cost\x18\x04 \x01(\tR\x04cost\x12\x1b\n" +
+	"\tline_cost\x18\x05 \x01(\tR\blineCost\"n\n" +
+	"\rSetBomRequest\x12-\n" +
+	"\x05owner\x18\x01 \x01(\v2\x17.wuzz.catalog.v1.BomRefR\x05owner\x12.\n" +
+	"\x05lines\x18\x02 \x03(\v2\x18.wuzz.catalog.v1.BomLineR\x05lines\"9\n" +
+	"\x18GetServiceCostingRequest\x12\x1d\n" +
+	"\n" +
+	"service_id\x18\x01 \x01(\x03R\tserviceId\"\x81\x01\n" +
+	"\x0fCostedComponent\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
+	"\x05price\x18\x03 \x01(\x03R\x05price\x12\x19\n" +
+	"\bper_unit\x18\x04 \x01(\tR\aperUnit\x12\x19\n" +
+	"\bper_line\x18\x05 \x01(\tR\aperLine\"m\n" +
+	"\vCostedGroup\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12:\n" +
+	"\aoptions\x18\x03 \x03(\v2 .wuzz.catalog.v1.CostedComponentR\aoptions\"\x89\x03\n" +
+	"\x0eServiceCosting\x12\x1d\n" +
+	"\n" +
+	"service_id\x18\x01 \x01(\x03R\tserviceId\x12!\n" +
+	"\fservice_name\x18\x02 \x01(\tR\vserviceName\x12\x12\n" +
+	"\x04unit\x18\x03 \x01(\tR\x04unit\x12\x14\n" +
+	"\x05price\x18\x04 \x01(\x03R\x05price\x12\"\n" +
+	"\rbase_per_unit\x18\x05 \x01(\tR\vbasePerUnit\x12\"\n" +
+	"\rbase_per_line\x18\x06 \x01(\tR\vbasePerLine\x127\n" +
+	"\n" +
+	"base_lines\x18\a \x03(\v2\x18.wuzz.catalog.v1.BomLineR\tbaseLines\x12C\n" +
+	"\x0evariant_groups\x18\b \x03(\v2\x1c.wuzz.catalog.v1.CostedGroupR\rvariantGroups\x12E\n" +
+	"\x0fmodifier_groups\x18\t \x03(\v2\x1c.wuzz.catalog.v1.CostedGroupR\x0emodifierGroups\"\xa3\x01\n" +
+	"\x12CalcCostingRequest\x12\x1d\n" +
+	"\n" +
+	"service_id\x18\x01 \x01(\x03R\tserviceId\x12,\n" +
+	"\x12variant_option_ids\x18\x02 \x03(\x03R\x10variantOptionIds\x12.\n" +
+	"\x13modifier_option_ids\x18\x03 \x03(\x03R\x11modifierOptionIds\x12\x10\n" +
+	"\x03qty\x18\x04 \x01(\tR\x03qty\"\xfe\x01\n" +
+	"\n" +
+	"CostedLine\x12\x16\n" +
+	"\x06source\x18\x01 \x01(\tR\x06source\x12\x1f\n" +
+	"\vsource_name\x18\x02 \x01(\tR\n" +
+	"sourceName\x12\x1f\n" +
+	"\vmaterial_id\x18\x03 \x01(\x03R\n" +
+	"materialId\x12\x10\n" +
+	"\x03sku\x18\x04 \x01(\tR\x03sku\x12\x12\n" +
+	"\x04name\x18\x05 \x01(\tR\x04name\x12\x12\n" +
+	"\x04unit\x18\x06 \x01(\tR\x04unit\x12\x10\n" +
+	"\x03per\x18\a \x01(\tR\x03per\x12\x19\n" +
+	"\bqty_used\x18\b \x01(\tR\aqtyUsed\x12\x1b\n" +
+	"\tunit_cost\x18\t \x01(\tR\bunitCost\x12\x12\n" +
+	"\x04cost\x18\n" +
+	" \x01(\tR\x04cost\"\xc7\x02\n" +
+	"\x13CalcCostingResponse\x12\x1d\n" +
+	"\n" +
+	"service_id\x18\x01 \x01(\x03R\tserviceId\x12!\n" +
+	"\fservice_name\x18\x02 \x01(\tR\vserviceName\x12\x12\n" +
+	"\x04unit\x18\x03 \x01(\tR\x04unit\x12\x10\n" +
+	"\x03qty\x18\x04 \x01(\tR\x03qty\x12\x1d\n" +
+	"\n" +
+	"unit_price\x18\x05 \x01(\x03R\tunitPrice\x12\x18\n" +
+	"\arevenue\x18\x06 \x01(\x03R\arevenue\x121\n" +
+	"\x05lines\x18\a \x03(\v2\x1b.wuzz.catalog.v1.CostedLineR\x05lines\x12\x12\n" +
+	"\x04cost\x18\b \x01(\x03R\x04cost\x12!\n" +
+	"\fgross_profit\x18\t \x01(\x03R\vgrossProfit\x12%\n" +
+	"\x0emargin_percent\x18\n" +
+	" \x01(\tR\rmarginPercent\"\xf0\x01\n" +
+	"\bStockRow\x12\x1b\n" +
+	"\toutlet_id\x18\x01 \x01(\x03R\boutletId\x12\x1f\n" +
+	"\vmaterial_id\x18\x02 \x01(\x03R\n" +
+	"materialId\x12\x10\n" +
+	"\x03sku\x18\x03 \x01(\tR\x03sku\x12\x12\n" +
+	"\x04name\x18\x04 \x01(\tR\x04name\x12\x12\n" +
+	"\x04unit\x18\x05 \x01(\tR\x04unit\x12\x10\n" +
+	"\x03qty\x18\x06 \x01(\tR\x03qty\x12\x14\n" +
+	"\x05value\x18\a \x01(\x03R\x05value\x12\x19\n" +
+	"\bavg_cost\x18\b \x01(\tR\aavgCost\x12\x17\n" +
+	"\amin_qty\x18\t \x01(\tR\x06minQty\x12\x10\n" +
+	"\x03low\x18\n" +
+	" \x01(\bR\x03low\"\xb1\x01\n" +
+	"\x10ListStockRequest\x12\x1b\n" +
+	"\toutlet_id\x18\x01 \x01(\x03R\boutletId\x12\f\n" +
+	"\x01q\x18\x02 \x01(\tR\x01q\x12\x10\n" +
+	"\x03low\x18\x03 \x01(\bR\x03low\x12\x17\n" +
+	"\asort_by\x18\x04 \x01(\tR\x06sortBy\x12\x19\n" +
+	"\bsort_dir\x18\x05 \x01(\tR\asortDir\x12\x14\n" +
+	"\x05limit\x18\x06 \x01(\x05R\x05limit\x12\x16\n" +
+	"\x06offset\x18\a \x01(\x05R\x06offset\"X\n" +
+	"\x11ListStockResponse\x12-\n" +
+	"\x04rows\x18\x01 \x03(\v2\x19.wuzz.catalog.v1.StockRowR\x04rows\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\x03R\x05total\"\xb5\x04\n" +
+	"\rStockMovement\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x1b\n" +
+	"\toutlet_id\x18\x02 \x01(\x03R\boutletId\x12\x1f\n" +
+	"\vmaterial_id\x18\x03 \x01(\x03R\n" +
+	"materialId\x12\x10\n" +
+	"\x03sku\x18\x04 \x01(\tR\x03sku\x12\x12\n" +
+	"\x04name\x18\x05 \x01(\tR\x04name\x12\x12\n" +
+	"\x04unit\x18\x06 \x01(\tR\x04unit\x12\x12\n" +
+	"\x04kind\x18\a \x01(\tR\x04kind\x12\x16\n" +
+	"\x06reason\x18\b \x01(\tR\x06reason\x12\x1b\n" +
+	"\tqty_delta\x18\t \x01(\tR\bqtyDelta\x12\x1f\n" +
+	"\vvalue_delta\x18\n" +
+	" \x01(\x03R\n" +
+	"valueDelta\x12\x1f\n" +
+	"\vbalance_qty\x18\v \x01(\tR\n" +
+	"balanceQty\x12#\n" +
+	"\rbalance_value\x18\f \x01(\x03R\fbalanceValue\x12\x19\n" +
+	"\bref_type\x18\r \x01(\tR\arefType\x12\x15\n" +
+	"\x06ref_id\x18\x0e \x01(\tR\x05refId\x12\x1a\n" +
+	"\bsupplier\x18\x0f \x01(\tR\bsupplier\x12\x15\n" +
+	"\x06doc_no\x18\x10 \x01(\tR\x05docNo\x12\x12\n" +
+	"\x04note\x18\x11 \x01(\tR\x04note\x12\x1d\n" +
+	"\n" +
+	"created_by\x18\x12 \x01(\tR\tcreatedBy\x129\n" +
+	"\n" +
+	"created_at\x18\x13 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12\x19\n" +
+	"\bref_code\x18\x14 \x01(\tR\arefCode\"\xfc\x01\n" +
+	"\x14ListMovementsRequest\x12\x1b\n" +
+	"\toutlet_id\x18\x01 \x01(\x03R\boutletId\x12\x1f\n" +
+	"\vmaterial_id\x18\x02 \x01(\x03R\n" +
+	"materialId\x12\x12\n" +
+	"\x04kind\x18\x03 \x01(\tR\x04kind\x12\f\n" +
+	"\x01q\x18\x04 \x01(\tR\x01q\x12\x12\n" +
+	"\x04from\x18\x05 \x01(\tR\x04from\x12\x0e\n" +
+	"\x02to\x18\x06 \x01(\tR\x02to\x12\x17\n" +
+	"\asort_by\x18\a \x01(\tR\x06sortBy\x12\x19\n" +
+	"\bsort_dir\x18\b \x01(\tR\asortDir\x12\x14\n" +
+	"\x05limit\x18\t \x01(\x05R\x05limit\x12\x16\n" +
+	"\x06offset\x18\n" +
+	" \x01(\x05R\x06offset\"k\n" +
+	"\x15ListMovementsResponse\x12<\n" +
+	"\tmovements\x18\x01 \x03(\v2\x1e.wuzz.catalog.v1.StockMovementR\tmovements\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\x03R\x05total\"\xf4\x01\n" +
+	"\x13ReceiveStockRequest\x12\x1b\n" +
+	"\toutlet_id\x18\x01 \x01(\x03R\boutletId\x12\x1f\n" +
+	"\vmaterial_id\x18\x02 \x01(\x03R\n" +
+	"materialId\x12\x10\n" +
+	"\x03qty\x18\x03 \x01(\tR\x03qty\x12\x1d\n" +
+	"\n" +
+	"total_cost\x18\x04 \x01(\x03R\ttotalCost\x12\x1a\n" +
+	"\bsupplier\x18\x05 \x01(\tR\bsupplier\x12\x15\n" +
+	"\x06doc_no\x18\x06 \x01(\tR\x05docNo\x12\x12\n" +
+	"\x04note\x18\a \x01(\tR\x04note\x12'\n" +
+	"\x0fidempotency_key\x18\b \x01(\tR\x0eidempotencyKey\"\xb8\x01\n" +
+	"\x11WasteStockRequest\x12\x1b\n" +
+	"\toutlet_id\x18\x01 \x01(\x03R\boutletId\x12\x1f\n" +
+	"\vmaterial_id\x18\x02 \x01(\x03R\n" +
+	"materialId\x12\x10\n" +
+	"\x03qty\x18\x03 \x01(\tR\x03qty\x12\x16\n" +
+	"\x06reason\x18\x04 \x01(\tR\x06reason\x12\x12\n" +
+	"\x04note\x18\x05 \x01(\tR\x04note\x12'\n" +
+	"\x0fidempotency_key\x18\x06 \x01(\tR\x0eidempotencyKey\"\xb0\x01\n" +
+	"\x12AdjustStockRequest\x12\x1b\n" +
+	"\toutlet_id\x18\x01 \x01(\x03R\boutletId\x12\x1f\n" +
+	"\vmaterial_id\x18\x02 \x01(\x03R\n" +
+	"materialId\x12\x1f\n" +
+	"\vcounted_qty\x18\x03 \x01(\tR\n" +
+	"countedQty\x12\x12\n" +
+	"\x04note\x18\x04 \x01(\tR\x04note\x12'\n" +
+	"\x0fidempotency_key\x18\x05 \x01(\tR\x0eidempotencyKey\"\xce\x01\n" +
+	"\x14TransferStockRequest\x12$\n" +
+	"\x0efrom_outlet_id\x18\x01 \x01(\x03R\ffromOutletId\x12 \n" +
+	"\fto_outlet_id\x18\x02 \x01(\x03R\n" +
+	"toOutletId\x12\x1f\n" +
+	"\vmaterial_id\x18\x03 \x01(\x03R\n" +
+	"materialId\x12\x10\n" +
+	"\x03qty\x18\x04 \x01(\tR\x03qty\x12\x12\n" +
+	"\x04note\x18\x05 \x01(\tR\x04note\x12'\n" +
+	"\x0fidempotency_key\x18\x06 \x01(\tR\x0eidempotencyKey\"k\n" +
+	"\x12SetMinStockRequest\x12\x1b\n" +
+	"\toutlet_id\x18\x01 \x01(\x03R\boutletId\x12\x1f\n" +
+	"\vmaterial_id\x18\x02 \x01(\x03R\n" +
+	"materialId\x12\x17\n" +
+	"\amin_qty\x18\x03 \x01(\tR\x06minQty\"m\n" +
+	"\x15StockMovementResponse\x12:\n" +
+	"\bmovement\x18\x01 \x01(\v2\x1e.wuzz.catalog.v1.StockMovementR\bmovement\x12\x18\n" +
+	"\acreated\x18\x02 \x01(\bR\acreated\"\x93\x01\n" +
+	"\x15TransferStockResponse\x120\n" +
+	"\x03out\x18\x01 \x01(\v2\x1e.wuzz.catalog.v1.StockMovementR\x03out\x12.\n" +
+	"\x02in\x18\x02 \x01(\v2\x1e.wuzz.catalog.v1.StockMovementR\x02in\x12\x18\n" +
+	"\acreated\x18\x03 \x01(\bR\acreated\"?\n" +
+	"\x10StockRowResponse\x12+\n" +
+	"\x03row\x18\x01 \x01(\v2\x19.wuzz.catalog.v1.StockRowR\x03row\"\x9f\x01\n" +
+	"\x0eOrderStockLine\x12\x1d\n" +
+	"\n" +
+	"service_id\x18\x01 \x01(\x03R\tserviceId\x12\x10\n" +
+	"\x03qty\x18\x02 \x01(\tR\x03qty\x12,\n" +
+	"\x12variant_option_ids\x18\x03 \x03(\x03R\x10variantOptionIds\x12.\n" +
+	"\x13modifier_option_ids\x18\x04 \x03(\x03R\x11modifierOptionIds\"\xd4\x01\n" +
+	"\x16ApplyOrderStockRequest\x12\x19\n" +
+	"\border_id\x18\x01 \x01(\tR\aorderId\x12\x1b\n" +
+	"\toutlet_id\x18\x02 \x01(\x03R\boutletId\x12\x16\n" +
+	"\x06action\x18\x03 \x01(\tR\x06action\x125\n" +
+	"\x05lines\x18\x04 \x03(\v2\x1f.wuzz.catalog.v1.OrderStockLineR\x05lines\x12\x14\n" +
+	"\x05actor\x18\x05 \x01(\tR\x05actor\x12\x1d\n" +
+	"\n" +
+	"order_code\x18\x06 \x01(\tR\torderCode\"7\n" +
+	"\x17ApplyOrderStockResponse\x12\x1c\n" +
+	"\tmovements\x18\x01 \x01(\x05R\tmovements2\xeb.\n" +
 	"\x0eCatalogService\x12X\n" +
 	"\vListOutlets\x12#.wuzz.catalog.v1.ListOutletsRequest\x1a$.wuzz.catalog.v1.ListOutletsResponse\x12R\n" +
-	"\tGetOutlet\x12!.wuzz.catalog.v1.GetOutletRequest\x1a\".wuzz.catalog.v1.GetOutletResponse\x12[\n" +
+	"\tGetOutlet\x12!.wuzz.catalog.v1.GetOutletRequest\x1a\".wuzz.catalog.v1.GetOutletResponse\x12v\n" +
+	"\x15ListServiceCategories\x12-.wuzz.catalog.v1.ListServiceCategoriesRequest\x1a..wuzz.catalog.v1.ListServiceCategoriesResponse\x12[\n" +
+	"\fListTaxRates\x12$.wuzz.catalog.v1.ListTaxRatesRequest\x1a%.wuzz.catalog.v1.ListTaxRatesResponse\x12[\n" +
 	"\fCreateOutlet\x12$.wuzz.catalog.v1.CreateOutletRequest\x1a%.wuzz.catalog.v1.CreateOutletResponse\x12[\n" +
-	"\fUpdateOutlet\x12$.wuzz.catalog.v1.UpdateOutletRequest\x1a%.wuzz.catalog.v1.UpdateOutletResponse\x12^\n" +
+	"\fUpdateOutlet\x12$.wuzz.catalog.v1.UpdateOutletRequest\x1a%.wuzz.catalog.v1.UpdateOutletResponse\x12[\n" +
+	"\fDeleteOutlet\x12$.wuzz.catalog.v1.DeleteOutletRequest\x1a%.wuzz.catalog.v1.DeleteOutletResponse\x12^\n" +
 	"\rNearbyOutlets\x12%.wuzz.catalog.v1.NearbyOutletsRequest\x1a&.wuzz.catalog.v1.NearbyOutletsResponse\x12d\n" +
 	"\x0fResolveCoverage\x12'.wuzz.catalog.v1.ResolveCoverageRequest\x1a(.wuzz.catalog.v1.ResolveCoverageResponse\x12a\n" +
 	"\x0eBrowseServices\x12&.wuzz.catalog.v1.BrowseServicesRequest\x1a'.wuzz.catalog.v1.BrowseServicesResponse\x12g\n" +
 	"\x10GetServiceDetail\x12(.wuzz.catalog.v1.GetServiceDetailRequest\x1a).wuzz.catalog.v1.GetServiceDetailResponse\x12[\n" +
 	"\fListServices\x12$.wuzz.catalog.v1.ListServicesRequest\x1a%.wuzz.catalog.v1.ListServicesResponse\x12^\n" +
 	"\rCreateService\x12%.wuzz.catalog.v1.CreateServiceRequest\x1a&.wuzz.catalog.v1.CreateServiceResponse\x12^\n" +
-	"\rUpdateService\x12%.wuzz.catalog.v1.UpdateServiceRequest\x1a&.wuzz.catalog.v1.UpdateServiceResponseB>Z<github.com/koobam/wuzz-backend/gen/wuzz/catalog/v1;catalogv1b\x06proto3"
+	"\rUpdateService\x12%.wuzz.catalog.v1.UpdateServiceRequest\x1a&.wuzz.catalog.v1.UpdateServiceResponse\x12^\n" +
+	"\rDeleteService\x12%.wuzz.catalog.v1.DeleteServiceRequest\x1a&.wuzz.catalog.v1.DeleteServiceResponse\x12j\n" +
+	"\x11ListVariantGroups\x12).wuzz.catalog.v1.ListVariantGroupsRequest\x1a*.wuzz.catalog.v1.ListVariantGroupsResponse\x12a\n" +
+	"\x0fGetVariantGroup\x12'.wuzz.catalog.v1.GetVariantGroupRequest\x1a%.wuzz.catalog.v1.VariantGroupResponse\x12e\n" +
+	"\x12CreateVariantGroup\x12(.wuzz.catalog.v1.SaveVariantGroupRequest\x1a%.wuzz.catalog.v1.VariantGroupResponse\x12e\n" +
+	"\x12UpdateVariantGroup\x12(.wuzz.catalog.v1.SaveVariantGroupRequest\x1a%.wuzz.catalog.v1.VariantGroupResponse\x12_\n" +
+	"\x12DeleteVariantGroup\x12#.wuzz.catalog.v1.DeleteGroupRequest\x1a$.wuzz.catalog.v1.DeleteGroupResponse\x12m\n" +
+	"\x12ListModifierGroups\x12*.wuzz.catalog.v1.ListModifierGroupsRequest\x1a+.wuzz.catalog.v1.ListModifierGroupsResponse\x12d\n" +
+	"\x10GetModifierGroup\x12(.wuzz.catalog.v1.GetModifierGroupRequest\x1a&.wuzz.catalog.v1.ModifierGroupResponse\x12h\n" +
+	"\x13CreateModifierGroup\x12).wuzz.catalog.v1.SaveModifierGroupRequest\x1a&.wuzz.catalog.v1.ModifierGroupResponse\x12h\n" +
+	"\x13UpdateModifierGroup\x12).wuzz.catalog.v1.SaveModifierGroupRequest\x1a&.wuzz.catalog.v1.ModifierGroupResponse\x12`\n" +
+	"\x13DeleteModifierGroup\x12#.wuzz.catalog.v1.DeleteGroupRequest\x1a$.wuzz.catalog.v1.DeleteGroupResponse\x12^\n" +
+	"\rListMaterials\x12%.wuzz.catalog.v1.ListMaterialsRequest\x1a&.wuzz.catalog.v1.ListMaterialsResponse\x12U\n" +
+	"\vGetMaterial\x12#.wuzz.catalog.v1.GetMaterialRequest\x1a!.wuzz.catalog.v1.MaterialResponse\x12Y\n" +
+	"\x0eCreateMaterial\x12$.wuzz.catalog.v1.SaveMaterialRequest\x1a!.wuzz.catalog.v1.MaterialResponse\x12Y\n" +
+	"\x0eUpdateMaterial\x12$.wuzz.catalog.v1.SaveMaterialRequest\x1a!.wuzz.catalog.v1.MaterialResponse\x12[\n" +
+	"\x0eDeleteMaterial\x12#.wuzz.catalog.v1.GetMaterialRequest\x1a$.wuzz.catalog.v1.DeleteGroupResponse\x127\n" +
+	"\x06GetBom\x12\x17.wuzz.catalog.v1.BomRef\x1a\x14.wuzz.catalog.v1.Bom\x12>\n" +
+	"\x06SetBom\x12\x1e.wuzz.catalog.v1.SetBomRequest\x1a\x14.wuzz.catalog.v1.Bom\x12_\n" +
+	"\x11GetServiceCosting\x12).wuzz.catalog.v1.GetServiceCostingRequest\x1a\x1f.wuzz.catalog.v1.ServiceCosting\x12X\n" +
+	"\vCalcCosting\x12#.wuzz.catalog.v1.CalcCostingRequest\x1a$.wuzz.catalog.v1.CalcCostingResponse\x12X\n" +
+	"\vListBanners\x12#.wuzz.catalog.v1.ListBannersRequest\x1a$.wuzz.catalog.v1.ListBannersResponse\x12O\n" +
+	"\tGetBanner\x12!.wuzz.catalog.v1.GetBannerRequest\x1a\x1f.wuzz.catalog.v1.BannerResponse\x12S\n" +
+	"\fCreateBanner\x12\".wuzz.catalog.v1.SaveBannerRequest\x1a\x1f.wuzz.catalog.v1.BannerResponse\x12S\n" +
+	"\fUpdateBanner\x12\".wuzz.catalog.v1.SaveBannerRequest\x1a\x1f.wuzz.catalog.v1.BannerResponse\x12[\n" +
+	"\x0fSetBannerStatus\x12'.wuzz.catalog.v1.SetBannerStatusRequest\x1a\x1f.wuzz.catalog.v1.BannerResponse\x12W\n" +
+	"\fDeleteBanner\x12!.wuzz.catalog.v1.GetBannerRequest\x1a$.wuzz.catalog.v1.DeleteGroupResponse\x12^\n" +
+	"\x0eReorderBanners\x12&.wuzz.catalog.v1.ReorderBannersRequest\x1a$.wuzz.catalog.v1.ListBannersResponse\x12j\n" +
+	"\x11ListBannerScreens\x12).wuzz.catalog.v1.ListBannerScreensRequest\x1a*.wuzz.catalog.v1.ListBannerScreensResponse\x12d\n" +
+	"\x0fListLiveBanners\x12'.wuzz.catalog.v1.ListLiveBannersRequest\x1a(.wuzz.catalog.v1.ListLiveBannersResponse\x12[\n" +
+	"\fListVouchers\x12$.wuzz.catalog.v1.ListVouchersRequest\x1a%.wuzz.catalog.v1.ListVouchersResponse\x12R\n" +
+	"\n" +
+	"GetVoucher\x12\".wuzz.catalog.v1.GetVoucherRequest\x1a .wuzz.catalog.v1.VoucherResponse\x12V\n" +
+	"\rCreateVoucher\x12#.wuzz.catalog.v1.SaveVoucherRequest\x1a .wuzz.catalog.v1.VoucherResponse\x12V\n" +
+	"\rUpdateVoucher\x12#.wuzz.catalog.v1.SaveVoucherRequest\x1a .wuzz.catalog.v1.VoucherResponse\x12^\n" +
+	"\x10SetVoucherStatus\x12(.wuzz.catalog.v1.SetVoucherStatusRequest\x1a .wuzz.catalog.v1.VoucherResponse\x12Y\n" +
+	"\rDeleteVoucher\x12\".wuzz.catalog.v1.GetVoucherRequest\x1a$.wuzz.catalog.v1.DeleteGroupResponse\x12j\n" +
+	"\x11ListVoucherColors\x12).wuzz.catalog.v1.ListVoucherColorsRequest\x1a*.wuzz.catalog.v1.ListVoucherColorsResponse\x12j\n" +
+	"\x11ListVoucherGrants\x12).wuzz.catalog.v1.ListVoucherGrantsRequest\x1a*.wuzz.catalog.v1.ListVoucherGrantsResponse\x12^\n" +
+	"\rInjectVoucher\x12%.wuzz.catalog.v1.InjectVoucherRequest\x1a&.wuzz.catalog.v1.InjectVoucherResponse\x12v\n" +
+	"\x15ListVoucherInjections\x12-.wuzz.catalog.v1.ListVoucherInjectionsRequest\x1a..wuzz.catalog.v1.ListVoucherInjectionsResponse\x12a\n" +
+	"\x0eListMyVouchers\x12&.wuzz.catalog.v1.ListMyVouchersRequest\x1a'.wuzz.catalog.v1.ListMyVouchersResponse\x12X\n" +
+	"\fClaimVoucher\x12$.wuzz.catalog.v1.ClaimVoucherRequest\x1a\".wuzz.catalog.v1.MyVoucherResponse\x12R\n" +
+	"\tListStock\x12!.wuzz.catalog.v1.ListStockRequest\x1a\".wuzz.catalog.v1.ListStockResponse\x12^\n" +
+	"\rListMovements\x12%.wuzz.catalog.v1.ListMovementsRequest\x1a&.wuzz.catalog.v1.ListMovementsResponse\x12\\\n" +
+	"\fReceiveStock\x12$.wuzz.catalog.v1.ReceiveStockRequest\x1a&.wuzz.catalog.v1.StockMovementResponse\x12X\n" +
+	"\n" +
+	"WasteStock\x12\".wuzz.catalog.v1.WasteStockRequest\x1a&.wuzz.catalog.v1.StockMovementResponse\x12Z\n" +
+	"\vAdjustStock\x12#.wuzz.catalog.v1.AdjustStockRequest\x1a&.wuzz.catalog.v1.StockMovementResponse\x12^\n" +
+	"\rTransferStock\x12%.wuzz.catalog.v1.TransferStockRequest\x1a&.wuzz.catalog.v1.TransferStockResponse\x12U\n" +
+	"\vSetMinStock\x12#.wuzz.catalog.v1.SetMinStockRequest\x1a!.wuzz.catalog.v1.StockRowResponse\x12d\n" +
+	"\x0fApplyOrderStock\x12'.wuzz.catalog.v1.ApplyOrderStockRequest\x1a(.wuzz.catalog.v1.ApplyOrderStockResponseB>Z<github.com/koobam/wuzz-backend/gen/wuzz/catalog/v1;catalogv1b\x06proto3"
 
 var (
 	file_wuzz_catalog_v1_catalog_proto_rawDescOnce sync.Once
@@ -2395,90 +10795,375 @@ func file_wuzz_catalog_v1_catalog_proto_rawDescGZIP() []byte {
 	return file_wuzz_catalog_v1_catalog_proto_rawDescData
 }
 
-var file_wuzz_catalog_v1_catalog_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
+var file_wuzz_catalog_v1_catalog_proto_msgTypes = make([]protoimpl.MessageInfo, 133)
 var file_wuzz_catalog_v1_catalog_proto_goTypes = []any{
-	(*Outlet)(nil),                   // 0: wuzz.catalog.v1.Outlet
-	(*ServiceItem)(nil),              // 1: wuzz.catalog.v1.ServiceItem
-	(*ListOutletsRequest)(nil),       // 2: wuzz.catalog.v1.ListOutletsRequest
-	(*ListOutletsResponse)(nil),      // 3: wuzz.catalog.v1.ListOutletsResponse
-	(*GetOutletRequest)(nil),         // 4: wuzz.catalog.v1.GetOutletRequest
-	(*GetOutletResponse)(nil),        // 5: wuzz.catalog.v1.GetOutletResponse
-	(*CreateOutletRequest)(nil),      // 6: wuzz.catalog.v1.CreateOutletRequest
-	(*CreateOutletResponse)(nil),     // 7: wuzz.catalog.v1.CreateOutletResponse
-	(*UpdateOutletRequest)(nil),      // 8: wuzz.catalog.v1.UpdateOutletRequest
-	(*UpdateOutletResponse)(nil),     // 9: wuzz.catalog.v1.UpdateOutletResponse
-	(*ListServicesRequest)(nil),      // 10: wuzz.catalog.v1.ListServicesRequest
-	(*ListServicesResponse)(nil),     // 11: wuzz.catalog.v1.ListServicesResponse
-	(*CreateServiceRequest)(nil),     // 12: wuzz.catalog.v1.CreateServiceRequest
-	(*CreateServiceResponse)(nil),    // 13: wuzz.catalog.v1.CreateServiceResponse
-	(*UpdateServiceRequest)(nil),     // 14: wuzz.catalog.v1.UpdateServiceRequest
-	(*UpdateServiceResponse)(nil),    // 15: wuzz.catalog.v1.UpdateServiceResponse
-	(*OutletView)(nil),               // 16: wuzz.catalog.v1.OutletView
-	(*NearbyOutletsRequest)(nil),     // 17: wuzz.catalog.v1.NearbyOutletsRequest
-	(*NearbyOutletsResponse)(nil),    // 18: wuzz.catalog.v1.NearbyOutletsResponse
-	(*ResolveCoverageRequest)(nil),   // 19: wuzz.catalog.v1.ResolveCoverageRequest
-	(*CoverageArea)(nil),             // 20: wuzz.catalog.v1.CoverageArea
-	(*ResolveCoverageResponse)(nil),  // 21: wuzz.catalog.v1.ResolveCoverageResponse
-	(*ServiceView)(nil),              // 22: wuzz.catalog.v1.ServiceView
-	(*BrowseServicesRequest)(nil),    // 23: wuzz.catalog.v1.BrowseServicesRequest
-	(*BrowseServicesResponse)(nil),   // 24: wuzz.catalog.v1.BrowseServicesResponse
-	(*ServiceTierPricing)(nil),       // 25: wuzz.catalog.v1.ServiceTierPricing
-	(*ServiceTier)(nil),              // 26: wuzz.catalog.v1.ServiceTier
-	(*ServiceAddon)(nil),             // 27: wuzz.catalog.v1.ServiceAddon
-	(*ServiceSection)(nil),           // 28: wuzz.catalog.v1.ServiceSection
-	(*ServiceDetail)(nil),            // 29: wuzz.catalog.v1.ServiceDetail
-	(*GetServiceDetailRequest)(nil),  // 30: wuzz.catalog.v1.GetServiceDetailRequest
-	(*GetServiceDetailResponse)(nil), // 31: wuzz.catalog.v1.GetServiceDetailResponse
-	(*timestamppb.Timestamp)(nil),    // 32: google.protobuf.Timestamp
+	(*Outlet)(nil),                        // 0: wuzz.catalog.v1.Outlet
+	(*OutletDay)(nil),                     // 1: wuzz.catalog.v1.OutletDay
+	(*ServiceItem)(nil),                   // 2: wuzz.catalog.v1.ServiceItem
+	(*IdList)(nil),                        // 3: wuzz.catalog.v1.IdList
+	(*ServiceRef)(nil),                    // 4: wuzz.catalog.v1.ServiceRef
+	(*VariantOption)(nil),                 // 5: wuzz.catalog.v1.VariantOption
+	(*VariantGroup)(nil),                  // 6: wuzz.catalog.v1.VariantGroup
+	(*ModifierOption)(nil),                // 7: wuzz.catalog.v1.ModifierOption
+	(*ModifierGroup)(nil),                 // 8: wuzz.catalog.v1.ModifierGroup
+	(*ListVariantGroupsRequest)(nil),      // 9: wuzz.catalog.v1.ListVariantGroupsRequest
+	(*ListVariantGroupsResponse)(nil),     // 10: wuzz.catalog.v1.ListVariantGroupsResponse
+	(*GetVariantGroupRequest)(nil),        // 11: wuzz.catalog.v1.GetVariantGroupRequest
+	(*VariantGroupResponse)(nil),          // 12: wuzz.catalog.v1.VariantGroupResponse
+	(*SaveVariantGroupRequest)(nil),       // 13: wuzz.catalog.v1.SaveVariantGroupRequest
+	(*DeleteOutletRequest)(nil),           // 14: wuzz.catalog.v1.DeleteOutletRequest
+	(*DeleteOutletResponse)(nil),          // 15: wuzz.catalog.v1.DeleteOutletResponse
+	(*DeleteServiceRequest)(nil),          // 16: wuzz.catalog.v1.DeleteServiceRequest
+	(*DeleteServiceResponse)(nil),         // 17: wuzz.catalog.v1.DeleteServiceResponse
+	(*DeleteGroupRequest)(nil),            // 18: wuzz.catalog.v1.DeleteGroupRequest
+	(*DeleteGroupResponse)(nil),           // 19: wuzz.catalog.v1.DeleteGroupResponse
+	(*ListModifierGroupsRequest)(nil),     // 20: wuzz.catalog.v1.ListModifierGroupsRequest
+	(*ListModifierGroupsResponse)(nil),    // 21: wuzz.catalog.v1.ListModifierGroupsResponse
+	(*GetModifierGroupRequest)(nil),       // 22: wuzz.catalog.v1.GetModifierGroupRequest
+	(*ModifierGroupResponse)(nil),         // 23: wuzz.catalog.v1.ModifierGroupResponse
+	(*SaveModifierGroupRequest)(nil),      // 24: wuzz.catalog.v1.SaveModifierGroupRequest
+	(*ListOutletsRequest)(nil),            // 25: wuzz.catalog.v1.ListOutletsRequest
+	(*Bounds)(nil),                        // 26: wuzz.catalog.v1.Bounds
+	(*ListOutletsResponse)(nil),           // 27: wuzz.catalog.v1.ListOutletsResponse
+	(*GetOutletRequest)(nil),              // 28: wuzz.catalog.v1.GetOutletRequest
+	(*GetOutletResponse)(nil),             // 29: wuzz.catalog.v1.GetOutletResponse
+	(*CreateOutletRequest)(nil),           // 30: wuzz.catalog.v1.CreateOutletRequest
+	(*CreateOutletResponse)(nil),          // 31: wuzz.catalog.v1.CreateOutletResponse
+	(*UpdateOutletRequest)(nil),           // 32: wuzz.catalog.v1.UpdateOutletRequest
+	(*UpdateOutletResponse)(nil),          // 33: wuzz.catalog.v1.UpdateOutletResponse
+	(*ListServicesRequest)(nil),           // 34: wuzz.catalog.v1.ListServicesRequest
+	(*ListServicesResponse)(nil),          // 35: wuzz.catalog.v1.ListServicesResponse
+	(*CreateServiceRequest)(nil),          // 36: wuzz.catalog.v1.CreateServiceRequest
+	(*CreateServiceResponse)(nil),         // 37: wuzz.catalog.v1.CreateServiceResponse
+	(*UpdateServiceRequest)(nil),          // 38: wuzz.catalog.v1.UpdateServiceRequest
+	(*ServiceCategory)(nil),               // 39: wuzz.catalog.v1.ServiceCategory
+	(*TaxRate)(nil),                       // 40: wuzz.catalog.v1.TaxRate
+	(*ListTaxRatesRequest)(nil),           // 41: wuzz.catalog.v1.ListTaxRatesRequest
+	(*ListTaxRatesResponse)(nil),          // 42: wuzz.catalog.v1.ListTaxRatesResponse
+	(*ListServiceCategoriesRequest)(nil),  // 43: wuzz.catalog.v1.ListServiceCategoriesRequest
+	(*ListServiceCategoriesResponse)(nil), // 44: wuzz.catalog.v1.ListServiceCategoriesResponse
+	(*UpdateServiceResponse)(nil),         // 45: wuzz.catalog.v1.UpdateServiceResponse
+	(*OutletView)(nil),                    // 46: wuzz.catalog.v1.OutletView
+	(*NearbyOutletsRequest)(nil),          // 47: wuzz.catalog.v1.NearbyOutletsRequest
+	(*NearbyOutletsResponse)(nil),         // 48: wuzz.catalog.v1.NearbyOutletsResponse
+	(*ResolveCoverageRequest)(nil),        // 49: wuzz.catalog.v1.ResolveCoverageRequest
+	(*CoverageArea)(nil),                  // 50: wuzz.catalog.v1.CoverageArea
+	(*ResolveCoverageResponse)(nil),       // 51: wuzz.catalog.v1.ResolveCoverageResponse
+	(*ServiceView)(nil),                   // 52: wuzz.catalog.v1.ServiceView
+	(*BrowseServicesRequest)(nil),         // 53: wuzz.catalog.v1.BrowseServicesRequest
+	(*BrowseServicesResponse)(nil),        // 54: wuzz.catalog.v1.BrowseServicesResponse
+	(*ServiceTierPricing)(nil),            // 55: wuzz.catalog.v1.ServiceTierPricing
+	(*ServiceTier)(nil),                   // 56: wuzz.catalog.v1.ServiceTier
+	(*ServiceAddon)(nil),                  // 57: wuzz.catalog.v1.ServiceAddon
+	(*ServiceSection)(nil),                // 58: wuzz.catalog.v1.ServiceSection
+	(*ServiceDetail)(nil),                 // 59: wuzz.catalog.v1.ServiceDetail
+	(*GetServiceDetailRequest)(nil),       // 60: wuzz.catalog.v1.GetServiceDetailRequest
+	(*GetServiceDetailResponse)(nil),      // 61: wuzz.catalog.v1.GetServiceDetailResponse
+	(*Material)(nil),                      // 62: wuzz.catalog.v1.Material
+	(*ListMaterialsRequest)(nil),          // 63: wuzz.catalog.v1.ListMaterialsRequest
+	(*ListMaterialsResponse)(nil),         // 64: wuzz.catalog.v1.ListMaterialsResponse
+	(*GetMaterialRequest)(nil),            // 65: wuzz.catalog.v1.GetMaterialRequest
+	(*SaveMaterialRequest)(nil),           // 66: wuzz.catalog.v1.SaveMaterialRequest
+	(*MaterialResponse)(nil),              // 67: wuzz.catalog.v1.MaterialResponse
+	(*Banner)(nil),                        // 68: wuzz.catalog.v1.Banner
+	(*BannerOutlet)(nil),                  // 69: wuzz.catalog.v1.BannerOutlet
+	(*ListBannersRequest)(nil),            // 70: wuzz.catalog.v1.ListBannersRequest
+	(*ListBannersResponse)(nil),           // 71: wuzz.catalog.v1.ListBannersResponse
+	(*GetBannerRequest)(nil),              // 72: wuzz.catalog.v1.GetBannerRequest
+	(*SaveBannerRequest)(nil),             // 73: wuzz.catalog.v1.SaveBannerRequest
+	(*BannerResponse)(nil),                // 74: wuzz.catalog.v1.BannerResponse
+	(*SetBannerStatusRequest)(nil),        // 75: wuzz.catalog.v1.SetBannerStatusRequest
+	(*ReorderBannersRequest)(nil),         // 76: wuzz.catalog.v1.ReorderBannersRequest
+	(*ListBannerScreensRequest)(nil),      // 77: wuzz.catalog.v1.ListBannerScreensRequest
+	(*ListBannerScreensResponse)(nil),     // 78: wuzz.catalog.v1.ListBannerScreensResponse
+	(*ListLiveBannersRequest)(nil),        // 79: wuzz.catalog.v1.ListLiveBannersRequest
+	(*ListLiveBannersResponse)(nil),       // 80: wuzz.catalog.v1.ListLiveBannersResponse
+	(*Voucher)(nil),                       // 81: wuzz.catalog.v1.Voucher
+	(*VoucherService)(nil),                // 82: wuzz.catalog.v1.VoucherService
+	(*ListVouchersRequest)(nil),           // 83: wuzz.catalog.v1.ListVouchersRequest
+	(*ListVouchersResponse)(nil),          // 84: wuzz.catalog.v1.ListVouchersResponse
+	(*GetVoucherRequest)(nil),             // 85: wuzz.catalog.v1.GetVoucherRequest
+	(*SaveVoucherRequest)(nil),            // 86: wuzz.catalog.v1.SaveVoucherRequest
+	(*VoucherResponse)(nil),               // 87: wuzz.catalog.v1.VoucherResponse
+	(*SetVoucherStatusRequest)(nil),       // 88: wuzz.catalog.v1.SetVoucherStatusRequest
+	(*ListVoucherColorsRequest)(nil),      // 89: wuzz.catalog.v1.ListVoucherColorsRequest
+	(*ListVoucherColorsResponse)(nil),     // 90: wuzz.catalog.v1.ListVoucherColorsResponse
+	(*VoucherGrant)(nil),                  // 91: wuzz.catalog.v1.VoucherGrant
+	(*ListVoucherGrantsRequest)(nil),      // 92: wuzz.catalog.v1.ListVoucherGrantsRequest
+	(*ListVoucherGrantsResponse)(nil),     // 93: wuzz.catalog.v1.ListVoucherGrantsResponse
+	(*InjectCustomer)(nil),                // 94: wuzz.catalog.v1.InjectCustomer
+	(*InjectVoucherRequest)(nil),          // 95: wuzz.catalog.v1.InjectVoucherRequest
+	(*VoucherInjection)(nil),              // 96: wuzz.catalog.v1.VoucherInjection
+	(*InjectVoucherResponse)(nil),         // 97: wuzz.catalog.v1.InjectVoucherResponse
+	(*ListVoucherInjectionsRequest)(nil),  // 98: wuzz.catalog.v1.ListVoucherInjectionsRequest
+	(*ListVoucherInjectionsResponse)(nil), // 99: wuzz.catalog.v1.ListVoucherInjectionsResponse
+	(*MyVoucher)(nil),                     // 100: wuzz.catalog.v1.MyVoucher
+	(*ListMyVouchersRequest)(nil),         // 101: wuzz.catalog.v1.ListMyVouchersRequest
+	(*ListMyVouchersResponse)(nil),        // 102: wuzz.catalog.v1.ListMyVouchersResponse
+	(*ClaimVoucherRequest)(nil),           // 103: wuzz.catalog.v1.ClaimVoucherRequest
+	(*MyVoucherResponse)(nil),             // 104: wuzz.catalog.v1.MyVoucherResponse
+	(*BomRef)(nil),                        // 105: wuzz.catalog.v1.BomRef
+	(*BomLine)(nil),                       // 106: wuzz.catalog.v1.BomLine
+	(*Bom)(nil),                           // 107: wuzz.catalog.v1.Bom
+	(*SetBomRequest)(nil),                 // 108: wuzz.catalog.v1.SetBomRequest
+	(*GetServiceCostingRequest)(nil),      // 109: wuzz.catalog.v1.GetServiceCostingRequest
+	(*CostedComponent)(nil),               // 110: wuzz.catalog.v1.CostedComponent
+	(*CostedGroup)(nil),                   // 111: wuzz.catalog.v1.CostedGroup
+	(*ServiceCosting)(nil),                // 112: wuzz.catalog.v1.ServiceCosting
+	(*CalcCostingRequest)(nil),            // 113: wuzz.catalog.v1.CalcCostingRequest
+	(*CostedLine)(nil),                    // 114: wuzz.catalog.v1.CostedLine
+	(*CalcCostingResponse)(nil),           // 115: wuzz.catalog.v1.CalcCostingResponse
+	(*StockRow)(nil),                      // 116: wuzz.catalog.v1.StockRow
+	(*ListStockRequest)(nil),              // 117: wuzz.catalog.v1.ListStockRequest
+	(*ListStockResponse)(nil),             // 118: wuzz.catalog.v1.ListStockResponse
+	(*StockMovement)(nil),                 // 119: wuzz.catalog.v1.StockMovement
+	(*ListMovementsRequest)(nil),          // 120: wuzz.catalog.v1.ListMovementsRequest
+	(*ListMovementsResponse)(nil),         // 121: wuzz.catalog.v1.ListMovementsResponse
+	(*ReceiveStockRequest)(nil),           // 122: wuzz.catalog.v1.ReceiveStockRequest
+	(*WasteStockRequest)(nil),             // 123: wuzz.catalog.v1.WasteStockRequest
+	(*AdjustStockRequest)(nil),            // 124: wuzz.catalog.v1.AdjustStockRequest
+	(*TransferStockRequest)(nil),          // 125: wuzz.catalog.v1.TransferStockRequest
+	(*SetMinStockRequest)(nil),            // 126: wuzz.catalog.v1.SetMinStockRequest
+	(*StockMovementResponse)(nil),         // 127: wuzz.catalog.v1.StockMovementResponse
+	(*TransferStockResponse)(nil),         // 128: wuzz.catalog.v1.TransferStockResponse
+	(*StockRowResponse)(nil),              // 129: wuzz.catalog.v1.StockRowResponse
+	(*OrderStockLine)(nil),                // 130: wuzz.catalog.v1.OrderStockLine
+	(*ApplyOrderStockRequest)(nil),        // 131: wuzz.catalog.v1.ApplyOrderStockRequest
+	(*ApplyOrderStockResponse)(nil),       // 132: wuzz.catalog.v1.ApplyOrderStockResponse
+	(*timestamppb.Timestamp)(nil),         // 133: google.protobuf.Timestamp
 }
 var file_wuzz_catalog_v1_catalog_proto_depIdxs = []int32{
-	32, // 0: wuzz.catalog.v1.Outlet.created_at:type_name -> google.protobuf.Timestamp
-	32, // 1: wuzz.catalog.v1.Outlet.updated_at:type_name -> google.protobuf.Timestamp
-	32, // 2: wuzz.catalog.v1.ServiceItem.created_at:type_name -> google.protobuf.Timestamp
-	32, // 3: wuzz.catalog.v1.ServiceItem.updated_at:type_name -> google.protobuf.Timestamp
-	0,  // 4: wuzz.catalog.v1.ListOutletsResponse.outlets:type_name -> wuzz.catalog.v1.Outlet
-	0,  // 5: wuzz.catalog.v1.GetOutletResponse.outlet:type_name -> wuzz.catalog.v1.Outlet
-	0,  // 6: wuzz.catalog.v1.CreateOutletResponse.outlet:type_name -> wuzz.catalog.v1.Outlet
-	0,  // 7: wuzz.catalog.v1.UpdateOutletResponse.outlet:type_name -> wuzz.catalog.v1.Outlet
-	1,  // 8: wuzz.catalog.v1.ListServicesResponse.services:type_name -> wuzz.catalog.v1.ServiceItem
-	1,  // 9: wuzz.catalog.v1.CreateServiceResponse.service:type_name -> wuzz.catalog.v1.ServiceItem
-	1,  // 10: wuzz.catalog.v1.UpdateServiceResponse.service:type_name -> wuzz.catalog.v1.ServiceItem
-	16, // 11: wuzz.catalog.v1.NearbyOutletsResponse.outlets:type_name -> wuzz.catalog.v1.OutletView
-	20, // 12: wuzz.catalog.v1.ResolveCoverageResponse.area:type_name -> wuzz.catalog.v1.CoverageArea
-	22, // 13: wuzz.catalog.v1.BrowseServicesResponse.services:type_name -> wuzz.catalog.v1.ServiceView
-	25, // 14: wuzz.catalog.v1.ServiceTier.pricing:type_name -> wuzz.catalog.v1.ServiceTierPricing
-	27, // 15: wuzz.catalog.v1.ServiceSection.addons:type_name -> wuzz.catalog.v1.ServiceAddon
-	22, // 16: wuzz.catalog.v1.ServiceDetail.service:type_name -> wuzz.catalog.v1.ServiceView
-	26, // 17: wuzz.catalog.v1.ServiceDetail.tiers:type_name -> wuzz.catalog.v1.ServiceTier
-	28, // 18: wuzz.catalog.v1.ServiceDetail.sections:type_name -> wuzz.catalog.v1.ServiceSection
-	29, // 19: wuzz.catalog.v1.GetServiceDetailResponse.detail:type_name -> wuzz.catalog.v1.ServiceDetail
-	2,  // 20: wuzz.catalog.v1.CatalogService.ListOutlets:input_type -> wuzz.catalog.v1.ListOutletsRequest
-	4,  // 21: wuzz.catalog.v1.CatalogService.GetOutlet:input_type -> wuzz.catalog.v1.GetOutletRequest
-	6,  // 22: wuzz.catalog.v1.CatalogService.CreateOutlet:input_type -> wuzz.catalog.v1.CreateOutletRequest
-	8,  // 23: wuzz.catalog.v1.CatalogService.UpdateOutlet:input_type -> wuzz.catalog.v1.UpdateOutletRequest
-	17, // 24: wuzz.catalog.v1.CatalogService.NearbyOutlets:input_type -> wuzz.catalog.v1.NearbyOutletsRequest
-	19, // 25: wuzz.catalog.v1.CatalogService.ResolveCoverage:input_type -> wuzz.catalog.v1.ResolveCoverageRequest
-	23, // 26: wuzz.catalog.v1.CatalogService.BrowseServices:input_type -> wuzz.catalog.v1.BrowseServicesRequest
-	30, // 27: wuzz.catalog.v1.CatalogService.GetServiceDetail:input_type -> wuzz.catalog.v1.GetServiceDetailRequest
-	10, // 28: wuzz.catalog.v1.CatalogService.ListServices:input_type -> wuzz.catalog.v1.ListServicesRequest
-	12, // 29: wuzz.catalog.v1.CatalogService.CreateService:input_type -> wuzz.catalog.v1.CreateServiceRequest
-	14, // 30: wuzz.catalog.v1.CatalogService.UpdateService:input_type -> wuzz.catalog.v1.UpdateServiceRequest
-	3,  // 31: wuzz.catalog.v1.CatalogService.ListOutlets:output_type -> wuzz.catalog.v1.ListOutletsResponse
-	5,  // 32: wuzz.catalog.v1.CatalogService.GetOutlet:output_type -> wuzz.catalog.v1.GetOutletResponse
-	7,  // 33: wuzz.catalog.v1.CatalogService.CreateOutlet:output_type -> wuzz.catalog.v1.CreateOutletResponse
-	9,  // 34: wuzz.catalog.v1.CatalogService.UpdateOutlet:output_type -> wuzz.catalog.v1.UpdateOutletResponse
-	18, // 35: wuzz.catalog.v1.CatalogService.NearbyOutlets:output_type -> wuzz.catalog.v1.NearbyOutletsResponse
-	21, // 36: wuzz.catalog.v1.CatalogService.ResolveCoverage:output_type -> wuzz.catalog.v1.ResolveCoverageResponse
-	24, // 37: wuzz.catalog.v1.CatalogService.BrowseServices:output_type -> wuzz.catalog.v1.BrowseServicesResponse
-	31, // 38: wuzz.catalog.v1.CatalogService.GetServiceDetail:output_type -> wuzz.catalog.v1.GetServiceDetailResponse
-	11, // 39: wuzz.catalog.v1.CatalogService.ListServices:output_type -> wuzz.catalog.v1.ListServicesResponse
-	13, // 40: wuzz.catalog.v1.CatalogService.CreateService:output_type -> wuzz.catalog.v1.CreateServiceResponse
-	15, // 41: wuzz.catalog.v1.CatalogService.UpdateService:output_type -> wuzz.catalog.v1.UpdateServiceResponse
-	31, // [31:42] is the sub-list for method output_type
-	20, // [20:31] is the sub-list for method input_type
-	20, // [20:20] is the sub-list for extension type_name
-	20, // [20:20] is the sub-list for extension extendee
-	0,  // [0:20] is the sub-list for field type_name
+	133, // 0: wuzz.catalog.v1.Outlet.created_at:type_name -> google.protobuf.Timestamp
+	133, // 1: wuzz.catalog.v1.Outlet.updated_at:type_name -> google.protobuf.Timestamp
+	1,   // 2: wuzz.catalog.v1.Outlet.hours:type_name -> wuzz.catalog.v1.OutletDay
+	133, // 3: wuzz.catalog.v1.ServiceItem.created_at:type_name -> google.protobuf.Timestamp
+	133, // 4: wuzz.catalog.v1.ServiceItem.updated_at:type_name -> google.protobuf.Timestamp
+	6,   // 5: wuzz.catalog.v1.ServiceItem.variant_groups:type_name -> wuzz.catalog.v1.VariantGroup
+	8,   // 6: wuzz.catalog.v1.ServiceItem.modifier_groups:type_name -> wuzz.catalog.v1.ModifierGroup
+	5,   // 7: wuzz.catalog.v1.VariantGroup.options:type_name -> wuzz.catalog.v1.VariantOption
+	4,   // 8: wuzz.catalog.v1.VariantGroup.services:type_name -> wuzz.catalog.v1.ServiceRef
+	133, // 9: wuzz.catalog.v1.VariantGroup.created_at:type_name -> google.protobuf.Timestamp
+	133, // 10: wuzz.catalog.v1.VariantGroup.updated_at:type_name -> google.protobuf.Timestamp
+	7,   // 11: wuzz.catalog.v1.ModifierGroup.options:type_name -> wuzz.catalog.v1.ModifierOption
+	4,   // 12: wuzz.catalog.v1.ModifierGroup.services:type_name -> wuzz.catalog.v1.ServiceRef
+	133, // 13: wuzz.catalog.v1.ModifierGroup.created_at:type_name -> google.protobuf.Timestamp
+	133, // 14: wuzz.catalog.v1.ModifierGroup.updated_at:type_name -> google.protobuf.Timestamp
+	6,   // 15: wuzz.catalog.v1.ListVariantGroupsResponse.groups:type_name -> wuzz.catalog.v1.VariantGroup
+	6,   // 16: wuzz.catalog.v1.VariantGroupResponse.group:type_name -> wuzz.catalog.v1.VariantGroup
+	6,   // 17: wuzz.catalog.v1.SaveVariantGroupRequest.group:type_name -> wuzz.catalog.v1.VariantGroup
+	8,   // 18: wuzz.catalog.v1.ListModifierGroupsResponse.groups:type_name -> wuzz.catalog.v1.ModifierGroup
+	8,   // 19: wuzz.catalog.v1.ModifierGroupResponse.group:type_name -> wuzz.catalog.v1.ModifierGroup
+	8,   // 20: wuzz.catalog.v1.SaveModifierGroupRequest.group:type_name -> wuzz.catalog.v1.ModifierGroup
+	26,  // 21: wuzz.catalog.v1.ListOutletsRequest.bounds:type_name -> wuzz.catalog.v1.Bounds
+	0,   // 22: wuzz.catalog.v1.ListOutletsResponse.outlets:type_name -> wuzz.catalog.v1.Outlet
+	0,   // 23: wuzz.catalog.v1.GetOutletResponse.outlet:type_name -> wuzz.catalog.v1.Outlet
+	1,   // 24: wuzz.catalog.v1.CreateOutletRequest.hours:type_name -> wuzz.catalog.v1.OutletDay
+	0,   // 25: wuzz.catalog.v1.CreateOutletResponse.outlet:type_name -> wuzz.catalog.v1.Outlet
+	1,   // 26: wuzz.catalog.v1.UpdateOutletRequest.hours:type_name -> wuzz.catalog.v1.OutletDay
+	0,   // 27: wuzz.catalog.v1.UpdateOutletResponse.outlet:type_name -> wuzz.catalog.v1.Outlet
+	2,   // 28: wuzz.catalog.v1.ListServicesResponse.services:type_name -> wuzz.catalog.v1.ServiceItem
+	3,   // 29: wuzz.catalog.v1.CreateServiceRequest.variant_group_ids:type_name -> wuzz.catalog.v1.IdList
+	3,   // 30: wuzz.catalog.v1.CreateServiceRequest.modifier_group_ids:type_name -> wuzz.catalog.v1.IdList
+	2,   // 31: wuzz.catalog.v1.CreateServiceResponse.service:type_name -> wuzz.catalog.v1.ServiceItem
+	3,   // 32: wuzz.catalog.v1.UpdateServiceRequest.variant_group_ids:type_name -> wuzz.catalog.v1.IdList
+	3,   // 33: wuzz.catalog.v1.UpdateServiceRequest.modifier_group_ids:type_name -> wuzz.catalog.v1.IdList
+	40,  // 34: wuzz.catalog.v1.ListTaxRatesResponse.rates:type_name -> wuzz.catalog.v1.TaxRate
+	39,  // 35: wuzz.catalog.v1.ListServiceCategoriesResponse.categories:type_name -> wuzz.catalog.v1.ServiceCategory
+	2,   // 36: wuzz.catalog.v1.UpdateServiceResponse.service:type_name -> wuzz.catalog.v1.ServiceItem
+	46,  // 37: wuzz.catalog.v1.NearbyOutletsResponse.outlets:type_name -> wuzz.catalog.v1.OutletView
+	50,  // 38: wuzz.catalog.v1.ResolveCoverageResponse.area:type_name -> wuzz.catalog.v1.CoverageArea
+	52,  // 39: wuzz.catalog.v1.BrowseServicesResponse.services:type_name -> wuzz.catalog.v1.ServiceView
+	55,  // 40: wuzz.catalog.v1.ServiceTier.pricing:type_name -> wuzz.catalog.v1.ServiceTierPricing
+	57,  // 41: wuzz.catalog.v1.ServiceSection.addons:type_name -> wuzz.catalog.v1.ServiceAddon
+	52,  // 42: wuzz.catalog.v1.ServiceDetail.service:type_name -> wuzz.catalog.v1.ServiceView
+	56,  // 43: wuzz.catalog.v1.ServiceDetail.tiers:type_name -> wuzz.catalog.v1.ServiceTier
+	58,  // 44: wuzz.catalog.v1.ServiceDetail.sections:type_name -> wuzz.catalog.v1.ServiceSection
+	59,  // 45: wuzz.catalog.v1.GetServiceDetailResponse.detail:type_name -> wuzz.catalog.v1.ServiceDetail
+	133, // 46: wuzz.catalog.v1.Material.created_at:type_name -> google.protobuf.Timestamp
+	133, // 47: wuzz.catalog.v1.Material.updated_at:type_name -> google.protobuf.Timestamp
+	62,  // 48: wuzz.catalog.v1.ListMaterialsResponse.materials:type_name -> wuzz.catalog.v1.Material
+	62,  // 49: wuzz.catalog.v1.SaveMaterialRequest.material:type_name -> wuzz.catalog.v1.Material
+	62,  // 50: wuzz.catalog.v1.MaterialResponse.material:type_name -> wuzz.catalog.v1.Material
+	133, // 51: wuzz.catalog.v1.Banner.starts_at:type_name -> google.protobuf.Timestamp
+	133, // 52: wuzz.catalog.v1.Banner.ends_at:type_name -> google.protobuf.Timestamp
+	69,  // 53: wuzz.catalog.v1.Banner.outlets:type_name -> wuzz.catalog.v1.BannerOutlet
+	133, // 54: wuzz.catalog.v1.Banner.created_at:type_name -> google.protobuf.Timestamp
+	133, // 55: wuzz.catalog.v1.Banner.updated_at:type_name -> google.protobuf.Timestamp
+	68,  // 56: wuzz.catalog.v1.ListBannersResponse.banners:type_name -> wuzz.catalog.v1.Banner
+	68,  // 57: wuzz.catalog.v1.SaveBannerRequest.banner:type_name -> wuzz.catalog.v1.Banner
+	68,  // 58: wuzz.catalog.v1.BannerResponse.banner:type_name -> wuzz.catalog.v1.Banner
+	68,  // 59: wuzz.catalog.v1.ListLiveBannersResponse.banners:type_name -> wuzz.catalog.v1.Banner
+	133, // 60: wuzz.catalog.v1.Voucher.starts_at:type_name -> google.protobuf.Timestamp
+	133, // 61: wuzz.catalog.v1.Voucher.ends_at:type_name -> google.protobuf.Timestamp
+	69,  // 62: wuzz.catalog.v1.Voucher.outlets:type_name -> wuzz.catalog.v1.BannerOutlet
+	82,  // 63: wuzz.catalog.v1.Voucher.services:type_name -> wuzz.catalog.v1.VoucherService
+	133, // 64: wuzz.catalog.v1.Voucher.created_at:type_name -> google.protobuf.Timestamp
+	133, // 65: wuzz.catalog.v1.Voucher.updated_at:type_name -> google.protobuf.Timestamp
+	81,  // 66: wuzz.catalog.v1.ListVouchersResponse.vouchers:type_name -> wuzz.catalog.v1.Voucher
+	81,  // 67: wuzz.catalog.v1.SaveVoucherRequest.voucher:type_name -> wuzz.catalog.v1.Voucher
+	81,  // 68: wuzz.catalog.v1.VoucherResponse.voucher:type_name -> wuzz.catalog.v1.Voucher
+	133, // 69: wuzz.catalog.v1.VoucherGrant.granted_at:type_name -> google.protobuf.Timestamp
+	133, // 70: wuzz.catalog.v1.VoucherGrant.expires_at:type_name -> google.protobuf.Timestamp
+	91,  // 71: wuzz.catalog.v1.ListVoucherGrantsResponse.grants:type_name -> wuzz.catalog.v1.VoucherGrant
+	94,  // 72: wuzz.catalog.v1.InjectVoucherRequest.customers:type_name -> wuzz.catalog.v1.InjectCustomer
+	133, // 73: wuzz.catalog.v1.InjectVoucherRequest.expires_at:type_name -> google.protobuf.Timestamp
+	133, // 74: wuzz.catalog.v1.VoucherInjection.created_at:type_name -> google.protobuf.Timestamp
+	96,  // 75: wuzz.catalog.v1.InjectVoucherResponse.injection:type_name -> wuzz.catalog.v1.VoucherInjection
+	96,  // 76: wuzz.catalog.v1.ListVoucherInjectionsResponse.injections:type_name -> wuzz.catalog.v1.VoucherInjection
+	133, // 77: wuzz.catalog.v1.MyVoucher.starts_at:type_name -> google.protobuf.Timestamp
+	133, // 78: wuzz.catalog.v1.MyVoucher.expires_at:type_name -> google.protobuf.Timestamp
+	69,  // 79: wuzz.catalog.v1.MyVoucher.outlets:type_name -> wuzz.catalog.v1.BannerOutlet
+	82,  // 80: wuzz.catalog.v1.MyVoucher.services:type_name -> wuzz.catalog.v1.VoucherService
+	133, // 81: wuzz.catalog.v1.MyVoucher.claimed_at:type_name -> google.protobuf.Timestamp
+	100, // 82: wuzz.catalog.v1.ListMyVouchersResponse.vouchers:type_name -> wuzz.catalog.v1.MyVoucher
+	100, // 83: wuzz.catalog.v1.MyVoucherResponse.voucher:type_name -> wuzz.catalog.v1.MyVoucher
+	106, // 84: wuzz.catalog.v1.Bom.lines:type_name -> wuzz.catalog.v1.BomLine
+	105, // 85: wuzz.catalog.v1.SetBomRequest.owner:type_name -> wuzz.catalog.v1.BomRef
+	106, // 86: wuzz.catalog.v1.SetBomRequest.lines:type_name -> wuzz.catalog.v1.BomLine
+	110, // 87: wuzz.catalog.v1.CostedGroup.options:type_name -> wuzz.catalog.v1.CostedComponent
+	106, // 88: wuzz.catalog.v1.ServiceCosting.base_lines:type_name -> wuzz.catalog.v1.BomLine
+	111, // 89: wuzz.catalog.v1.ServiceCosting.variant_groups:type_name -> wuzz.catalog.v1.CostedGroup
+	111, // 90: wuzz.catalog.v1.ServiceCosting.modifier_groups:type_name -> wuzz.catalog.v1.CostedGroup
+	114, // 91: wuzz.catalog.v1.CalcCostingResponse.lines:type_name -> wuzz.catalog.v1.CostedLine
+	116, // 92: wuzz.catalog.v1.ListStockResponse.rows:type_name -> wuzz.catalog.v1.StockRow
+	133, // 93: wuzz.catalog.v1.StockMovement.created_at:type_name -> google.protobuf.Timestamp
+	119, // 94: wuzz.catalog.v1.ListMovementsResponse.movements:type_name -> wuzz.catalog.v1.StockMovement
+	119, // 95: wuzz.catalog.v1.StockMovementResponse.movement:type_name -> wuzz.catalog.v1.StockMovement
+	119, // 96: wuzz.catalog.v1.TransferStockResponse.out:type_name -> wuzz.catalog.v1.StockMovement
+	119, // 97: wuzz.catalog.v1.TransferStockResponse.in:type_name -> wuzz.catalog.v1.StockMovement
+	116, // 98: wuzz.catalog.v1.StockRowResponse.row:type_name -> wuzz.catalog.v1.StockRow
+	130, // 99: wuzz.catalog.v1.ApplyOrderStockRequest.lines:type_name -> wuzz.catalog.v1.OrderStockLine
+	25,  // 100: wuzz.catalog.v1.CatalogService.ListOutlets:input_type -> wuzz.catalog.v1.ListOutletsRequest
+	28,  // 101: wuzz.catalog.v1.CatalogService.GetOutlet:input_type -> wuzz.catalog.v1.GetOutletRequest
+	43,  // 102: wuzz.catalog.v1.CatalogService.ListServiceCategories:input_type -> wuzz.catalog.v1.ListServiceCategoriesRequest
+	41,  // 103: wuzz.catalog.v1.CatalogService.ListTaxRates:input_type -> wuzz.catalog.v1.ListTaxRatesRequest
+	30,  // 104: wuzz.catalog.v1.CatalogService.CreateOutlet:input_type -> wuzz.catalog.v1.CreateOutletRequest
+	32,  // 105: wuzz.catalog.v1.CatalogService.UpdateOutlet:input_type -> wuzz.catalog.v1.UpdateOutletRequest
+	14,  // 106: wuzz.catalog.v1.CatalogService.DeleteOutlet:input_type -> wuzz.catalog.v1.DeleteOutletRequest
+	47,  // 107: wuzz.catalog.v1.CatalogService.NearbyOutlets:input_type -> wuzz.catalog.v1.NearbyOutletsRequest
+	49,  // 108: wuzz.catalog.v1.CatalogService.ResolveCoverage:input_type -> wuzz.catalog.v1.ResolveCoverageRequest
+	53,  // 109: wuzz.catalog.v1.CatalogService.BrowseServices:input_type -> wuzz.catalog.v1.BrowseServicesRequest
+	60,  // 110: wuzz.catalog.v1.CatalogService.GetServiceDetail:input_type -> wuzz.catalog.v1.GetServiceDetailRequest
+	34,  // 111: wuzz.catalog.v1.CatalogService.ListServices:input_type -> wuzz.catalog.v1.ListServicesRequest
+	36,  // 112: wuzz.catalog.v1.CatalogService.CreateService:input_type -> wuzz.catalog.v1.CreateServiceRequest
+	38,  // 113: wuzz.catalog.v1.CatalogService.UpdateService:input_type -> wuzz.catalog.v1.UpdateServiceRequest
+	16,  // 114: wuzz.catalog.v1.CatalogService.DeleteService:input_type -> wuzz.catalog.v1.DeleteServiceRequest
+	9,   // 115: wuzz.catalog.v1.CatalogService.ListVariantGroups:input_type -> wuzz.catalog.v1.ListVariantGroupsRequest
+	11,  // 116: wuzz.catalog.v1.CatalogService.GetVariantGroup:input_type -> wuzz.catalog.v1.GetVariantGroupRequest
+	13,  // 117: wuzz.catalog.v1.CatalogService.CreateVariantGroup:input_type -> wuzz.catalog.v1.SaveVariantGroupRequest
+	13,  // 118: wuzz.catalog.v1.CatalogService.UpdateVariantGroup:input_type -> wuzz.catalog.v1.SaveVariantGroupRequest
+	18,  // 119: wuzz.catalog.v1.CatalogService.DeleteVariantGroup:input_type -> wuzz.catalog.v1.DeleteGroupRequest
+	20,  // 120: wuzz.catalog.v1.CatalogService.ListModifierGroups:input_type -> wuzz.catalog.v1.ListModifierGroupsRequest
+	22,  // 121: wuzz.catalog.v1.CatalogService.GetModifierGroup:input_type -> wuzz.catalog.v1.GetModifierGroupRequest
+	24,  // 122: wuzz.catalog.v1.CatalogService.CreateModifierGroup:input_type -> wuzz.catalog.v1.SaveModifierGroupRequest
+	24,  // 123: wuzz.catalog.v1.CatalogService.UpdateModifierGroup:input_type -> wuzz.catalog.v1.SaveModifierGroupRequest
+	18,  // 124: wuzz.catalog.v1.CatalogService.DeleteModifierGroup:input_type -> wuzz.catalog.v1.DeleteGroupRequest
+	63,  // 125: wuzz.catalog.v1.CatalogService.ListMaterials:input_type -> wuzz.catalog.v1.ListMaterialsRequest
+	65,  // 126: wuzz.catalog.v1.CatalogService.GetMaterial:input_type -> wuzz.catalog.v1.GetMaterialRequest
+	66,  // 127: wuzz.catalog.v1.CatalogService.CreateMaterial:input_type -> wuzz.catalog.v1.SaveMaterialRequest
+	66,  // 128: wuzz.catalog.v1.CatalogService.UpdateMaterial:input_type -> wuzz.catalog.v1.SaveMaterialRequest
+	65,  // 129: wuzz.catalog.v1.CatalogService.DeleteMaterial:input_type -> wuzz.catalog.v1.GetMaterialRequest
+	105, // 130: wuzz.catalog.v1.CatalogService.GetBom:input_type -> wuzz.catalog.v1.BomRef
+	108, // 131: wuzz.catalog.v1.CatalogService.SetBom:input_type -> wuzz.catalog.v1.SetBomRequest
+	109, // 132: wuzz.catalog.v1.CatalogService.GetServiceCosting:input_type -> wuzz.catalog.v1.GetServiceCostingRequest
+	113, // 133: wuzz.catalog.v1.CatalogService.CalcCosting:input_type -> wuzz.catalog.v1.CalcCostingRequest
+	70,  // 134: wuzz.catalog.v1.CatalogService.ListBanners:input_type -> wuzz.catalog.v1.ListBannersRequest
+	72,  // 135: wuzz.catalog.v1.CatalogService.GetBanner:input_type -> wuzz.catalog.v1.GetBannerRequest
+	73,  // 136: wuzz.catalog.v1.CatalogService.CreateBanner:input_type -> wuzz.catalog.v1.SaveBannerRequest
+	73,  // 137: wuzz.catalog.v1.CatalogService.UpdateBanner:input_type -> wuzz.catalog.v1.SaveBannerRequest
+	75,  // 138: wuzz.catalog.v1.CatalogService.SetBannerStatus:input_type -> wuzz.catalog.v1.SetBannerStatusRequest
+	72,  // 139: wuzz.catalog.v1.CatalogService.DeleteBanner:input_type -> wuzz.catalog.v1.GetBannerRequest
+	76,  // 140: wuzz.catalog.v1.CatalogService.ReorderBanners:input_type -> wuzz.catalog.v1.ReorderBannersRequest
+	77,  // 141: wuzz.catalog.v1.CatalogService.ListBannerScreens:input_type -> wuzz.catalog.v1.ListBannerScreensRequest
+	79,  // 142: wuzz.catalog.v1.CatalogService.ListLiveBanners:input_type -> wuzz.catalog.v1.ListLiveBannersRequest
+	83,  // 143: wuzz.catalog.v1.CatalogService.ListVouchers:input_type -> wuzz.catalog.v1.ListVouchersRequest
+	85,  // 144: wuzz.catalog.v1.CatalogService.GetVoucher:input_type -> wuzz.catalog.v1.GetVoucherRequest
+	86,  // 145: wuzz.catalog.v1.CatalogService.CreateVoucher:input_type -> wuzz.catalog.v1.SaveVoucherRequest
+	86,  // 146: wuzz.catalog.v1.CatalogService.UpdateVoucher:input_type -> wuzz.catalog.v1.SaveVoucherRequest
+	88,  // 147: wuzz.catalog.v1.CatalogService.SetVoucherStatus:input_type -> wuzz.catalog.v1.SetVoucherStatusRequest
+	85,  // 148: wuzz.catalog.v1.CatalogService.DeleteVoucher:input_type -> wuzz.catalog.v1.GetVoucherRequest
+	89,  // 149: wuzz.catalog.v1.CatalogService.ListVoucherColors:input_type -> wuzz.catalog.v1.ListVoucherColorsRequest
+	92,  // 150: wuzz.catalog.v1.CatalogService.ListVoucherGrants:input_type -> wuzz.catalog.v1.ListVoucherGrantsRequest
+	95,  // 151: wuzz.catalog.v1.CatalogService.InjectVoucher:input_type -> wuzz.catalog.v1.InjectVoucherRequest
+	98,  // 152: wuzz.catalog.v1.CatalogService.ListVoucherInjections:input_type -> wuzz.catalog.v1.ListVoucherInjectionsRequest
+	101, // 153: wuzz.catalog.v1.CatalogService.ListMyVouchers:input_type -> wuzz.catalog.v1.ListMyVouchersRequest
+	103, // 154: wuzz.catalog.v1.CatalogService.ClaimVoucher:input_type -> wuzz.catalog.v1.ClaimVoucherRequest
+	117, // 155: wuzz.catalog.v1.CatalogService.ListStock:input_type -> wuzz.catalog.v1.ListStockRequest
+	120, // 156: wuzz.catalog.v1.CatalogService.ListMovements:input_type -> wuzz.catalog.v1.ListMovementsRequest
+	122, // 157: wuzz.catalog.v1.CatalogService.ReceiveStock:input_type -> wuzz.catalog.v1.ReceiveStockRequest
+	123, // 158: wuzz.catalog.v1.CatalogService.WasteStock:input_type -> wuzz.catalog.v1.WasteStockRequest
+	124, // 159: wuzz.catalog.v1.CatalogService.AdjustStock:input_type -> wuzz.catalog.v1.AdjustStockRequest
+	125, // 160: wuzz.catalog.v1.CatalogService.TransferStock:input_type -> wuzz.catalog.v1.TransferStockRequest
+	126, // 161: wuzz.catalog.v1.CatalogService.SetMinStock:input_type -> wuzz.catalog.v1.SetMinStockRequest
+	131, // 162: wuzz.catalog.v1.CatalogService.ApplyOrderStock:input_type -> wuzz.catalog.v1.ApplyOrderStockRequest
+	27,  // 163: wuzz.catalog.v1.CatalogService.ListOutlets:output_type -> wuzz.catalog.v1.ListOutletsResponse
+	29,  // 164: wuzz.catalog.v1.CatalogService.GetOutlet:output_type -> wuzz.catalog.v1.GetOutletResponse
+	44,  // 165: wuzz.catalog.v1.CatalogService.ListServiceCategories:output_type -> wuzz.catalog.v1.ListServiceCategoriesResponse
+	42,  // 166: wuzz.catalog.v1.CatalogService.ListTaxRates:output_type -> wuzz.catalog.v1.ListTaxRatesResponse
+	31,  // 167: wuzz.catalog.v1.CatalogService.CreateOutlet:output_type -> wuzz.catalog.v1.CreateOutletResponse
+	33,  // 168: wuzz.catalog.v1.CatalogService.UpdateOutlet:output_type -> wuzz.catalog.v1.UpdateOutletResponse
+	15,  // 169: wuzz.catalog.v1.CatalogService.DeleteOutlet:output_type -> wuzz.catalog.v1.DeleteOutletResponse
+	48,  // 170: wuzz.catalog.v1.CatalogService.NearbyOutlets:output_type -> wuzz.catalog.v1.NearbyOutletsResponse
+	51,  // 171: wuzz.catalog.v1.CatalogService.ResolveCoverage:output_type -> wuzz.catalog.v1.ResolveCoverageResponse
+	54,  // 172: wuzz.catalog.v1.CatalogService.BrowseServices:output_type -> wuzz.catalog.v1.BrowseServicesResponse
+	61,  // 173: wuzz.catalog.v1.CatalogService.GetServiceDetail:output_type -> wuzz.catalog.v1.GetServiceDetailResponse
+	35,  // 174: wuzz.catalog.v1.CatalogService.ListServices:output_type -> wuzz.catalog.v1.ListServicesResponse
+	37,  // 175: wuzz.catalog.v1.CatalogService.CreateService:output_type -> wuzz.catalog.v1.CreateServiceResponse
+	45,  // 176: wuzz.catalog.v1.CatalogService.UpdateService:output_type -> wuzz.catalog.v1.UpdateServiceResponse
+	17,  // 177: wuzz.catalog.v1.CatalogService.DeleteService:output_type -> wuzz.catalog.v1.DeleteServiceResponse
+	10,  // 178: wuzz.catalog.v1.CatalogService.ListVariantGroups:output_type -> wuzz.catalog.v1.ListVariantGroupsResponse
+	12,  // 179: wuzz.catalog.v1.CatalogService.GetVariantGroup:output_type -> wuzz.catalog.v1.VariantGroupResponse
+	12,  // 180: wuzz.catalog.v1.CatalogService.CreateVariantGroup:output_type -> wuzz.catalog.v1.VariantGroupResponse
+	12,  // 181: wuzz.catalog.v1.CatalogService.UpdateVariantGroup:output_type -> wuzz.catalog.v1.VariantGroupResponse
+	19,  // 182: wuzz.catalog.v1.CatalogService.DeleteVariantGroup:output_type -> wuzz.catalog.v1.DeleteGroupResponse
+	21,  // 183: wuzz.catalog.v1.CatalogService.ListModifierGroups:output_type -> wuzz.catalog.v1.ListModifierGroupsResponse
+	23,  // 184: wuzz.catalog.v1.CatalogService.GetModifierGroup:output_type -> wuzz.catalog.v1.ModifierGroupResponse
+	23,  // 185: wuzz.catalog.v1.CatalogService.CreateModifierGroup:output_type -> wuzz.catalog.v1.ModifierGroupResponse
+	23,  // 186: wuzz.catalog.v1.CatalogService.UpdateModifierGroup:output_type -> wuzz.catalog.v1.ModifierGroupResponse
+	19,  // 187: wuzz.catalog.v1.CatalogService.DeleteModifierGroup:output_type -> wuzz.catalog.v1.DeleteGroupResponse
+	64,  // 188: wuzz.catalog.v1.CatalogService.ListMaterials:output_type -> wuzz.catalog.v1.ListMaterialsResponse
+	67,  // 189: wuzz.catalog.v1.CatalogService.GetMaterial:output_type -> wuzz.catalog.v1.MaterialResponse
+	67,  // 190: wuzz.catalog.v1.CatalogService.CreateMaterial:output_type -> wuzz.catalog.v1.MaterialResponse
+	67,  // 191: wuzz.catalog.v1.CatalogService.UpdateMaterial:output_type -> wuzz.catalog.v1.MaterialResponse
+	19,  // 192: wuzz.catalog.v1.CatalogService.DeleteMaterial:output_type -> wuzz.catalog.v1.DeleteGroupResponse
+	107, // 193: wuzz.catalog.v1.CatalogService.GetBom:output_type -> wuzz.catalog.v1.Bom
+	107, // 194: wuzz.catalog.v1.CatalogService.SetBom:output_type -> wuzz.catalog.v1.Bom
+	112, // 195: wuzz.catalog.v1.CatalogService.GetServiceCosting:output_type -> wuzz.catalog.v1.ServiceCosting
+	115, // 196: wuzz.catalog.v1.CatalogService.CalcCosting:output_type -> wuzz.catalog.v1.CalcCostingResponse
+	71,  // 197: wuzz.catalog.v1.CatalogService.ListBanners:output_type -> wuzz.catalog.v1.ListBannersResponse
+	74,  // 198: wuzz.catalog.v1.CatalogService.GetBanner:output_type -> wuzz.catalog.v1.BannerResponse
+	74,  // 199: wuzz.catalog.v1.CatalogService.CreateBanner:output_type -> wuzz.catalog.v1.BannerResponse
+	74,  // 200: wuzz.catalog.v1.CatalogService.UpdateBanner:output_type -> wuzz.catalog.v1.BannerResponse
+	74,  // 201: wuzz.catalog.v1.CatalogService.SetBannerStatus:output_type -> wuzz.catalog.v1.BannerResponse
+	19,  // 202: wuzz.catalog.v1.CatalogService.DeleteBanner:output_type -> wuzz.catalog.v1.DeleteGroupResponse
+	71,  // 203: wuzz.catalog.v1.CatalogService.ReorderBanners:output_type -> wuzz.catalog.v1.ListBannersResponse
+	78,  // 204: wuzz.catalog.v1.CatalogService.ListBannerScreens:output_type -> wuzz.catalog.v1.ListBannerScreensResponse
+	80,  // 205: wuzz.catalog.v1.CatalogService.ListLiveBanners:output_type -> wuzz.catalog.v1.ListLiveBannersResponse
+	84,  // 206: wuzz.catalog.v1.CatalogService.ListVouchers:output_type -> wuzz.catalog.v1.ListVouchersResponse
+	87,  // 207: wuzz.catalog.v1.CatalogService.GetVoucher:output_type -> wuzz.catalog.v1.VoucherResponse
+	87,  // 208: wuzz.catalog.v1.CatalogService.CreateVoucher:output_type -> wuzz.catalog.v1.VoucherResponse
+	87,  // 209: wuzz.catalog.v1.CatalogService.UpdateVoucher:output_type -> wuzz.catalog.v1.VoucherResponse
+	87,  // 210: wuzz.catalog.v1.CatalogService.SetVoucherStatus:output_type -> wuzz.catalog.v1.VoucherResponse
+	19,  // 211: wuzz.catalog.v1.CatalogService.DeleteVoucher:output_type -> wuzz.catalog.v1.DeleteGroupResponse
+	90,  // 212: wuzz.catalog.v1.CatalogService.ListVoucherColors:output_type -> wuzz.catalog.v1.ListVoucherColorsResponse
+	93,  // 213: wuzz.catalog.v1.CatalogService.ListVoucherGrants:output_type -> wuzz.catalog.v1.ListVoucherGrantsResponse
+	97,  // 214: wuzz.catalog.v1.CatalogService.InjectVoucher:output_type -> wuzz.catalog.v1.InjectVoucherResponse
+	99,  // 215: wuzz.catalog.v1.CatalogService.ListVoucherInjections:output_type -> wuzz.catalog.v1.ListVoucherInjectionsResponse
+	102, // 216: wuzz.catalog.v1.CatalogService.ListMyVouchers:output_type -> wuzz.catalog.v1.ListMyVouchersResponse
+	104, // 217: wuzz.catalog.v1.CatalogService.ClaimVoucher:output_type -> wuzz.catalog.v1.MyVoucherResponse
+	118, // 218: wuzz.catalog.v1.CatalogService.ListStock:output_type -> wuzz.catalog.v1.ListStockResponse
+	121, // 219: wuzz.catalog.v1.CatalogService.ListMovements:output_type -> wuzz.catalog.v1.ListMovementsResponse
+	127, // 220: wuzz.catalog.v1.CatalogService.ReceiveStock:output_type -> wuzz.catalog.v1.StockMovementResponse
+	127, // 221: wuzz.catalog.v1.CatalogService.WasteStock:output_type -> wuzz.catalog.v1.StockMovementResponse
+	127, // 222: wuzz.catalog.v1.CatalogService.AdjustStock:output_type -> wuzz.catalog.v1.StockMovementResponse
+	128, // 223: wuzz.catalog.v1.CatalogService.TransferStock:output_type -> wuzz.catalog.v1.TransferStockResponse
+	129, // 224: wuzz.catalog.v1.CatalogService.SetMinStock:output_type -> wuzz.catalog.v1.StockRowResponse
+	132, // 225: wuzz.catalog.v1.CatalogService.ApplyOrderStock:output_type -> wuzz.catalog.v1.ApplyOrderStockResponse
+	163, // [163:226] is the sub-list for method output_type
+	100, // [100:163] is the sub-list for method input_type
+	100, // [100:100] is the sub-list for extension type_name
+	100, // [100:100] is the sub-list for extension extendee
+	0,   // [0:100] is the sub-list for field type_name
 }
 
 func init() { file_wuzz_catalog_v1_catalog_proto_init() }
@@ -2486,13 +11171,14 @@ func file_wuzz_catalog_v1_catalog_proto_init() {
 	if File_wuzz_catalog_v1_catalog_proto != nil {
 		return
 	}
+	file_wuzz_catalog_v1_catalog_proto_msgTypes[8].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_wuzz_catalog_v1_catalog_proto_rawDesc), len(file_wuzz_catalog_v1_catalog_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   32,
+			NumMessages:   133,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

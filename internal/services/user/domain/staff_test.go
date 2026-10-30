@@ -2,36 +2,86 @@ package domain
 
 import "testing"
 
-func TestMayUse(t *testing.T) {
-	customer := User{}
-	cashier := User{Roles: []string{"outlet:3"}}
-	admin := User{Roles: []string{"admin"}}
-	wuzzer := User{Roles: []string{"wuzzer"}}
+func TestAccountMayUse(t *testing.T) {
+	admin := Account{Kind: KindAdmin, Role: "finance"}
+	adminAtOutlet := Account{Kind: KindAdmin, Role: "super", OutletID: 1}
+	front := Account{Kind: KindStaff, Role: RoleFront, OutletID: 3}
+	wuzzer := Account{Kind: KindStaff, Role: RoleWuzzer}
 
 	cases := []struct {
 		name     string
-		user     User
+		account  Account
 		audience string
 		want     bool
 	}{
-		{"customer app is open to everyone", customer, "", true},
-		{"customer cannot use backoffice", customer, AudienceBackoffice, false},
-		{"customer cannot use pos", customer, AudiencePOS, false},
-		{"cashier can use pos", cashier, AudiencePOS, true},
-		{"cashier cannot use backoffice", cashier, AudienceBackoffice, false},
 		{"admin can use backoffice", admin, AudienceBackoffice, true},
-		{"admin can use pos", admin, AudiencePOS, true},
+		{"an admin with no outlet cannot use pos: a till is one outlet's", admin, AudiencePOS, false},
+		{"an admin assigned to an outlet can use pos", adminAtOutlet, AudiencePOS, true},
+		{"admin can use station", admin, AudienceStation, true},
+		{"front can use pos", front, AudiencePOS, true},
+		{"front cannot use backoffice", front, AudienceBackoffice, false},
+		{"front cannot use station", front, AudienceStation, false},
 		{"wuzzer can use station", wuzzer, AudienceStation, true},
 		{"wuzzer cannot use pos", wuzzer, AudiencePOS, false},
 		{"wuzzer cannot use backoffice", wuzzer, AudienceBackoffice, false},
-		{"cashier cannot use station", cashier, AudienceStation, false},
-		{"customer cannot use station", customer, AudienceStation, false},
-		{"admin can use station", admin, AudienceStation, true},
+		{"the customer app is not a staff audience", admin, "", false},
 		{"unknown audience is refused", admin, "nope", false},
 	}
 	for _, c := range cases {
-		if got := c.user.MayUse(c.audience); got != c.want {
+		if got := c.account.MayUse(c.audience); got != c.want {
 			t.Errorf("%s: MayUse(%q) = %v, want %v", c.name, c.audience, got, c.want)
 		}
+	}
+}
+
+func TestAccountRoles(t *testing.T) {
+	cases := []struct {
+		account Account
+		want    []string
+	}{
+		{Account{Kind: KindAdmin, Role: "finance"}, []string{"admin", "admin:finance"}},
+		{Account{Kind: KindAdmin, Role: "super", OutletID: 1}, []string{"admin", "admin:super", "outlet:1"}},
+		{Account{Kind: KindStaff, Role: RoleFront, OutletID: 3}, []string{"outlet:3"}},
+		{Account{Kind: KindStaff, Role: RoleWuzzer}, []string{"wuzzer"}},
+	}
+	for _, c := range cases {
+		got := c.account.Roles()
+		if len(got) != len(c.want) {
+			t.Fatalf("%+v: roles = %v, want %v", c.account, got, c.want)
+		}
+		for i := range got {
+			if got[i] != c.want[i] {
+				t.Errorf("%+v: roles = %v, want %v", c.account, got, c.want)
+			}
+		}
+	}
+}
+
+func TestAccountID(t *testing.T) {
+	for _, c := range []struct {
+		kind string
+		n    int64
+	}{{KindAdmin, 7}, {KindStaff, 3}} {
+		kind, n, ok := ParseAccountID(AccountID(c.kind, c.n))
+		if !ok || kind != c.kind || n != c.n {
+			t.Errorf("round trip of %s %d gave %s %d %v", c.kind, c.n, kind, n, ok)
+		}
+	}
+	for _, customer := range []string{"42", "", "x:1", "a:", "a:x"} {
+		if _, _, ok := ParseAccountID(customer); ok {
+			t.Errorf("%q should not parse as an account id", customer)
+		}
+	}
+}
+
+func TestAccountValidate(t *testing.T) {
+	if err := (Account{Kind: KindStaff, Role: RoleFront, Name: "Kasir"}).Validate(); err == nil {
+		t.Error("front staff without an outlet should be refused")
+	}
+	if err := (Account{Kind: KindStaff, Role: RoleWuzzer, Name: "W", OutletID: 2}).Validate(); err == nil {
+		t.Error("a wuzzer with an outlet should be refused")
+	}
+	if err := (Account{Kind: KindStaff, Role: RoleFront, Name: "Kasir", OutletID: 2}).Validate(); err != nil {
+		t.Errorf("valid front staff refused: %v", err)
 	}
 }

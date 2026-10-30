@@ -128,10 +128,13 @@ func TestServicesAndDetail(t *testing.T) {
 	if err != nil || detail.Name != "Cuci Pakaian Kiloan" {
 		t.Fatalf("detail = %+v, %v", detail.ServiceView, err)
 	}
-	if len(detail.Tiers) != 2 || detail.Tiers[1].Pricing == nil || detail.Tiers[1].Pricing.Price != 10500 {
-		t.Errorf("tiers = %+v; want Reguler and Express at 1.5x", detail.Tiers)
+	// The customer app still reads tiers and sections: the first variant group and the modifier groups, as before.
+	if len(detail.Tiers) != 2 || detail.Tiers[0].Name != "Reguler" || detail.Tiers[0].Pricing.Price != 7000 ||
+		detail.Tiers[1].Name != "Express" || detail.Tiers[1].Pricing.Price != 10500 || detail.Tiers[1].Pricing.EstimatedTime != 1 {
+		t.Errorf("tiers = %+v; want Reguler 7000 and Express 10500", detail.Tiers)
 	}
-	if len(detail.Sections) != 3 || detail.Sections[0].Title != "Penyelesaian" || len(detail.Sections[0].Addons) != 2 {
+	if len(detail.Sections) != 3 || detail.Sections[0].Title != "Penyelesaian" || detail.Sections[0].Type != "single" || len(detail.Sections[0].Addons) != 2 ||
+		detail.Sections[2].Title != "Layanan Tambahan" || detail.Sections[2].Type != "multiple" || detail.Sections[0].Addons[1].Description == "" {
 		t.Errorf("sections = %+v", detail.Sections)
 	}
 	if _, err := d.ServiceDetail(context.Background(), 1); err == nil {

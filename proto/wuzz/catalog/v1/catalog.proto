@@ -12,8 +12,12 @@ option go_package = "github.com/koobam/wuzz-backend/gen/wuzz/catalog/v1;catalogv
 service CatalogService {
   rpc ListOutlets(ListOutletsRequest) returns (ListOutletsResponse);
   rpc GetOutlet(GetOutletRequest) returns (GetOutletResponse);
+  rpc ListServiceCategories(ListServiceCategoriesRequest) returns (ListServiceCategoriesResponse);
+  rpc ListTaxRates(ListTaxRatesRequest) returns (ListTaxRatesResponse);
   rpc CreateOutlet(CreateOutletRequest) returns (CreateOutletResponse);
   rpc UpdateOutlet(UpdateOutletRequest) returns (UpdateOutletResponse);
+  // Refused (FailedPrecondition/conflict) while the outlet has stock records; the gateway also checks staff and orders first.
+  rpc DeleteOutlet(DeleteOutletRequest) returns (DeleteOutletResponse);
 
   // Customer-app discovery, served from MongoDB (geo index + search). Public.
   rpc NearbyOutlets(NearbyOutletsRequest) returns (NearbyOutletsResponse);
@@ -25,6 +29,73 @@ service CatalogService {
   rpc ListServices(ListServicesRequest) returns (ListServicesResponse);
   rpc CreateService(CreateServiceRequest) returns (CreateServiceResponse);
   rpc UpdateService(UpdateServiceRequest) returns (UpdateServiceResponse);
+  // Takes the service's group links and its own recipe with it; orders keep their own copy of what they sold.
+  rpc DeleteService(DeleteServiceRequest) returns (DeleteServiceResponse);
+
+  // Reusable variant and modifier groups (admin writes).
+  rpc ListVariantGroups(ListVariantGroupsRequest) returns (ListVariantGroupsResponse);
+  rpc GetVariantGroup(GetVariantGroupRequest) returns (VariantGroupResponse);
+  rpc CreateVariantGroup(SaveVariantGroupRequest) returns (VariantGroupResponse);
+  rpc UpdateVariantGroup(SaveVariantGroupRequest) returns (VariantGroupResponse);
+  rpc DeleteVariantGroup(DeleteGroupRequest) returns (DeleteGroupResponse);
+  rpc ListModifierGroups(ListModifierGroupsRequest) returns (ListModifierGroupsResponse);
+  rpc GetModifierGroup(GetModifierGroupRequest) returns (ModifierGroupResponse);
+  rpc CreateModifierGroup(SaveModifierGroupRequest) returns (ModifierGroupResponse);
+  rpc UpdateModifierGroup(SaveModifierGroupRequest) returns (ModifierGroupResponse);
+  rpc DeleteModifierGroup(DeleteGroupRequest) returns (DeleteGroupResponse);
+
+  // Materials, recipes (BOM) and costing (admin). Quantities and costs travel as exact decimal strings.
+  rpc ListMaterials(ListMaterialsRequest) returns (ListMaterialsResponse);
+  rpc GetMaterial(GetMaterialRequest) returns (MaterialResponse);
+  rpc CreateMaterial(SaveMaterialRequest) returns (MaterialResponse);
+  rpc UpdateMaterial(SaveMaterialRequest) returns (MaterialResponse);
+  rpc DeleteMaterial(GetMaterialRequest) returns (DeleteGroupResponse);
+  rpc GetBom(BomRef) returns (Bom);
+  rpc SetBom(SetBomRequest) returns (Bom);
+  rpc GetServiceCosting(GetServiceCostingRequest) returns (ServiceCosting);
+  rpc CalcCosting(CalcCostingRequest) returns (CalcCostingResponse);
+
+  // Banners of the customer app (admin writes). ListLiveBanners is public: the banners on a phone right now.
+  rpc ListBanners(ListBannersRequest) returns (ListBannersResponse);
+  rpc GetBanner(GetBannerRequest) returns (BannerResponse);
+  rpc CreateBanner(SaveBannerRequest) returns (BannerResponse);
+  rpc UpdateBanner(SaveBannerRequest) returns (BannerResponse);
+  rpc SetBannerStatus(SetBannerStatusRequest) returns (BannerResponse);
+  rpc DeleteBanner(GetBannerRequest) returns (DeleteGroupResponse);
+  // Writes the carousel's order: ids must list every banner exactly once.
+  rpc ReorderBanners(ReorderBannersRequest) returns (ListBannersResponse);
+  // The screens of the app a banner may open (wuzz://screen/<key>).
+  rpc ListBannerScreens(ListBannerScreensRequest) returns (ListBannerScreensResponse);
+  rpc ListLiveBanners(ListLiveBannersRequest) returns (ListLiveBannersResponse);
+
+  // Vouchers (admin writes). ListMyVouchers and ClaimVoucher are the signed-in customer's own wallet.
+  rpc ListVouchers(ListVouchersRequest) returns (ListVouchersResponse);
+  rpc GetVoucher(GetVoucherRequest) returns (VoucherResponse);
+  rpc CreateVoucher(SaveVoucherRequest) returns (VoucherResponse);
+  rpc UpdateVoucher(SaveVoucherRequest) returns (VoucherResponse);
+  rpc SetVoucherStatus(SetVoucherStatusRequest) returns (VoucherResponse);
+  rpc DeleteVoucher(GetVoucherRequest) returns (DeleteGroupResponse);
+  // The colours a coupon may have.
+  rpc ListVoucherColors(ListVoucherColorsRequest) returns (ListVoucherColorsResponse);
+  // Who holds a voucher.
+  rpc ListVoucherGrants(ListVoucherGrantsRequest) returns (ListVoucherGrantsResponse);
+  // Puts a voucher in the wallets of customers the user service has already resolved, and audits it.
+  rpc InjectVoucher(InjectVoucherRequest) returns (InjectVoucherResponse);
+  rpc ListVoucherInjections(ListVoucherInjectionsRequest) returns (ListVoucherInjectionsResponse);
+  rpc ListMyVouchers(ListMyVouchersRequest) returns (ListMyVouchersResponse);
+  rpc ClaimVoucher(ClaimVoucherRequest) returns (MyVoucherResponse);
+
+  // The stock ledger. Admins use every outlet; outlet staff list and book receipts and waste at their own outlet only.
+  rpc ListStock(ListStockRequest) returns (ListStockResponse);
+  rpc ListMovements(ListMovementsRequest) returns (ListMovementsResponse);
+  rpc ReceiveStock(ReceiveStockRequest) returns (StockMovementResponse);
+  rpc WasteStock(WasteStockRequest) returns (StockMovementResponse);
+  rpc AdjustStock(AdjustStockRequest) returns (StockMovementResponse);
+  rpc TransferStock(TransferStockRequest) returns (TransferStockResponse);
+  rpc SetMinStock(SetMinStockRequest) returns (StockRowResponse);
+  // Called by the order service (not by people) to take an order's materials out of stock, or put them back; authenticated by
+  // the internal key. Idempotent per order.
+  rpc ApplyOrderStock(ApplyOrderStockRequest) returns (ApplyOrderStockResponse);
 }
 
 message Outlet {
@@ -37,6 +108,34 @@ message Outlet {
   bool active = 7;
   google.protobuf.Timestamp created_at = 8;
   google.protobuf.Timestamp updated_at = 9;
+  // Addresses (https) of the outlet's pictures; the first is its banner.
+  repeated string images = 10;
+  // "laundry", "caffe" or "all".
+  string category = 11;
+  // Opening and closing time, wall-clock "HH:MM" in Asia/Jakarta; a close before the open means it closes after midnight.
+  string open_time = 12;
+  string close_time = 13;
+  // How an order reaches the customer: "pickup", "delivery" or both.
+  repeated string delivery_types = 14;
+  // Whether the hours say it is open right now (worked out when the outlet is read).
+  bool is_open_now = 15;
+  // The clock the opening hours are on: "Asia/Jakarta" (WIB), "Asia/Makassar" (WITA) or "Asia/Jayapura" (WIT).
+  string timezone = 16;
+  // The week, Monday (weekday 0) to Sunday (6). open_time and close_time above are today's hours (empty when closed today).
+  repeated OutletDay hours = 17;
+  // Contact email of the outlet; empty when it has none. Lower case.
+  string email = 18;
+}
+
+// OutletDay is the opening hours of one weekday. A closed day has no times; a close before the open means it closes after midnight.
+// open_24h marks a day open round the clock: it has no times of its own (they are read back as "00:00"/"00:00") and it cannot also
+// be closed.
+message OutletDay {
+  int32 weekday = 1; // 0 = Monday ... 6 = Sunday
+  bool closed = 2;
+  string open_time = 3;
+  string close_time = 4;
+  bool open_24h = 5;
 }
 
 message ServiceItem {
@@ -49,6 +148,140 @@ message ServiceItem {
   bool active = 5;
   google.protobuf.Timestamp created_at = 6;
   google.protobuf.Timestamp updated_at = 7;
+  // Which category it is listed under (0 = none), the icon it is drawn with, and a line about it.
+  int64 category_id = 8;
+  string icon = 9;
+  string description = 10;
+  // The variant and modifier groups linked to the service, in order, with all their options.
+  repeated VariantGroup variant_groups = 11;
+  repeated ModifierGroup modifier_groups = 12;
+  // How tax is added to the price: "none" or "ppn" (the rate is the checkout's configuration, not stored here).
+  string tax_type = 13;
+  // A note for staff, never shown to customers.
+  string internal_notes = 14;
+  // `price` is what the customer pays (the price after tax). price_before_tax is what is stored and keyed in; both are whole
+  // rupiah, with the tax added once, rounded half away from zero. tax_rate_bps is the rate of tax_type (0 for "none").
+  int64 price_before_tax = 15;
+  int64 price_after_tax = 16;
+  int32 tax_rate_bps = 17;
+  // A discount on the list price (price_before_tax): "none", "value" (discount_value is whole rupiah) or "percent"
+  // (discount_value is basis points, 1250 = 12.5%). The discount comes off first and tax is added to what is left:
+  // discount_amount is what it takes off, price_after_discount = price_before_tax - discount_amount is the tax base, and
+  // price_after_tax = price_after_discount + tax. Each step rounds once, half away from zero.
+  string discount_type = 18;
+  int64 discount_value = 19;
+  int64 discount_amount = 20;
+  int64 price_after_discount = 21;
+}
+
+// A wrapper, so that "not given" (an update keeps the stored links) differs from an empty list (it clears them).
+message IdList { repeated int64 ids = 1; }
+
+// A service a group is used by.
+message ServiceRef {
+  int64 id = 1;
+  string name = 2;
+}
+
+message VariantOption {
+  int64 id = 1; // 0 = a new option, on a write
+  string name = 2;
+  // Rupiah added per unit to the service's price.
+  int64 price_delta = 3;
+  bool is_default = 4;
+  bool active = 5;
+  int32 sort_index = 6;
+  int32 estimated_time = 7;
+  string estimated_time_unit = 8;
+}
+
+// A choice of exactly one option, shared by the services that offer it.
+message VariantGroup {
+  int64 id = 1;
+  string name = 2;
+  string internal_notes = 3;
+  int32 sort_index = 4;
+  repeated VariantOption options = 5;
+  repeated ServiceRef services = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message ModifierOption {
+  int64 id = 1; // 0 = a new option, on a write
+  string name = 2;
+  string description = 3;
+  // Rupiah added per unit.
+  int64 price = 4;
+  bool active = 5;
+  int32 sort_index = 6;
+}
+
+// Optional add-ons with a rule: min 0 is optional, min >= 1 required; max unset is no ceiling.
+message ModifierGroup {
+  int64 id = 1;
+  string name = 2;
+  string internal_notes = 3;
+  int32 min = 4;
+  optional int32 max = 5;
+  repeated ModifierOption options = 6;
+  repeated ServiceRef services = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+// The list filters. q matches the group name, its note or any option name (case-insensitive, no wildcards); sort_by is one of
+// id, name, created_at, updated_at (empty = id); sort_dir is asc or desc (empty = asc).
+message ListVariantGroupsRequest {
+  string q = 1;
+  string sort_by = 2;
+  string sort_dir = 3;
+  // A page: limit defaults to 10 (at most 100), offset to 0.
+  int32 limit = 4;
+  int32 offset = 5;
+  // Only groups linked to this service (0 = any), and used / unused / empty (all) by any service.
+  int64 service_id = 6;
+  string usage = 7;
+}
+// total counts every group the filter matches, before limit and offset.
+message ListVariantGroupsResponse {
+  repeated VariantGroup groups = 1;
+  int64 total = 2;
+}
+message GetVariantGroupRequest { int64 id = 1; }
+message VariantGroupResponse { VariantGroup group = 1; }
+message SaveVariantGroupRequest {
+  int64 id = 1; // 0 on a create
+  VariantGroup group = 2;
+}
+message DeleteOutletRequest { int64 id = 1; }
+message DeleteOutletResponse {}
+message DeleteServiceRequest { int64 id = 1; }
+message DeleteServiceResponse {}
+
+message DeleteGroupRequest { int64 id = 1; }
+message DeleteGroupResponse {}
+
+message ListModifierGroupsRequest {
+  string q = 1;
+  string sort_by = 2;
+  string sort_dir = 3;
+  // required (min >= 1), optional (min 0) or empty for all.
+  string requirement = 4;
+  int32 limit = 5;
+  int32 offset = 6;
+  int64 service_id = 7;
+  string usage = 8;
+}
+message ListModifierGroupsResponse {
+  repeated ModifierGroup groups = 1;
+  int64 total = 2;
+}
+message GetModifierGroupRequest { int64 id = 1; }
+message ModifierGroupResponse { ModifierGroup group = 1; }
+message SaveModifierGroupRequest {
+  int64 id = 1; // 0 on a create
+  ModifierGroup group = 2;
 }
 
 message ListOutletsRequest {
@@ -56,8 +289,31 @@ message ListOutletsRequest {
   repeated int64 ids = 1;
   // Admins may ask for inactive outlets too.
   bool include_inactive = 2;
+  // Only outlets inside this box (a map's visible area). Unset = everywhere.
+  Bounds bounds = 3;
+  // A searchable page, used when limit > 0 (the back office's table): q matches name, address, phone or email; active is "", "true" or
+  // "false"; sort_by is one of id, name, address, phone, active (empty = id); sort_dir asc or desc. Admin only; ids and bounds
+  // are ignored then. With limit 0 the plain list above is returned and total stays 0.
+  string q = 4;
+  string active = 5;
+  string sort_by = 6;
+  string sort_dir = 7;
+  int32 limit = 8;
+  int32 offset = 9;
 }
-message ListOutletsResponse { repeated Outlet outlets = 1; }
+
+// A box on the map, in degrees.
+message Bounds {
+  double south = 1;
+  double west = 2;
+  double north = 3;
+  double east = 4;
+}
+message ListOutletsResponse {
+  repeated Outlet outlets = 1;
+  // How many outlets the paged filter matches, before limit and offset (0 for the plain list).
+  int64 total = 2;
+}
 
 message GetOutletRequest { int64 id = 1; }
 message GetOutletResponse { Outlet outlet = 1; }
@@ -68,6 +324,17 @@ message CreateOutletRequest {
   string phone = 3;
   double latitude = 4;
   double longitude = 5;
+  repeated string images = 6;
+  // Left empty, a new outlet is "all", open 08:00-22:00, pickup and delivery.
+  string category = 7;
+  string open_time = 8;
+  string close_time = 9;
+  repeated string delivery_types = 10;
+  // Left empty: Asia/Jakarta, and the week is open_time-close_time every day (08:00-22:00 when those are empty too).
+  string timezone = 11;
+  repeated OutletDay hours = 12;
+  // Optional contact email ("" = none); validated and lower-cased by the catalog.
+  string email = 13;
 }
 message CreateOutletResponse { Outlet outlet = 1; }
 
@@ -79,16 +346,53 @@ message UpdateOutletRequest {
   double latitude = 5;
   double longitude = 6;
   bool active = 7;
+  repeated string images = 8;
+  // These replace the stored values; the gateway fills what the caller left out from the outlet as it is.
+  string category = 9;
+  string open_time = 10;
+  string close_time = 11;
+  repeated string delivery_types = 12;
+  string timezone = 13;
+  repeated OutletDay hours = 14;
+  string email = 15;
 }
 message UpdateOutletResponse { Outlet outlet = 1; }
 
-message ListServicesRequest { bool include_inactive = 1; }
-message ListServicesResponse { repeated ServiceItem services = 1; }
+message ListServicesRequest {
+  bool include_inactive = 1;
+  // A searchable page, used when limit > 0 (the back office's table): q matches name, description or category name;
+  // category_id 0 = any; unit "" = any; active is "", "true" or "false"; sort_by is one of id, name, unit, price,
+  // category_id, active (empty = id). Admin only; include_inactive is implied. With limit 0 the plain list is returned.
+  string q = 2;
+  int64 category_id = 3;
+  string unit = 4;
+  string active = 5;
+  string sort_by = 6;
+  string sort_dir = 7;
+  int32 limit = 8;
+  int32 offset = 9;
+  // "" = any tax type, else "none" or "ppn".
+  string tax_type = 10;
+  // "" = any, else "none", "value" or "percent".
+  string discount_type = 11;
+}
+message ListServicesResponse {
+  repeated ServiceItem services = 1;
+  // How many services the paged filter matches, before limit and offset (0 for the plain list).
+  int64 total = 2;
+}
 
 message CreateServiceRequest {
   string name = 1;
   string unit = 2;
   int64 price = 3;
+  int64 category_id = 4; // 0 = none
+  IdList variant_group_ids = 5;
+  IdList modifier_group_ids = 6;
+  string tax_type = 7; // "none" or "ppn"; empty = "none"
+  string internal_notes = 8;
+  string discount_type = 9; // "none", "value" or "percent"; empty = "none"
+  int64 discount_value = 10; // whole rupiah for "value", basis points for "percent"
 }
 message CreateServiceResponse { ServiceItem service = 1; }
 
@@ -98,7 +402,33 @@ message UpdateServiceRequest {
   string unit = 3;
   int64 price = 4;
   bool active = 5;
+  int64 category_id = 6; // 0 = none
+  IdList variant_group_ids = 7;  // not set = keep the links
+  IdList modifier_group_ids = 8; // not set = keep the links
+  string tax_type = 9; // "none" or "ppn"; empty is refused (the gateway sends the stored one when the body leaves it out)
+  string internal_notes = 10;
+  string discount_type = 11; // "none", "value" or "percent"; empty is refused (the gateway sends the stored one)
+  int64 discount_value = 12;
 }
+
+// A group of services, as the POS lists them.
+message ServiceCategory {
+  int64 id = 1;
+  string name = 2;
+  // The name of an icon the apps know how to draw.
+  string icon = 3;
+  int32 sort_order = 4;
+}
+message TaxRate {
+  string tax_type = 1;
+  // Basis points: 1100 = 11%. 0 for "none".
+  int32 rate_bps = 2;
+}
+message ListTaxRatesRequest {}
+message ListTaxRatesResponse { repeated TaxRate rates = 1; }
+
+message ListServiceCategoriesRequest {}
+message ListServiceCategoriesResponse { repeated ServiceCategory categories = 1; }
 message UpdateServiceResponse { ServiceItem service = 1; }
 
 // OutletView is an outlet as the customer app browses it: what Postgres holds
@@ -166,6 +496,14 @@ message ServiceView {
   string description = 3;
   // Rupiah, whole.
   int64 price = 4;
+  // `price` is what the customer pays (after tax); these say how it came about.
+  int64 price_before_tax = 14;
+  int64 price_after_tax = 15;
+  string tax_type = 16;
+  int32 tax_rate_bps = 17;
+  // The discount comes off the list price (price_before_tax) before tax: price_after_discount is the tax base.
+  int64 discount_amount = 18;
+  int64 price_after_discount = 19;
   // "kg" or "pcs".
   string unit = 5;
   // "multiple" (priced by weight) or "single" (priced per piece).
@@ -174,6 +512,7 @@ message ServiceView {
   string service_category = 7;
   int32 min_kg = 8;
   int32 max_kg = 9;
+  // The service's discount as the app has always read it (12.5 for 12.5%, or whole rupiah); `price` already has it taken off.
   double discount = 10;
   // "percentage" or "fixed"; empty when there is no discount.
   string discount_type = 11;
@@ -243,3 +582,486 @@ message ServiceDetail {
 
 message GetServiceDetailRequest { int64 id = 1; }
 message GetServiceDetailResponse { ServiceDetail detail = 1; }
+
+// ---- materials, BOM and costing ----
+
+message Material {
+  int64 id = 1;
+  string sku = 2;
+  string name = 3;
+  string category = 4; // chemical | packaging | consumable | other
+  string unit = 5;     // ml | g | pcs | sheet, the base unit of every quantity
+  int64 purchase_price = 6; // whole rupiah
+  string purchase_qty = 7;  // exact decimal, up to 4 places
+  // purchase_price / purchase_qty, rounded half away from zero to 6 places for display only.
+  string unit_cost = 8;
+  bool active = 9;
+  string notes = 10;
+  int32 used_in = 11; // recipe lines using it
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
+}
+
+message ListMaterialsRequest {
+  string q = 1;
+  string category = 2;
+  string active = 3; // "", "true" or "false"
+  string sort_by = 4;
+  string sort_dir = 5;
+  int32 limit = 6;
+  int32 offset = 7;
+}
+message ListMaterialsResponse {
+  repeated Material materials = 1;
+  int64 total = 2;
+}
+message GetMaterialRequest { int64 id = 1; }
+message SaveMaterialRequest {
+  int64 id = 1; // 0 on a create
+  Material material = 2;
+}
+message MaterialResponse { Material material = 1; }
+
+// ---- banners ----
+
+message Banner {
+  int64 id = 1;
+  string title = 2;
+  string internal_notes = 3; // never sent to the customer app
+  string image_url = 4;
+  string target_type = 5;  // none | service | outlet | screen | external
+  string target_value = 6; // a service or outlet id, a screen key, an https address; empty for none
+  string status = 7;       // active | inactive
+  int32 sort_index = 8;
+  google.protobuf.Timestamp starts_at = 9; // unset = open-ended
+  google.protobuf.Timestamp ends_at = 10;  // unset = open-ended
+  repeated int64 outlet_ids = 11;          // empty = every outlet
+  repeated BannerOutlet outlets = 12;
+  bool is_live = 13;      // derived: active and the server's clock inside the window
+  string deeplink = 14;   // derived: what a tap opens; empty for none
+  google.protobuf.Timestamp created_at = 15;
+  google.protobuf.Timestamp updated_at = 16;
+}
+
+message BannerOutlet {
+  int64 id = 1;
+  string name = 2;
+}
+
+message ListBannersRequest {
+  string q = 1;
+  string status = 2;  // "", active or inactive
+  string live = 3;    // "", "true" or "false"
+  int64 outlet_id = 4; // banners that apply to this outlet; 0 = no filter
+  string sort_by = 5;
+  string sort_dir = 6;
+  int32 limit = 7;
+  int32 offset = 8;
+}
+message ListBannersResponse {
+  repeated Banner banners = 1;
+  int64 total = 2;
+}
+message GetBannerRequest { int64 id = 1; }
+message SaveBannerRequest {
+  int64 id = 1; // 0 on a create
+  Banner banner = 2;
+}
+message BannerResponse { Banner banner = 1; }
+message SetBannerStatusRequest {
+  int64 id = 1;
+  string status = 2;
+}
+message ReorderBannersRequest { repeated int64 ids = 1; }
+message ListBannerScreensRequest {}
+message ListBannerScreensResponse { repeated string screens = 1; }
+message ListLiveBannersRequest { int64 outlet_id = 1; } // 0 = no outlet known: only banners for every outlet
+message ListLiveBannersResponse { repeated Banner banners = 1; }
+
+// ---- vouchers ----
+
+message Voucher {
+  int64 id = 1;
+  string code = 2;        // upper-case letters and digits; empty for a public voucher
+  string title = 3;
+  string description = 4;
+  string internal_notes = 5; // never sent to the customer app
+  string discount_type = 6;  // percentage | amount
+  int64 value = 7;           // 1..100 for a percentage, rupiah for an amount
+  int64 max_discount = 8;    // rupiah cap of a percentage; 0 = none
+  int64 min_spend = 9;       // rupiah; 0 = none
+  int32 max_claims = 10;     // 0 = no limit (a coded voucher only)
+  int64 claims_count = 11;   // derived: how many customers hold it
+  int32 usage_limit = 12;    // how many times one customer may spend it
+  string status = 13;        // active | inactive
+  string color = 14;         // "#RRGGBB"
+  string image_url = 15;
+  google.protobuf.Timestamp starts_at = 16; // unset = open-ended
+  google.protobuf.Timestamp ends_at = 17;   // unset = open-ended
+  repeated int64 outlet_ids = 18;           // empty = every outlet
+  repeated BannerOutlet outlets = 19;
+  repeated int64 service_ids = 20;          // empty = every service
+  repeated VoucherService services = 21;
+  bool is_live = 22;  // derived: active and the server's clock inside the window
+  string type = 23;   // derived: public | code
+  google.protobuf.Timestamp created_at = 24;
+  google.protobuf.Timestamp updated_at = 25;
+}
+
+message VoucherService {
+  int64 id = 1;
+  string name = 2;
+}
+
+message ListVouchersRequest {
+  string q = 1;
+  string status = 2;        // "", active or inactive
+  string live = 3;          // "", "true" or "false"
+  string period = 4;        // "", running, upcoming, ended or unlimited
+  string discount_type = 5; // "", percentage or amount
+  int64 outlet_id = 6;      // vouchers that can be spent at this outlet; 0 = no filter
+  string sort_by = 7;
+  string sort_dir = 8;
+  int32 limit = 9;
+  int32 offset = 10;
+}
+message ListVouchersResponse {
+  repeated Voucher vouchers = 1;
+  int64 total = 2;
+}
+message GetVoucherRequest { int64 id = 1; }
+message SaveVoucherRequest {
+  int64 id = 1; // 0 on a create
+  Voucher voucher = 2;
+}
+message VoucherResponse { Voucher voucher = 1; }
+message SetVoucherStatusRequest {
+  int64 id = 1;
+  string status = 2;
+}
+message ListVoucherColorsRequest {}
+message ListVoucherColorsResponse { repeated string colors = 1; }
+
+message VoucherGrant {
+  int64 id = 1;
+  int64 voucher_id = 2;
+  int64 customer_id = 3;
+  string customer_name = 4;  // as it was when the voucher was granted
+  string customer_phone = 5;
+  string source = 6;         // claim | inject
+  string granted_by = 7;     // the admin who injected it; empty for a claim
+  google.protobuf.Timestamp granted_at = 8;
+  google.protobuf.Timestamp expires_at = 9; // unset = until the voucher ends
+  int32 uses_remaining = 10;
+}
+message ListVoucherGrantsRequest {
+  int64 voucher_id = 1;
+  string q = 2; // part of the customer's name or phone
+  int32 limit = 3;
+  int32 offset = 4;
+}
+message ListVoucherGrantsResponse {
+  repeated VoucherGrant grants = 1;
+  int64 total = 2;
+}
+
+message InjectCustomer {
+  int64 id = 1;
+  string name = 2;
+  string phone = 3;
+  bool active = 4; // false for a customer who is switched off or banned
+}
+message InjectVoucherRequest {
+  int64 voucher_id = 1;
+  repeated InjectCustomer customers = 2; // the ones the user service found
+  int32 not_found = 3;                   // how many named customers it could not find
+  google.protobuf.Timestamp expires_at = 4; // unset = until the voucher ends
+}
+message VoucherInjection {
+  int64 id = 1;
+  int64 voucher_id = 2;
+  string voucher_title = 3; // as it was when it was sent
+  string voucher_code = 4;
+  string actor_id = 5;
+  string actor_name = 6;
+  int32 target_count = 7;
+  int32 injected_count = 8;
+  int32 skipped_already_held = 9;
+  int32 skipped_over_limit = 10;
+  int32 skipped_not_found = 11;
+  int32 skipped_inactive = 12;
+  google.protobuf.Timestamp created_at = 13;
+}
+message InjectVoucherResponse { VoucherInjection injection = 1; }
+message ListVoucherInjectionsRequest {
+  int64 voucher_id = 1; // 0 = every voucher
+  int32 limit = 2;
+  int32 offset = 3;
+}
+message ListVoucherInjectionsResponse {
+  repeated VoucherInjection injections = 1;
+  int64 total = 2;
+}
+
+// A voucher as one customer holds it. Nothing private is in it: no internal note, no status, no claim counts.
+message MyVoucher {
+  int64 id = 1;
+  string code = 2;
+  string title = 3;
+  string description = 4;
+  string discount_type = 5;
+  int64 value = 6;
+  int64 max_discount = 7;
+  int64 min_spend = 8;
+  string color = 9;
+  string image_url = 10;
+  google.protobuf.Timestamp starts_at = 11;
+  google.protobuf.Timestamp expires_at = 12; // the earlier of the voucher's end and the customer's own expiry; unset = none
+  repeated int64 outlet_ids = 13;            // empty = every outlet
+  repeated BannerOutlet outlets = 14;
+  repeated int64 service_ids = 15;           // empty = every service
+  repeated VoucherService services = 16;
+  string source = 17;                        // public | claim | inject
+  google.protobuf.Timestamp claimed_at = 18; // unset for a public voucher
+  int32 uses_remaining = 19;
+  int32 usage_limit = 20;
+}
+message ListMyVouchersRequest {}
+message ListMyVouchersResponse { repeated MyVoucher vouchers = 1; }
+message ClaimVoucherRequest {
+  string code = 1;
+  string customer_name = 2;  // the customer's own, as the gateway read them from the user service
+  string customer_phone = 3;
+}
+message MyVoucherResponse { MyVoucher voucher = 1; }
+
+message BomRef {
+  string owner_type = 1; // service | variant_option | modifier_option
+  int64 owner_id = 2;
+}
+
+message BomLine {
+  int64 material_id = 1;
+  string sku = 2;
+  string name = 3;
+  string unit = 4;
+  string qty = 5;          // exact decimal
+  string per = 6;          // unit | line
+  string loss_percent = 7; // exact decimal
+  string unit_cost = 8;    // display, 6 places
+  // The cost of this line for one unit sold (a per-line line: once), display, 6 places.
+  string cost = 9;
+}
+
+message Bom {
+  string owner_type = 1;
+  int64 owner_id = 2;
+  repeated BomLine lines = 3;
+  // The exact sum of the per-unit lines, and of the per-line lines, rounded to 6 places for display.
+  string cost = 4;
+  string line_cost = 5;
+}
+
+message SetBomRequest {
+  BomRef owner = 1;
+  repeated BomLine lines = 2; // only material_id, qty, per and loss_percent are read
+}
+
+message GetServiceCostingRequest { int64 service_id = 1; }
+
+message CostedComponent {
+  int64 id = 1;
+  string name = 2;
+  // A variant option's extra price or a modifier option's price, whole rupiah.
+  int64 price = 3;
+  string per_unit = 4; // display, 6 places
+  string per_line = 5;
+}
+message CostedGroup {
+  int64 id = 1;
+  string name = 2;
+  repeated CostedComponent options = 3;
+}
+message ServiceCosting {
+  int64 service_id = 1;
+  string service_name = 2;
+  string unit = 3;
+  int64 price = 4;
+  string base_per_unit = 5;
+  string base_per_line = 6;
+  repeated BomLine base_lines = 7;
+  repeated CostedGroup variant_groups = 8;
+  repeated CostedGroup modifier_groups = 9;
+}
+
+message CalcCostingRequest {
+  int64 service_id = 1;
+  repeated int64 variant_option_ids = 2;
+  repeated int64 modifier_option_ids = 3;
+  string qty = 4;
+}
+message CostedLine {
+  string source = 1; // service | variant | modifier
+  string source_name = 2;
+  int64 material_id = 3;
+  string sku = 4;
+  string name = 5;
+  string unit = 6;
+  string per = 7;
+  string qty_used = 8;  // total base units consumed by the order line, display, 6 places
+  string unit_cost = 9;
+  string cost = 10;
+}
+message CalcCostingResponse {
+  int64 service_id = 1;
+  string service_name = 2;
+  string unit = 3;
+  string qty = 4;
+  int64 unit_price = 5;
+  int64 revenue = 6;
+  repeated CostedLine lines = 7;
+  int64 cost = 8;
+  int64 gross_profit = 9;
+  string margin_percent = 10; // 2 places
+}
+
+// ---- stock ----
+
+message StockRow {
+  int64 outlet_id = 1;
+  int64 material_id = 2;
+  string sku = 3;
+  string name = 4;
+  string unit = 5;
+  string qty = 6;  // exact decimal; may be negative
+  int64 value = 7; // whole rupiah
+  // value / qty, rounded to 6 places for display; the material's standard unit cost while nothing is on hand.
+  string avg_cost = 8;
+  string min_qty = 9;
+  bool low = 10;
+}
+
+message ListStockRequest {
+  int64 outlet_id = 1; // 0 = every outlet
+  string q = 2;
+  bool low = 3;
+  string sort_by = 4;
+  string sort_dir = 5;
+  int32 limit = 6;
+  int32 offset = 7;
+}
+message ListStockResponse {
+  repeated StockRow rows = 1;
+  int64 total = 2;
+}
+
+message StockMovement {
+  int64 id = 1;
+  int64 outlet_id = 2;
+  int64 material_id = 3;
+  string sku = 4;
+  string name = 5;
+  string unit = 6;
+  string kind = 7;
+  string reason = 8;
+  string qty_delta = 9;
+  int64 value_delta = 10;
+  string balance_qty = 11;
+  int64 balance_value = 12;
+  string ref_type = 13;
+  string ref_id = 14;
+  string supplier = 15;
+  string doc_no = 16;
+  string note = 17;
+  string created_by = 18;
+  google.protobuf.Timestamp created_at = 19;
+  // For a movement made from an order: the order's TRX code (TRX-25102026-K7M2), as it was when the movement was written. Empty for
+  // other movements and for those from before codes existed. ref_id stays the order's id.
+  string ref_code = 20;
+}
+
+message ListMovementsRequest {
+  int64 outlet_id = 1;
+  int64 material_id = 2;
+  string kind = 3;
+  string q = 4;
+  string from = 5; // YYYY-MM-DD, Asia/Jakarta
+  string to = 6;
+  string sort_by = 7;
+  string sort_dir = 8;
+  int32 limit = 9;
+  int32 offset = 10;
+}
+message ListMovementsResponse {
+  repeated StockMovement movements = 1;
+  int64 total = 2;
+}
+
+message ReceiveStockRequest {
+  int64 outlet_id = 1;
+  int64 material_id = 2;
+  string qty = 3;
+  int64 total_cost = 4;
+  string supplier = 5;
+  string doc_no = 6;
+  string note = 7;
+  string idempotency_key = 8;
+}
+message WasteStockRequest {
+  int64 outlet_id = 1;
+  int64 material_id = 2;
+  string qty = 3;
+  string reason = 4;
+  string note = 5;
+  string idempotency_key = 6;
+}
+message AdjustStockRequest {
+  int64 outlet_id = 1;
+  int64 material_id = 2;
+  string counted_qty = 3;
+  string note = 4;
+  string idempotency_key = 5;
+}
+message TransferStockRequest {
+  int64 from_outlet_id = 1;
+  int64 to_outlet_id = 2;
+  int64 material_id = 3;
+  string qty = 4;
+  string note = 5;
+  string idempotency_key = 6;
+}
+message SetMinStockRequest {
+  int64 outlet_id = 1;
+  int64 material_id = 2;
+  string min_qty = 3;
+}
+
+// created is false when the idempotency key had been used and the original movement is returned. For a count that equals the
+// book there is no movement at all.
+message StockMovementResponse {
+  StockMovement movement = 1;
+  bool created = 2;
+}
+message TransferStockResponse {
+  StockMovement out = 1;
+  StockMovement in = 2;
+  bool created = 3;
+}
+message StockRowResponse { StockRow row = 1; }
+
+message OrderStockLine {
+  int64 service_id = 1;
+  string qty = 2; // the line's quantity as the shortest exact decimal
+  repeated int64 variant_option_ids = 3;
+  repeated int64 modifier_option_ids = 4;
+}
+message ApplyOrderStockRequest {
+  string order_id = 1;
+  int64 outlet_id = 2;
+  string action = 3; // consume | reverse
+  repeated OrderStockLine lines = 4;
+  string actor = 5;
+  // The order's TRX code, written on every movement made for it.
+  string order_code = 6;
+}
+message ApplyOrderStockResponse { int32 movements = 1; }

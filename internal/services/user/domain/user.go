@@ -40,58 +40,8 @@ type User struct {
 	XP        int64
 	Birthdate *time.Time
 	Status    string
-	// Roles is empty for a customer; see migrations/user/*_add_user_roles.sql.
-	Roles     []string
 	CreatedAt time.Time
 	UpdatedAt time.Time
-}
-
-// IsStaff reports whether the account has any staff role.
-func (u User) IsStaff() bool { return len(u.Roles) > 0 }
-
-// Audiences a staff sign-in can ask for.
-const (
-	AudienceBackoffice = "backoffice"
-	AudiencePOS        = "pos"
-	// AudienceStation is the Wuzzer app: the technician who is also the driver.
-	AudienceStation = "station"
-)
-
-// RoleWuzzer marks a Wuzzer account. Unlike outlet staff it belongs to no outlet.
-const RoleWuzzer = "wuzzer"
-
-// MayUse reports whether the account may sign in to the given audience.
-// An empty audience is the customer app, open to every account.
-func (u User) MayUse(audience string) bool {
-	switch audience {
-	case "":
-		return true
-	case AudienceBackoffice:
-		return u.hasRole("admin")
-	case AudiencePOS:
-		if u.hasRole("admin") {
-			return true
-		}
-		for _, r := range u.Roles {
-			if strings.HasPrefix(r, "outlet:") {
-				return true
-			}
-		}
-		return false
-	case AudienceStation:
-		return u.hasRole("admin") || u.hasRole(RoleWuzzer)
-	default:
-		return false
-	}
-}
-
-func (u User) hasRole(role string) bool {
-	for _, r := range u.Roles {
-		if r == role {
-			return true
-		}
-	}
-	return false
 }
 
 func (u User) IsBanned() bool  { return u.Status == StatusBanned }
