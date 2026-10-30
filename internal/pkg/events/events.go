@@ -35,9 +35,11 @@ const (
 
 	TypeOutletCreated = "outlet.created"
 	TypeOutletUpdated = "outlet.updated"
+	TypeOutletDeleted = "outlet.deleted"
 
 	TypeServiceCreated = "service.created"
 	TypeServiceUpdated = "service.updated"
+	TypeServiceDeleted = "service.deleted"
 
 	TypeOrderCreated       = "order.created"
 	TypeOrderStatusChanged = "order.status_changed"
@@ -104,6 +106,15 @@ type OutletChanged struct {
 	Active    bool    `json:"active"`
 }
 
+// OutletDeleted and ServiceDeleted are the payloads of outlet.deleted and service.deleted: only the id, because the row is gone.
+type OutletDeleted struct {
+	ID int64 `json:"id"`
+}
+
+type ServiceDeleted struct {
+	ID int64 `json:"id"`
+}
+
 // ServiceChanged is the snapshot carried by service.created / service.updated.
 type ServiceChanged struct {
 	ID     int64  `json:"id"`
@@ -125,6 +136,7 @@ type OrderLine struct {
 
 type OrderChanged struct {
 	ID            string      `json:"id"`
+	Code          string      `json:"code,omitempty"`
 	OutletID      int64       `json:"outletId"`
 	CustomerName  string      `json:"customerName"`
 	CustomerPhone string      `json:"customerPhone"`

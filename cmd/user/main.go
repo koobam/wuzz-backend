@@ -87,7 +87,10 @@ func realMain() error {
 	if cfg.Twilio.DevMode || cfg.Twilio.AccountSID == "" {
 		log.Warn("phone verification is not sending SMS: using the logging verifier",
 			slog.Bool("dev_mode", cfg.Twilio.DevMode))
-		verifications = verification.NewLogging(rdb, log, cfg.Auth.VerificationCodeTTL)
+		if cfg.Twilio.FixedCode != "" {
+			log.Warn("OTP_FIXED_CODE is set: every sign-in code is the same fixed one. Never on a real deployment.")
+		}
+		verifications = verification.NewLogging(rdb, log, cfg.Auth.VerificationCodeTTL, cfg.Twilio.FixedCode)
 	} else {
 		verifications = verification.NewTwilio(cfg.Twilio)
 	}

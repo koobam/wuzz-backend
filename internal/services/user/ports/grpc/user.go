@@ -205,18 +205,56 @@ func (s *Server) ListUsers(ctx context.Context, req *userv1.ListUsersRequest) (*
 	if err := requireAdmin(ctx); err != nil {
 		return nil, err
 	}
-	users, total, err := s.app.Queries.ListUsers.Handle(ctx, command.ListUsers{
-		Query: req.GetQuery(), Status: req.GetStatus(),
+	res, err := s.app.Queries.ListUsers.Handle(ctx, query.ListUsers{
+		Query: req.GetQuery(), Status: req.GetStatus(), SortBy: req.GetSortBy(), SortDir: req.GetSortDir(),
 		Limit: int(req.GetLimit()), Offset: int(req.GetOffset()),
 	})
 	if err != nil {
 		return nil, err
 	}
-	out := make([]*userv1.User, 0, len(users))
-	for _, u := range users {
+	out := make([]*userv1.User, 0, len(res.Users))
+	for _, u := range res.Users {
 		out = append(out, toProtoUser(u))
 	}
-	return &userv1.ListUsersResponse{Users: out, Total: total}, nil
+	return &userv1.ListUsersResponse{Users: out, Total: res.Total}, nil
+}
+
+// ResolveCustomers finds customers by id or phone number for the back office. It is admin-only: it answers with names and numbers.
+func (s *Server) ResolveCustomers(ctx context.Context, req *userv1.ResolveCustomersRequest) (*userv1.ResolveCustomersResponse, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return nil, err
+	}
+	res, err := s.app.Queries.ResolveCustomers.Handle(ctx, query.ResolveCustomers{IDs: req.GetIds(), Phones: req.GetPhones()})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*userv1.User, 0, len(res.Users))
+	for _, u := range res.Users {
+		out = append(out, toProtoUser(u))
+	}
+	return &userv1.ResolveCustomersResponse{Users: out, Unmatched: res.Unmatched}, nil
+}
+
+func (s *Server) ListAccounts(ctx context.Context, req *userv1.ListAccountsRequest) (*userv1.ListAccountsResponse, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return nil, err
+	}
+	res, err := s.app.Queries.ListAccounts.Handle(ctx, query.ListAccounts{
+		Kind: req.GetKind(), Query: req.GetQuery(), Status: req.GetStatus(), OutletID: req.GetOutletId(),
+		SortBy: req.GetSortBy(), SortDir: req.GetSortDir(),
+		Limit: int(req.GetLimit()), Offset: int(req.GetOffset()),
+	})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*userv1.Account, 0, len(res.Accounts))
+	for _, a := range res.Accounts {
+		out = append(out, &userv1.Account{
+			Id: a.ID, Kind: a.Kind, Name: a.Name, Phone: a.Phone, Role: a.Role, OutletId: a.OutletID, Status: a.Status,
+			CreatedAt: timestamppb.New(a.CreatedAt), UpdatedAt: timestamppb.New(a.UpdatedAt),
+		})
+	}
+	return &userv1.ListAccountsResponse{Accounts: out, Total: res.Total}, nil
 }
 
 func (s *Server) SetUserStatus(ctx context.Context, req *userv1.SetUserStatusRequest) (*userv1.SetUserStatusResponse, error) {

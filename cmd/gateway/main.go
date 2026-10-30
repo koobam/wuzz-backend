@@ -11,9 +11,12 @@ import (
 	"github.com/koobam/wuzz-backend/internal/pkg/httpx"
 	"github.com/koobam/wuzz-backend/internal/pkg/observability"
 	"github.com/koobam/wuzz-backend/internal/pkg/run"
+	"github.com/koobam/wuzz-backend/internal/platform/postgres"
 	"github.com/koobam/wuzz-backend/internal/platform/redisx"
+	"github.com/koobam/wuzz-backend/internal/services/gateway/activity"
 	"github.com/koobam/wuzz-backend/internal/services/gateway/clients"
 	"github.com/koobam/wuzz-backend/internal/services/gateway/rest"
+	"github.com/koobam/wuzz-backend/internal/services/gateway/waitlist"
 )
 
 var version = "dev"
@@ -45,6 +48,15 @@ func realMain() error {
 		return err
 	}
 
+	// The activity log lives in the gateway's own database. Failing to reach it stops the start (a misconfigured deploy must not run
+	// unaudited); once running, a database that goes down never fails a request, it is logged and counted (see activity.Recorder).
+	pool, err := postgres.New(ctx, cfg.Postgres)
+	if err != nil {
+		return err
+	}
+	store := &activity.Store{Pool: pool}
+	recorder := activity.NewRecorder(store, log)
+
 	upstreams, err := clients.Dial(ctx, cfg)
 	if err != nil {
 		return err
@@ -60,7 +72,7 @@ func realMain() error {
 	ready := func(ctx context.Context) error { return rdb.Ping(ctx).Err() }
 
 	engine := httpx.NewEngine(cfg, log, ready)
-	rest.Register(engine, upstreams, verifier, rdb, cfg)
+	rest.Register(engine, upstreams, verifier, rdb, cfg, &activity.Log{Recorder: recorder, Reader: store}, &waitlist.Store{Pool: pool})
 	server := httpx.NewServer(cfg, engine, log)
 
 	log.Info("gateway starting",
@@ -74,6 +86,13 @@ func realMain() error {
 			Stop: func(context.Context) error { return upstreams.Close() }},
 		run.Component{Name: "redis", Start: run.Noop,
 			Stop: func(context.Context) error { return rdb.Close() }},
+		// Components stop in reverse order, so this one, listed before http, stops after it: the last requests' entries are still
+		// queued when it flushes.
+		run.Component{Name: "activity-log", Start: run.Noop, Stop: func(ctx context.Context) error {
+			err := recorder.Close(ctx)
+			pool.Close()
+			return err
+		}},
 		run.Component{Name: "http", Start: server.Start, Stop: server.Shutdown},
 	)
 }

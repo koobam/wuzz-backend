@@ -254,10 +254,9 @@ func RequireIdentity(allow func(authn.Identity) bool) gin.HandlerFunc {
 // IsAdmin, IsOutletStaff and IsWuzzer are the staff audiences.
 func IsAdmin(id authn.Identity) bool { return id.HasRole("admin") }
 
+// IsOutletStaff is the POS audience: a till belongs to one outlet, so only the staff of an outlet use it. An admin
+// has every outlet and so none in particular; the back office is where an admin sees orders.
 func IsOutletStaff(id authn.Identity) bool {
-	if id.HasRole("admin") {
-		return true
-	}
 	for _, r := range id.Roles {
 		if strings.HasPrefix(r, "outlet:") {
 			return true

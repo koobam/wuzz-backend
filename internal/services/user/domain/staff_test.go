@@ -4,6 +4,7 @@ import "testing"
 
 func TestAccountMayUse(t *testing.T) {
 	admin := Account{Kind: KindAdmin, Role: "finance"}
+	adminAtOutlet := Account{Kind: KindAdmin, Role: "super", OutletID: 1}
 	front := Account{Kind: KindStaff, Role: RoleFront, OutletID: 3}
 	wuzzer := Account{Kind: KindStaff, Role: RoleWuzzer}
 
@@ -14,7 +15,8 @@ func TestAccountMayUse(t *testing.T) {
 		want     bool
 	}{
 		{"admin can use backoffice", admin, AudienceBackoffice, true},
-		{"admin can use pos", admin, AudiencePOS, true},
+		{"an admin with no outlet cannot use pos: a till is one outlet's", admin, AudiencePOS, false},
+		{"an admin assigned to an outlet can use pos", adminAtOutlet, AudiencePOS, true},
 		{"admin can use station", admin, AudienceStation, true},
 		{"front can use pos", front, AudiencePOS, true},
 		{"front cannot use backoffice", front, AudienceBackoffice, false},
@@ -38,6 +40,7 @@ func TestAccountRoles(t *testing.T) {
 		want    []string
 	}{
 		{Account{Kind: KindAdmin, Role: "finance"}, []string{"admin", "admin:finance"}},
+		{Account{Kind: KindAdmin, Role: "super", OutletID: 1}, []string{"admin", "admin:super", "outlet:1"}},
 		{Account{Kind: KindStaff, Role: RoleFront, OutletID: 3}, []string{"outlet:3"}},
 		{Account{Kind: KindStaff, Role: RoleWuzzer}, []string{"wuzzer"}},
 	}

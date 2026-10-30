@@ -22,16 +22,22 @@ type Logging struct {
 	rdb *redisx.Client
 	log *slog.Logger
 	ttl time.Duration
+	// fixed, when not empty, is the code every number gets (dev and staging only; config.Load refuses it
+	// anywhere else), so nobody has to dig the code out of a log.
+	fixed string
 }
 
-func NewLogging(rdb *redisx.Client, log *slog.Logger, ttl time.Duration) *Logging {
-	return &Logging{rdb: rdb, log: log, ttl: ttl}
+func NewLogging(rdb *redisx.Client, log *slog.Logger, ttl time.Duration, fixed string) *Logging {
+	return &Logging{rdb: rdb, log: log, ttl: ttl, fixed: fixed}
 }
 
 func (l *Logging) key(phone string) string { return l.rdb.Key("verification-code", phone) }
 
 func (l *Logging) Start(ctx context.Context, phone string) error {
-	code, err := randomCode()
+	code, err := l.fixed, error(nil)
+	if code == "" {
+		code, err = randomCode()
+	}
 	if err != nil {
 		return apperr.Internal("Could not start verification").WithCause(err)
 	}

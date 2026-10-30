@@ -24,11 +24,13 @@ type Commands struct {
 }
 
 type Queries struct {
-	GetUser         *query.GetUserHandler
-	MemberSummary   *query.GetMemberSummaryHandler
-	CheckUsername   *query.CheckUsernameHandler
-	SuggestUsername *query.SuggestUsernameHandler
-	ListUsers       *command.ListUsersHandler
+	GetUser          *query.GetUserHandler
+	MemberSummary    *query.GetMemberSummaryHandler
+	CheckUsername    *query.CheckUsernameHandler
+	SuggestUsername  *query.SuggestUsernameHandler
+	ListUsers        *query.ListUsersHandler
+	ListAccounts     *query.ListAccountsHandler
+	ResolveCustomers *query.ResolveCustomersHandler
 }
 
 type App struct {
@@ -36,9 +38,22 @@ type App struct {
 	Queries  Queries
 }
 
+// UserStore and AccountStore are what the Postgres adapters provide: the write-side port plus the listing the back office reads.
+type (
+	UserStore interface {
+		command.Users
+		query.UserList
+		query.UserResolver
+	}
+	AccountStore interface {
+		command.Accounts
+		query.AccountList
+	}
+)
+
 func New(
-	users command.Users,
-	accounts command.Accounts,
+	users UserStore,
+	accounts AccountStore,
 	members query.Members,
 	pending command.PendingRegistrations,
 	sessions command.Sessions,
@@ -58,11 +73,13 @@ func New(
 			SetUserStatus: command.NewSetUserStatusHandler(users),
 		},
 		Queries: Queries{
-			GetUser:         query.NewGetUserHandler(queryUsers{users}, accounts),
-			MemberSummary:   query.NewGetMemberSummaryHandler(members),
-			CheckUsername:   query.NewCheckUsernameHandler(queryUsers{users}),
-			SuggestUsername: query.NewSuggestUsernameHandler(queryUsers{users}),
-			ListUsers:       command.NewListUsersHandler(users),
+			GetUser:          query.NewGetUserHandler(queryUsers{users}, accounts),
+			MemberSummary:    query.NewGetMemberSummaryHandler(members),
+			CheckUsername:    query.NewCheckUsernameHandler(queryUsers{users}),
+			SuggestUsername:  query.NewSuggestUsernameHandler(queryUsers{users}),
+			ListUsers:        query.NewListUsersHandler(users),
+			ListAccounts:     query.NewListAccountsHandler(accounts),
+			ResolveCustomers: query.NewResolveCustomersHandler(users),
 		},
 	}
 }

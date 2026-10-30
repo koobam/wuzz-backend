@@ -45,7 +45,7 @@ func TestAudiences(t *testing.T) {
 	// real server installs it for every route.
 	engine := gin.New()
 	engine.Use(httpx.ErrorHandler())
-	Register(engine, &clients.Clients{User: fakeUser{}}, verifier, nil, cfg)
+	Register(engine, &clients.Clients{User: fakeUser{}}, verifier, nil, cfg, nil, nil)
 
 	token := func(roles ...string) string {
 		tok, err := signer.Issue(authn.Identity{UserID: "u1", Name: "T", Roles: roles})
@@ -78,11 +78,16 @@ func TestAudiences(t *testing.T) {
 
 		{"pos: a wuzzer is refused", "/pos/v1/auth/me", token("wuzzer"), http.StatusForbidden},
 		{"pos: outlet staff gets in", "/pos/v1/auth/me", token("outlet:3"), http.StatusOK},
+		{"pos: an admin with no outlet is refused", "/pos/v1/auth/me", token("admin", "admin:super"), http.StatusForbidden},
+		{"pos orders: an admin with no outlet is refused", "/pos/v1/orders", token("admin"), http.StatusForbidden},
+		{"pos: an admin assigned to an outlet gets in", "/pos/v1/auth/me", token("admin", "outlet:1"), http.StatusOK},
 		{"backoffice: a wuzzer is refused", "/backoffice/v1/auth/me", token("wuzzer"), http.StatusForbidden},
 		{"backoffice: outlet staff is refused", "/backoffice/v1/auth/me", token("outlet:3"), http.StatusForbidden},
 
 		{"pos orders: a wuzzer is refused", "/pos/v1/orders", token("wuzzer"), http.StatusForbidden},
 		{"backoffice users: a wuzzer is refused", "/backoffice/v1/users", token("wuzzer"), http.StatusForbidden},
+		{"backoffice admins: a wuzzer is refused", "/backoffice/v1/admins", token("wuzzer"), http.StatusForbidden},
+		{"backoffice staff: outlet staff is refused", "/backoffice/v1/staff", token("outlet:3"), http.StatusForbidden},
 	}
 	for _, c := range cases {
 		if got := get(c.path, c.token); got != c.want {
@@ -101,7 +106,7 @@ func TestSpecMatchesRoutes(t *testing.T) {
 		t.Fatal(err)
 	}
 	engine := gin.New()
-	Register(engine, &clients.Clients{User: fakeUser{}}, verifier, nil, cfg)
+	Register(engine, &clients.Clients{User: fakeUser{}}, verifier, nil, cfg, nil, nil)
 
 	spec, err := docs.Operations()
 	if err != nil {

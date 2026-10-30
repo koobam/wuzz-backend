@@ -9,6 +9,53 @@ import (
 	"github.com/koobam/wuzz-backend/internal/services/user/domain"
 )
 
+// Accounts is the persistence port for admins and staff, the two tables that are not
+// customers. Sign-in reads them by phone or id.
+type Accounts interface {
+	ByPhone(ctx context.Context, phone string) (domain.Account, error)
+	// ByID takes the prefixed id (see domain.AccountID).
+	ByID(ctx context.Context, id string) (domain.Account, error)
+}
+
+// Sessions issues and revokes refresh tokens. Backed by Redis: a refresh
+// token is a capability, not something worth a relational row.
+type Sessions interface {
+	Issue(ctx context.Context, userID string) (refreshToken string, err error)
+	// Consume returns the user id a refresh token was issued for and revokes
+	// it in the same operation — a refresh token is single use, so a stolen
+	// one that gets replayed after the legitimate client already rotated it
+	// is rejected rather than honoured.
+	Consume(ctx context.Context, refreshToken string) (userID string, err error)
+	Revoke(ctx context.Context, refreshToken string) error
+}
+
+// Verifications sends and checks a one-time code sent to a phone number.
+type Verifications interface {
+	Start(ctx context.Context, phone string) error
+	Check(ctx context.Context, phone, code string) (bool, error)
+}
+
+// PendingProfile is what Register collects before the phone number is
+// proved. Held in Redis with the same TTL as the code itself, so a
+// registration that is never verified simply expires rather than needing
+// cleanup.
+type PendingProfile struct {
+	Username  string
+	Name      string
+	Email     string
+	Birthdate *time.Time
+}
+
+// PendingRegistrations holds a registration's submitted profile between
+// Register (which cannot create the account yet — the phone number is
+// unproved) and VerifyOtp (which can).
+type PendingRegistrations interface {
+	Save(ctx context.Context, phone string, profile PendingProfile, ttl time.Duration) error
+	// Consume returns the profile and deletes it — a pending registration is
+	// claimed by exactly one successful verification.
+	Consume(ctx context.Context, phone string) (PendingProfile, bool, error)
+}
+
 type Session struct {
 	AccessToken  string
 	RefreshToken string
@@ -249,6 +296,84 @@ func NewLogoutHandler(sessions Sessions) *LogoutHandler { return &LogoutHandler{
 
 func (h *LogoutHandler) Handle(ctx context.Context, cmd Logout) (struct{}, error) {
 	return struct{}{}, h.sessions.Revoke(ctx, cmd.RefreshToken)
+}
+
+// ---------- SendLoginCode ----------
+
+// SendLoginCode starts sign-in for an existing admin or staff account. It answers the
+// same whether or not the number belongs to staff: a different answer would let
+// anyone probe which phone numbers are back-office accounts.
+type SendLoginCode struct{ Phone string }
+
+type SendLoginCodeHandler struct {
+	accounts      Accounts
+	verifications Verifications
+	codeTTL       time.Duration
+}
+
+func NewSendLoginCodeHandler(accounts Accounts, verifications Verifications, codeTTL time.Duration) *SendLoginCodeHandler {
+	return &SendLoginCodeHandler{accounts: accounts, verifications: verifications, codeTTL: codeTTL}
+}
+
+func (h *SendLoginCodeHandler) Handle(ctx context.Context, cmd SendLoginCode) (time.Time, error) {
+	phone, err := domain.NormalisePhone(cmd.Phone)
+	if err != nil {
+		return time.Time{}, err
+	}
+	expires := time.Now().Add(h.codeTTL)
+
+	account, err := h.accounts.ByPhone(ctx, phone)
+	if err != nil {
+		if apperr.IsKind(err, apperr.KindNotFound) {
+			return expires, nil
+		}
+		return time.Time{}, err
+	}
+	if !account.CanSignIn() {
+		return expires, nil
+	}
+	if err := h.verifications.Start(ctx, phone); err != nil {
+		return time.Time{}, err
+	}
+	return expires, nil
+}
+
+// ---------- DevLogin ----------
+
+// DevLogin signs an existing customer in by phone, with no code. It exists so a
+// developer can use the app on a simulator without reading an SMS code out of a
+// log. It is only ever constructed when the service runs with APP_ENV=dev and
+// the dev verifier (see cmd/user/main.go); everywhere else the handler is nil
+// and the RPC answers NotFound.
+type DevLogin struct {
+	Phone string
+}
+
+type DevLoginHandler struct {
+	users     Users
+	sessions  Sessions
+	signer    *authn.Signer
+	accessTTL time.Duration
+}
+
+func NewDevLoginHandler(users Users, sessions Sessions, signer *authn.Signer, accessTTL time.Duration) *DevLoginHandler {
+	return &DevLoginHandler{users: users, sessions: sessions, signer: signer, accessTTL: accessTTL}
+}
+
+func (h *DevLoginHandler) Handle(ctx context.Context, cmd DevLogin) (Session, error) {
+	phone, err := domain.NormalisePhone(cmd.Phone)
+	if err != nil {
+		return Session{}, err
+	}
+	user, err := h.users.ByPhone(ctx, phone)
+	if err != nil {
+		return Session{}, err
+	}
+	// Customers only: admins and staff live in their own tables, which this never reads.
+	if !user.CanSignIn() {
+		return Session{}, apperr.Forbidden("This account cannot sign in")
+	}
+	return issueSession(ctx, h.sessions, h.signer, h.accessTTL, user)
 }
 
 func issueSession(ctx context.Context, sessions Sessions, signer *authn.Signer, accessTTL time.Duration, user domain.User) (Session, error) {

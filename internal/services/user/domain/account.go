@@ -38,7 +38,7 @@ type Account struct {
 	Phone string
 	// Role is the row's role: finance, support... for an admin; front, wuzzer for staff.
 	Role string
-	// OutletID is set for staff whose role is tied to one outlet (front).
+	// OutletID is set for front staff, and for an admin assigned to an outlet; it is what binds them to a till.
 	OutletID  int64
 	Status    string
 	CreatedAt time.Time
@@ -80,7 +80,11 @@ func ParseAccountID(id string) (kind string, n int64, ok bool) {
 // "outlet:<id>" for front staff, "wuzzer" for a Wuzzer.
 func (a Account) Roles() []string {
 	if a.Kind == KindAdmin {
-		return []string{"admin", "admin:" + a.Role}
+		roles := []string{"admin", "admin:" + a.Role}
+		if a.OutletID != 0 {
+			roles = append(roles, "outlet:"+strconv.FormatInt(a.OutletID, 10))
+		}
+		return roles
 	}
 	switch a.Role {
 	case RoleFront:
@@ -92,13 +96,15 @@ func (a Account) Roles() []string {
 }
 
 // MayUse reports whether the account may sign in to the given audience. An admin may use
-// every one of them; front staff only the POS; a Wuzzer only the station app.
+// the backoffice and the station app, and the POS only if assigned an outlet; front staff only the POS; a Wuzzer only the station app.
 func (a Account) MayUse(audience string) bool {
 	switch audience {
 	case AudienceBackoffice:
 		return a.Kind == KindAdmin
 	case AudiencePOS:
-		return a.Kind == KindAdmin || (a.Kind == KindStaff && a.Role == RoleFront)
+		// A till is one outlet's: front staff use it, and an admin who has been assigned an outlet. An admin with none is
+		// not any till's, so the POS refuses them.
+		return (a.Kind == KindStaff && a.Role == RoleFront) || (a.Kind == KindAdmin && a.OutletID != 0)
 	case AudienceStation:
 		return a.Kind == KindAdmin || (a.Kind == KindStaff && a.Role == RoleWuzzer)
 	default:
