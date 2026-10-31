@@ -30,6 +30,7 @@ type Entry struct {
 type Repo interface {
 	Add(ctx context.Context, email, language, source string) error
 	List(ctx context.Context, limit, offset int) ([]Entry, int, error)
+	Count(ctx context.Context) (int, error)
 }
 
 // Store keeps the list in the gateway's Postgres.
@@ -40,6 +41,13 @@ func (s *Store) Add(ctx context.Context, email, language, source string) error {
 	_, err := s.Pool.Exec(ctx,
 		`INSERT INTO waitlist (email, language, source) VALUES ($1, $2, $3) ON CONFLICT (email) DO NOTHING`, email, language, source)
 	return err
+}
+
+// Count is how many addresses are on the list.
+func (s *Store) Count(ctx context.Context) (int, error) {
+	var total int
+	err := s.Pool.QueryRow(ctx, `SELECT count(*) FROM waitlist`).Scan(&total)
+	return total, err
 }
 
 func (s *Store) List(ctx context.Context, limit, offset int) ([]Entry, int, error) {
@@ -109,6 +117,16 @@ func (h *Handler) Create(c *gin.Context) {
 		return
 	}
 	httpx.Created(c, gin.H{"saved": true})
+}
+
+// Count answers GET /app/v1/waitlist/count: how many people are waiting, for the landing page. Only the number is public, never an address.
+func (h *Handler) Count(c *gin.Context) {
+	total, err := h.Repo.Count(c.Request.Context())
+	if err != nil {
+		httpx.Fail(c, apperr.Internal("Could not read the waitlist").WithCause(err))
+		return
+	}
+	httpx.OK(c, gin.H{"total": total})
 }
 
 // List answers GET /backoffice/v1/waitlist: one page, newest first, and the total.

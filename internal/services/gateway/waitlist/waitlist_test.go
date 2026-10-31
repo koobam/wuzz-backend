@@ -17,6 +17,7 @@ func (f *fake) Add(_ context.Context, email, lang, _ string) error {
 	return nil
 }
 func (f *fake) List(context.Context, int, int) ([]Entry, int, error) { return nil, 0, nil }
+func (f *fake) Count(context.Context) (int, error)                   { return len(f.got), nil }
 
 func TestNormalize(t *testing.T) {
 	for in, want := range map[string]string{"Ana@Example.COM": "ana@example.com", "  a@b.co ": "a@b.co"} {
@@ -51,5 +52,20 @@ func TestCreate(t *testing.T) {
 	}
 	if c := post(`{"email":"not-an-email"}`); c == http.StatusCreated || len(f.got) != 1 {
 		t.Fatalf("invalid accepted: %d %v", c, f.got)
+	}
+}
+
+func TestCount(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	f := &fake{got: []string{"a@example.com|id", "b@example.com|en"}}
+	r := gin.New()
+	r.GET("/w/count", (&Handler{Repo: f}).Count)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/w/count", nil))
+	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), `"total":2`) {
+		t.Fatalf("count: %d %s", w.Code, w.Body.String())
+	}
+	if strings.Contains(w.Body.String(), "@") {
+		t.Fatalf("count leaks an address: %s", w.Body.String())
 	}
 }
