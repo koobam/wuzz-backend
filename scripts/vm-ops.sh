@@ -26,12 +26,15 @@ compose() { docker compose --env-file "envs/$env_name.env" -p "wuzz-$env_name" -
 env_value() { grep -m1 "^$1=" "envs/$env_name.env" | cut -d= -f2-; }
 
 # database -> the service that owns it
-dbs="wuzz:user wuzz_catalog:catalog wuzz_transaction:transaction"
+dbs="wuzz:user wuzz_catalog:catalog wuzz_transaction:transaction wuzz_gateway:gateway"
+# wuzz_gateway (waitlist, activity log) is new: a stack that predates it has no such database yet, and is skipped
+# rather than failing every backup and deploy until its compose file is updated.
 keep_pre_deploy=5
 keep_daily=7
 
 # </dev/null: exec -T would otherwise read this script's own stdin (the deploy workflow sends the registry token there).
 psql_admin() { compose exec -T postgres psql -U wuzz -d postgres -v ON_ERROR_STOP=1 -q "$@" </dev/null; }
+has_db() { [ "$(psql_admin -tA -c "select 1 from pg_database where datname='$1'")" = 1 ]; }
 
 backup() { # label
 	local label="${1:-daily}" ts keep pair db
@@ -41,6 +44,7 @@ backup() { # label
 
 	for pair in $dbs; do
 		db="${pair%%:*}"
+		has_db "$db" || { echo "backup: $db does not exist on this stack, skipped"; continue; }
 		local out="$backups/$label-$db-$ts.sql.gz"
 		if ! compose exec -T postgres pg_dump -U wuzz -d "$db" --no-owner </dev/null | gzip >"$out" || ! gzip -t "$out" || [ "$(stat -c %s "$out")" -lt 200 ]; then
 			rm -f "$out"
@@ -82,6 +86,7 @@ rehearse() { # tag
 	echo "rehearse: $image on copies of the real data"
 	for pair in $dbs; do
 		db="${pair%%:*}"; svc="${pair##*:}"; scratch="${db}_rehearsal"
+		has_db "$db" || { echo "rehearse: $db does not exist on this stack, skipped"; continue; }
 		psql_admin -c "DROP DATABASE IF EXISTS $scratch WITH (FORCE)" -c "CREATE DATABASE $scratch"
 		compose exec -T postgres pg_dump -U wuzz -d "$db" --no-owner </dev/null | compose exec -T postgres psql -U wuzz -d "$scratch" -q -v ON_ERROR_STOP=1 >/dev/null
 		dsn="postgres://wuzz:${password}@postgres:5432/${scratch}?sslmode=disable"
@@ -101,7 +106,7 @@ deploy() { # tag, registry user
 	local tag="${1:?tag}" registry_user="${2:?registry user}"
 	: "${REGISTRY_TOKEN:?REGISTRY_TOKEN is required}"
 	# wuzz-support publishes its own image from its own repository; not rolled here.
-	local services="gateway user catalog transaction migrate-user migrate-catalog migrate-transaction"
+	local services="gateway user catalog transaction migrate-user migrate-catalog migrate-transaction migrate-gateway"
 
 	echo "== 1. back up"
 	backup pre-deploy
