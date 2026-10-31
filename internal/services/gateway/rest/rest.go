@@ -62,6 +62,7 @@ func Register(engine *gin.Engine, upstreams *clients.Clients, verifier *authn.Ve
 	// The landing page's "tell me at launch" form. Open to anyone, so it is rate limited.
 	if leads != nil {
 		appV1.POST("/waitlist", httpx.RateLimit(rdb, "waitlist", 5, time.Minute), (&waitlist.Handler{Repo: leads}).Create)
+		appV1.GET("/waitlist/count", httpx.RateLimit(rdb, "waitlist-count", 60, time.Minute), (&waitlist.Handler{Repo: leads}).Count)
 	}
 
 	bo := engine.Group("/backoffice/v1")
