@@ -17,7 +17,10 @@ type Commands struct {
 	Refresh   *command.RefreshHandler
 	Logout    *command.LogoutHandler
 
-	SendLoginCode *command.SendLoginCodeHandler
+	SendLoginCode         *command.SendLoginCodeHandler
+	SendCustomerLoginCode *command.SendCustomerLoginCodeHandler
+	LoginWithPin          *command.LoginWithPinHandler
+	SetPin                *command.SetPinHandler
 	// DevLogin is nil outside development; see cmd/user/main.go.
 	DevLogin      *command.DevLoginHandler
 	SetUserStatus *command.SetUserStatusHandler
@@ -42,6 +45,7 @@ type App struct {
 type (
 	UserStore interface {
 		command.Users
+		command.PinStore
 		query.UserList
 		query.UserResolver
 	}
@@ -56,6 +60,7 @@ func New(
 	accounts AccountStore,
 	members query.Members,
 	pending command.PendingRegistrations,
+	pinAttempts command.PinLockout,
 	sessions command.Sessions,
 	verifications command.Verifications,
 	signer *authn.Signer,
@@ -65,12 +70,15 @@ func New(
 	return &App{
 		Commands: Commands{
 			Register:  command.NewRegisterHandler(users, pending, verifications, codeTTL),
-			VerifyOtp: command.NewVerifyOtpHandler(users, accounts, pending, verifications, sessions, signer, accessTTL),
+			VerifyOtp: command.NewVerifyOtpHandler(users, accounts, users, pending, verifications, sessions, signer, accessTTL),
 			Refresh:   command.NewRefreshHandler(users, accounts, sessions, signer, accessTTL),
 			Logout:    command.NewLogoutHandler(sessions),
 
-			SendLoginCode: command.NewSendLoginCodeHandler(accounts, verifications, codeTTL),
-			SetUserStatus: command.NewSetUserStatusHandler(users),
+			SendLoginCode:         command.NewSendLoginCodeHandler(accounts, verifications, codeTTL),
+			SendCustomerLoginCode: command.NewSendCustomerLoginCodeHandler(users, verifications, codeTTL),
+			LoginWithPin:          command.NewLoginWithPinHandler(users, users, pinAttempts, sessions, signer, accessTTL),
+			SetPin:                command.NewSetPinHandler(users),
+			SetUserStatus:         command.NewSetUserStatusHandler(users),
 		},
 		Queries: Queries{
 			GetUser:          query.NewGetUserHandler(queryUsers{users}, accounts),

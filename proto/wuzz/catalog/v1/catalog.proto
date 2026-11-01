@@ -641,6 +641,7 @@ message Banner {
   string deeplink = 14;   // derived: what a tap opens; empty for none
   google.protobuf.Timestamp created_at = 15;
   google.protobuf.Timestamp updated_at = 16;
+  string placement = 17; // home | login: where the app draws it
 }
 
 message BannerOutlet {
@@ -675,7 +676,10 @@ message SetBannerStatusRequest {
 message ReorderBannersRequest { repeated int64 ids = 1; }
 message ListBannerScreensRequest {}
 message ListBannerScreensResponse { repeated string screens = 1; }
-message ListLiveBannersRequest { int64 outlet_id = 1; } // 0 = no outlet known: only banners for every outlet
+message ListLiveBannersRequest {
+  int64 outlet_id = 1;
+  string placement = 2; // home or login; empty is home
+} // 0 = no outlet known: only banners for every outlet
 message ListLiveBannersResponse { repeated Banner banners = 1; }
 
 // ---- vouchers ----

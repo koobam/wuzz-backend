@@ -24,10 +24,12 @@ type Server struct {
 	app *app.App
 	// internalKey is what the order service presents to use ApplyOrderStock; empty turns that call off.
 	internalKey string
+	// scheme is the URL scheme of this environment's customer app, which a banner's deeplink starts with.
+	scheme string
 }
 
-func Register(registrar grpc.ServiceRegistrar, application *app.App, internalKey string) {
-	catalogv1.RegisterCatalogServiceServer(registrar, &Server{app: application, internalKey: internalKey})
+func Register(registrar grpc.ServiceRegistrar, application *app.App, internalKey, scheme string) {
+	catalogv1.RegisterCatalogServiceServer(registrar, &Server{app: application, internalKey: internalKey, scheme: scheme})
 }
 
 func isAdmin(ctx context.Context) bool {

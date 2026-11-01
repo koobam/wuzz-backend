@@ -34,6 +34,7 @@ type BannerDTO struct {
 	TargetValue   string            `json:"target_value"`
 	Deeplink      string            `json:"deeplink"`
 	Status        string            `json:"status"`
+	Placement     string            `json:"placement"`
 	SortIndex     int32             `json:"sort_index"`
 	StartsAt      *string           `json:"starts_at"`
 	EndsAt        *string           `json:"ends_at"`
@@ -54,7 +55,7 @@ func optUTC(t *timestamppb.Timestamp) *string {
 
 func bannerDTO(b *catalogv1.Banner) BannerDTO {
 	d := BannerDTO{ID: b.GetId(), Title: b.GetTitle(), InternalNotes: b.GetInternalNotes(), ImageURL: b.GetImageUrl(), TargetType: b.GetTargetType(),
-		TargetValue: b.GetTargetValue(), Deeplink: b.GetDeeplink(), Status: b.GetStatus(), SortIndex: b.GetSortIndex(), StartsAt: optUTC(b.GetStartsAt()),
+		TargetValue: b.GetTargetValue(), Deeplink: b.GetDeeplink(), Status: b.GetStatus(), Placement: b.GetPlacement(), SortIndex: b.GetSortIndex(), StartsAt: optUTC(b.GetStartsAt()),
 		EndsAt: optUTC(b.GetEndsAt()), OutletIDs: append([]int64{}, b.GetOutletIds()...), Outlets: make([]bannerOutletDTO, 0, len(b.GetOutlets())),
 		IsLive: b.GetIsLive(), CreatedAt: utc(b.GetCreatedAt()), UpdatedAt: utc(b.GetUpdatedAt())}
 	for _, o := range b.GetOutlets() {
@@ -102,6 +103,7 @@ type bannerBody struct {
 	TargetType    string     `json:"target_type"`
 	TargetValue   flexString `json:"target_value"`
 	Status        string     `json:"status"`
+	Placement     string     `json:"placement"` // home (default) or login
 	StartsAt      *string    `json:"starts_at"` // RFC 3339; null or "" = open-ended
 	EndsAt        *string    `json:"ends_at"`
 	OutletIDs     []int64    `json:"outlet_ids"`
@@ -128,7 +130,7 @@ func (b bannerBody) proto() (*catalogv1.Banner, error) {
 		return nil, err
 	}
 	return &catalogv1.Banner{Title: b.Title, InternalNotes: b.InternalNotes, ImageUrl: b.ImageURL, TargetType: b.TargetType, TargetValue: string(b.TargetValue),
-		Status: b.Status, StartsAt: starts, EndsAt: ends, OutletIds: b.OutletIDs}, nil
+		Status: b.Status, Placement: b.Placement, StartsAt: starts, EndsAt: ends, OutletIds: b.OutletIDs}, nil
 }
 
 func bannerID(c *gin.Context) (int64, bool) {
@@ -281,9 +283,16 @@ func (h *Handler) BOListBannerScreens(c *gin.Context) {
 	httpx.OK(c, gin.H{"screens": res.GetScreens()})
 }
 
-// LiveBanners answers GET /app/v1/banners?outlet_id=: the banners on a phone right now, first shown first. With an outlet, those for
-// every outlet and those limited to it; without, only those for every outlet. Nothing private is in it: no note, no status, no limit.
-func (h *Handler) LiveBanners(c *gin.Context) {
+// LiveBanners answers GET /app/v1/banners?outlet_id=: the home carousel's banners on a phone right now, first shown first. With an outlet,
+// those for every outlet and those limited to it; without, only those for every outlet. Nothing private is in it: no note, no status,
+// no limit.
+func (h *Handler) LiveBanners(c *gin.Context) { h.liveBanners(c, "home") }
+
+// LoginBanners answers GET /app/v1/login-banners: the carousel of the login screen, a list of its own that the home carousel never
+// shows and that never shows the home banners. It is public, as the login screen is seen before anyone has signed in.
+func (h *Handler) LoginBanners(c *gin.Context) { h.liveBanners(c, "login") }
+
+func (h *Handler) liveBanners(c *gin.Context, placement string) {
 	outlet := int64(0)
 	if v := c.Query("outlet_id"); v != "" {
 		n, err := strconv.ParseInt(v, 10, 64)
@@ -293,7 +302,7 @@ func (h *Handler) LiveBanners(c *gin.Context) {
 		}
 		outlet = n
 	}
-	res, err := h.Catalog.ListLiveBanners(c.Request.Context(), &catalogv1.ListLiveBannersRequest{OutletId: outlet})
+	res, err := h.Catalog.ListLiveBanners(c.Request.Context(), &catalogv1.ListLiveBannersRequest{OutletId: outlet, Placement: placement})
 	if err != nil {
 		httpx.Fail(c, httpx.Upstream(err))
 		return

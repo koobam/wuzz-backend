@@ -20,7 +20,9 @@ type Banner struct {
 	// address, and empty for none.
 	TargetType, TargetValue string
 	Status                  string // active | inactive: the human decision to publish
-	SortIndex               int32  // the carousel's order, written only by a reorder
+	// Placement is where the app draws the banner: the home carousel or the login screen's. Each has its own list.
+	Placement string
+	SortIndex int32 // the carousel's order, written only by a reorder
 	// StartsAt and EndsAt are the display window, to the second; nil at either end is open-ended there.
 	StartsAt, EndsAt *time.Time
 	// OutletIDs limits the banner to these outlets; empty is every outlet. Outlets names them (filled on reads).
@@ -39,6 +41,9 @@ const (
 	BannerActive   = "active"
 	BannerInactive = "inactive"
 
+	PlacementHome  = "home"
+	PlacementLogin = "login"
+
 	TargetNone     = "none"
 	TargetService  = "service"
 	TargetOutlet   = "outlet"
@@ -49,6 +54,9 @@ const (
 	maxBannerNotes = 500
 	maxBannerSites = 200
 )
+
+// BannerPlacements are the places a banner can be shown.
+var BannerPlacements = []string{PlacementHome, PlacementLogin}
 
 // BannerTargets are the kinds of target a banner can have.
 var BannerTargets = []string{TargetNone, TargetService, TargetOutlet, TargetScreen, TargetExternal}
@@ -89,15 +97,16 @@ func (b Banner) AppliesTo(outletID int64) bool {
 	return false
 }
 
-// Deeplink is the address the app opens on a tap, or "" for a banner that goes nowhere.
-func (b Banner) Deeplink() string {
+// Deeplink is the address the app opens on a tap, or "" for a banner that goes nowhere. The scheme is the one the app of this
+// environment registers (wuzz in production, wuzz-stg in staging), so a link from one environment never opens the other's app.
+func (b Banner) Deeplink(scheme string) string {
 	switch b.TargetType {
 	case TargetService:
-		return "wuzz://service/" + b.TargetValue
+		return scheme + "://service/" + b.TargetValue
 	case TargetOutlet:
-		return "wuzz://outlet/" + b.TargetValue
+		return scheme + "://outlet/" + b.TargetValue
 	case TargetScreen:
-		return "wuzz://screen/" + b.TargetValue
+		return scheme + "://screen/" + b.TargetValue
 	case TargetExternal:
 		return b.TargetValue
 	}
@@ -122,20 +131,23 @@ func (b Banner) EndUnix() int64 {
 
 // BannerInput is a banner as a form posts it.
 type BannerInput struct {
-	Title, InternalNotes, ImageURL, TargetType, TargetValue, Status string
-	StartsAt, EndsAt                                                *time.Time
-	OutletIDs                                                       []int64
+	Title, InternalNotes, ImageURL, TargetType, TargetValue, Status, Placement string
+	StartsAt, EndsAt                                                           *time.Time
+	OutletIDs                                                                  []int64
 }
 
 // ParseBanner checks and trims a banner. What needs the database (the target and the outlets exist) is checked by the store.
 func ParseBanner(in BannerInput) (Banner, error) {
 	b := Banner{Title: strings.TrimSpace(in.Title), InternalNotes: strings.TrimSpace(in.InternalNotes), ImageURL: strings.TrimSpace(in.ImageURL),
-		TargetType: in.TargetType, TargetValue: strings.TrimSpace(in.TargetValue), Status: in.Status}
+		TargetType: in.TargetType, TargetValue: strings.TrimSpace(in.TargetValue), Status: in.Status, Placement: in.Placement}
 	if b.Status == "" {
 		b.Status = BannerInactive
 	}
 	if b.TargetType == "" {
 		b.TargetType = TargetNone
+	}
+	if b.Placement == "" {
+		b.Placement = PlacementHome
 	}
 	switch {
 	case b.Title == "":
@@ -146,6 +158,8 @@ func ParseBanner(in BannerInput) (Banner, error) {
 		return b, apperr.Invalid(fmt.Sprintf("The internal notes can be at most %d characters", maxBannerNotes))
 	case b.Status != BannerActive && b.Status != BannerInactive:
 		return b, apperr.Invalid("The status must be active or inactive")
+	case !oneOf(BannerPlacements, b.Placement):
+		return b, apperr.Invalid("The placement must be one of " + strings.Join(BannerPlacements, ", "))
 	}
 	if b.ImageURL != "" {
 		u, err := url.Parse(b.ImageURL)

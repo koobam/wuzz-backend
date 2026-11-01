@@ -82,7 +82,7 @@ func TestBannerLiveAndOutlets(t *testing.T) {
 
 	live := func(outlet int64) []int64 {
 		t.Helper()
-		items, err := s.ListLiveBanners(ctx, outlet, now)
+		items, err := s.ListLiveBanners(ctx, outlet, domain.PlacementHome, now)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -103,7 +103,7 @@ func TestBannerLiveAndOutlets(t *testing.T) {
 		}
 	}
 	// The same banner, an hour later: the one that was waiting has started.
-	later, err := s.ListLiveBanners(ctx, o1.ID, now.Add(90*time.Minute))
+	later, err := s.ListLiveBanners(ctx, o1.ID, domain.PlacementHome, now.Add(90*time.Minute))
 	if err != nil || !contains(idsOf(later), notYet.ID) {
 		t.Errorf("an hour and a half on: %v, %v", idsOf(later), err)
 	}
@@ -254,5 +254,48 @@ func TestBannersBlockDeletes(t *testing.T) {
 	}
 	if err := s.DeleteOutlet(ctx, limited.ID); err != nil {
 		t.Errorf("the limited outlet after its banner is gone: %v", err)
+	}
+}
+
+// The home carousel and the login screen's each read a list of their own: a banner made for one is never on the other.
+func TestBannerPlacementKeepsTheListsApart(t *testing.T) {
+	s, ctx := testStore(t), context.Background()
+	now := time.Now().Truncate(time.Second)
+
+	home := bannerOf(t, s, "ZZ beranda", nil)
+	login := bannerOf(t, s, "ZZ masuk", func(i *domain.BannerInput) { i.Placement = domain.PlacementLogin })
+	if home.Placement != domain.PlacementHome {
+		t.Errorf("a banner that did not say where defaults to %q, got %q", domain.PlacementHome, home.Placement)
+	}
+	if login.Placement != domain.PlacementLogin {
+		t.Errorf("placement = %q, want login", login.Placement)
+	}
+
+	ids := func(placement string) []int64 {
+		t.Helper()
+		items, err := s.ListLiveBanners(ctx, 0, placement, now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return idsOf(items)
+	}
+	if got := ids(domain.PlacementHome); !contains(got, home.ID) || contains(got, login.ID) {
+		t.Errorf("home list = %v, want the home banner only", got)
+	}
+	if got := ids(domain.PlacementLogin); !contains(got, login.ID) || contains(got, home.ID) {
+		t.Errorf("login list = %v, want the login banner only", got)
+	}
+
+	// Moving a banner to the other place moves it between the lists.
+	moved := login
+	moved.Placement = domain.PlacementHome
+	if _, err := s.UpdateBanner(ctx, moved); err != nil {
+		t.Fatal(err)
+	}
+	if got := ids(domain.PlacementLogin); contains(got, login.ID) {
+		t.Errorf("the banner moved to home is still in the login list: %v", got)
+	}
+	if got := ids(domain.PlacementHome); !contains(got, login.ID) {
+		t.Errorf("the banner moved to home is not in the home list: %v", got)
 	}
 }

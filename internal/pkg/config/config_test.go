@@ -143,3 +143,26 @@ func TestMediaConfig(t *testing.T) {
 		t.Errorf("catalog should ignore media settings: %v", err)
 	}
 }
+
+func TestAppSchemeDefaultsAndIsValidated(t *testing.T) {
+	t.Setenv("APP_ENV", "dev")
+	cfg, err := Load(ServiceCatalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.AppScheme != "wuzz" {
+		t.Errorf("default AppScheme = %q, want wuzz", cfg.AppScheme)
+	}
+
+	t.Setenv("APP_DEEPLINK_SCHEME", "wuzz-stg")
+	if cfg, err = Load(ServiceCatalog); err != nil || cfg.AppScheme != "wuzz-stg" {
+		t.Errorf("AppScheme wuzz-stg: got %q, err %v", cfg.AppScheme, err)
+	}
+
+	for _, bad := range []string{"Wuzz", "wuzz://", "1wuzz", "wuzz stg"} {
+		t.Setenv("APP_DEEPLINK_SCHEME", bad)
+		if _, err := Load(ServiceCatalog); err == nil {
+			t.Errorf("AppScheme %q was accepted", bad)
+		}
+	}
+}

@@ -7,10 +7,14 @@ package config
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 )
+
+// appScheme is what a URL scheme may look like (RFC 3986, lowercased).
+var appScheme = regexp.MustCompile(`^[a-z][a-z0-9+.-]*$`)
 
 type Service string
 
@@ -26,6 +30,10 @@ type Config struct {
 	Service     Service
 	Env         string // dev | staging | production
 	Version     string
+
+	// AppScheme is the URL scheme the customer app of this environment registers: wuzz in production, wuzz-stg in staging.
+	// A banner's deeplink starts with it, so the link opens the app of its own environment and no other.
+	AppScheme string
 
 	HTTP      HTTP
 	GRPC      GRPC
@@ -255,10 +263,14 @@ func Load(service Service) (*Config, error) {
 			OTLPEndpoint: getenv("OTEL_EXPORTER_OTLP_ENDPOINT", ""),
 			TraceRatio:   getenvFloat("OTEL_TRACE_RATIO", 1),
 		},
-		Internal: Internal{APIKey: os.Getenv("INTERNAL_API_KEY")},
+		Internal:  Internal{APIKey: os.Getenv("INTERNAL_API_KEY")},
+		AppScheme: getenv("APP_DEEPLINK_SCHEME", "wuzz"),
 	}
 	if err := cfg.Media.validate(env, service); err != nil {
 		return nil, err
+	}
+	if !appScheme.MatchString(cfg.AppScheme) {
+		return nil, fmt.Errorf("config: APP_DEEPLINK_SCHEME %q is not a URL scheme (lowercase letters, digits, - + .)", cfg.AppScheme)
 	}
 	if cfg.Internal.APIKey == "" && env == "dev" {
 		cfg.Internal.APIKey = DevInternalKey

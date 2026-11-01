@@ -32,9 +32,12 @@ func Register(engine *gin.Engine, userClient userv1.UserServiceClient, verifier 
 	// clients should use /app/v1.
 	v1 := engine.Group("/app/v1")
 	v1.POST("/register", httpx.RateLimit(rdb, "register", 5, time.Minute), h.Register)
+	v1.POST("/login", httpx.RateLimit(rdb, "login", 5, time.Minute), h.Login)
+	v1.POST("/login/pin", httpx.RateLimit(rdb, "login-pin", 10, time.Minute), h.LoginWithPin)
+	v1.PUT("/pin", httpx.Authenticate(verifier, true), httpx.RateLimit(rdb, "set-pin", 5, time.Minute), h.SetPin)
 	v1.POST("/verify-otp", httpx.RateLimit(rdb, "verify-otp", 10, time.Minute), h.VerifyOtp)
 	v1.GET("/suggest-username", h.SuggestUsername)
-	v1.GET("/check-username", h.CheckUsername)
+	v1.GET("/check-username", h.CheckUsernameV1)
 	v1.GET("/me", httpx.Authenticate(verifier, true), h.Me)
 	v1.GET("/me/summary", httpx.Authenticate(verifier, true), h.MemberSummary)
 	// Development only: the user service refuses it too unless it runs in dev.

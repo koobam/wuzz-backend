@@ -22,7 +22,7 @@ type Users struct{ pool *postgres.Pool }
 
 func NewUsers(pool *postgres.Pool) *Users { return &Users{pool: pool} }
 
-const userColumns = `id, username, name, phone, email, points, streak, xp, birthdate, status, created_at, updated_at`
+const userColumns = `id, username, name, phone, email, points, streak, xp, birthdate, status, created_at, updated_at, (pin_hash IS NOT NULL) AS has_pin, reverify_required`
 
 func (r *Users) ByPhone(ctx context.Context, phone string) (domain.User, error) {
 	row := r.pool.QueryRow(ctx, `SELECT `+userColumns+` FROM users WHERE phone = $1`, phone)
@@ -144,6 +144,54 @@ func (r *Users) Create(ctx context.Context, u domain.User) (domain.User, error) 
 	return created, nil
 }
 
+// GetPinHash returns the bcrypt hash of the customer's PIN, or "" when none is set. The hash is read here and nowhere else, so
+// it cannot leak through a domain.User.
+func (r *Users) GetPinHash(ctx context.Context, userID string) (string, error) {
+	n, err := strconv.ParseInt(userID, 10, 64)
+	if err != nil {
+		return "", apperr.NotFound("User not found")
+	}
+	var hash *string
+	if err := r.pool.QueryRow(ctx, `SELECT pin_hash FROM users WHERE id = $1`, n).Scan(&hash); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", apperr.NotFound("User not found")
+		}
+		return "", apperr.Internal("Could not check the PIN").WithCause(err)
+	}
+	if hash == nil {
+		return "", nil
+	}
+	return *hash, nil
+}
+
+// SetPin stores a new PIN hash and clears the "verify again" flag in one statement: choosing a PIN is the end of that flag.
+func (r *Users) SetPin(ctx context.Context, userID, hash string) error {
+	n, err := strconv.ParseInt(userID, 10, 64)
+	if err != nil {
+		return apperr.NotFound("User not found")
+	}
+	tag, err := r.pool.Exec(ctx, `UPDATE users SET pin_hash = $2, reverify_required = false, updated_at = now() WHERE id = $1`, n, hash)
+	if err != nil {
+		return apperr.Internal("Could not save the PIN").WithCause(err)
+	}
+	if tag.RowsAffected() == 0 {
+		return apperr.NotFound("User not found")
+	}
+	return nil
+}
+
+// ClearReverify drops the "verify again" flag, after the customer proved their number with a code.
+func (r *Users) ClearReverify(ctx context.Context, userID string) error {
+	n, err := strconv.ParseInt(userID, 10, 64)
+	if err != nil {
+		return apperr.NotFound("User not found")
+	}
+	if _, err := r.pool.Exec(ctx, `UPDATE users SET reverify_required = false WHERE id = $1 AND reverify_required`, n); err != nil {
+		return apperr.Internal("Could not update the account").WithCause(err)
+	}
+	return nil
+}
+
 type row interface {
 	Scan(dest ...any) error
 }
@@ -155,7 +203,7 @@ func scanUser(r row) (domain.User, error) {
 		email     *string
 		birthdate *time.Time
 	)
-	err := r.Scan(&id, &u.Username, &u.Name, &u.Phone, &email, &u.Points, &u.Streak, &u.XP, &birthdate, &u.Status, &u.CreatedAt, &u.UpdatedAt)
+	err := r.Scan(&id, &u.Username, &u.Name, &u.Phone, &email, &u.Points, &u.Streak, &u.XP, &birthdate, &u.Status, &u.CreatedAt, &u.UpdatedAt, &u.HasPin, &u.ReverifyRequired)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.User{}, apperr.NotFound("User not found")

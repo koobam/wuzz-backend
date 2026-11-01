@@ -4,6 +4,8 @@
 package auth
 
 import (
+	"errors"
+
 	"github.com/gin-gonic/gin"
 
 	userv1 "github.com/koobam/wuzz-backend/gen/wuzz/user/v1"
@@ -87,6 +89,30 @@ func (h *Handler) CheckUsername(c *gin.Context) {
 	httpx.Done(c)
 }
 
+// CheckUsernameV1 is CheckUsername for /app/v1: the same question, answered the same way whatever the answer. A name that is
+// free, taken, or not a valid name is a 200 with the verdict in the body; only a check that could not be made (the user service
+// is down, a timeout) is an error status. The unversioned route keeps the status-code answers the shipped client reads.
+func (h *Handler) CheckUsernameV1(c *gin.Context) {
+	res, err := h.User.CheckUsername(c.Request.Context(), &userv1.CheckUsernameRequest{
+		Username: c.Query("username"),
+	})
+	if err != nil {
+		upstream := httpx.Upstream(err)
+		var appErr *apperr.Error
+		if errors.As(upstream, &appErr) && appErr.Kind == apperr.KindInvalid {
+			httpx.OK(c, UsernameCheckDTO{Available: false, Reason: "invalid", Message: appErr.Message})
+			return
+		}
+		httpx.Fail(c, upstream)
+		return
+	}
+	if !res.GetAvailable() {
+		httpx.OK(c, UsernameCheckDTO{Available: false, Reason: "taken", Message: usernameTakenErr.Message})
+		return
+	}
+	httpx.OK(c, UsernameCheckDTO{Available: true})
+}
+
 // Me requires the caller to be authenticated (see routes.go, where the
 // Authenticate(verifier, required=true) middleware runs first) — the bearer
 // token it verified is already on c.Request.Context(), and
@@ -125,6 +151,57 @@ func (h *Handler) Logout(c *gin.Context) {
 		return
 	}
 	if _, err := h.User.Logout(c.Request.Context(), &userv1.LogoutRequest{RefreshToken: body.RefreshToken}); err != nil {
+		httpx.Fail(c, httpx.Upstream(err))
+		return
+	}
+	httpx.Done(c)
+}
+
+// Login starts sign-in for an existing customer. The answer's method says how to go on: "pin" (no code was sent, use login/pin)
+// or "otp" (a code was sent, use verify-otp). A number that has no account is answered "otp" too, so it cannot be used to find
+// out who is a customer. force_otp asks for a code even when a PIN would do.
+func (h *Handler) Login(c *gin.Context) {
+	body, ok := httpx.Bind[LoginRequestDTO](c)
+	if !ok {
+		return
+	}
+
+	res, err := h.User.SendCustomerLoginCode(c.Request.Context(), &userv1.SendCustomerLoginCodeRequest{Phone: body.Phone, ForceOtp: body.ForceOtp})
+	if err != nil {
+		httpx.Fail(c, httpx.Upstream(err))
+		return
+	}
+
+	httpx.OK(c, LoginResponseDTO{
+		Phone:     body.Phone,
+		ExpiredAt: res.GetExpiresAt().AsTime().Format(timeLayout),
+		Method:    res.GetMethod(),
+	})
+}
+
+// LoginWithPin: POST /app/v1/login/pin. Answers with the same session shape as verify-otp.
+func (h *Handler) LoginWithPin(c *gin.Context) {
+	body, ok := httpx.Bind[LoginWithPinRequestDTO](c)
+	if !ok {
+		return
+	}
+
+	res, err := h.User.LoginWithPin(c.Request.Context(), &userv1.LoginWithPinRequest{Phone: body.Phone, Pin: body.Pin})
+	if err != nil {
+		httpx.Fail(c, httpx.Upstream(err))
+		return
+	}
+
+	httpx.OK(c, verifyOtpResponseFromProto(res.GetSession()))
+}
+
+// SetPin: PUT /app/v1/pin (authenticated). Sets or changes the caller's PIN.
+func (h *Handler) SetPin(c *gin.Context) {
+	body, ok := httpx.Bind[SetPinRequestDTO](c)
+	if !ok {
+		return
+	}
+	if _, err := h.User.SetPin(c.Request.Context(), &userv1.SetPinRequest{Pin: body.Pin}); err != nil {
 		httpx.Fail(c, httpx.Upstream(err))
 		return
 	}
