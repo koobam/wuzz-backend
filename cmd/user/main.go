@@ -78,6 +78,7 @@ func realMain() error {
 	members := userpg.NewMembers(pool)
 	sessions := userredis.NewSessions(rdb, cfg.Auth.RefreshTokenTTL)
 	pending := userredis.NewPendingRegistrations(rdb)
+	pinAttempts := userredis.NewPinAttempts(rdb)
 
 	// config.Load has already refused to start outside dev without Twilio
 	// credentials (unless TWILIO_DEV_MODE is on), so this falls back only
@@ -105,7 +106,7 @@ func realMain() error {
 		return err
 	}
 
-	application := app.New(users, accounts, members, pending, sessions, verifications, signer, cfg.Auth.AccessTokenTTL, cfg.Auth.VerificationCodeTTL)
+	application := app.New(users, accounts, members, pending, pinAttempts, sessions, verifications, signer, cfg.Auth.AccessTokenTTL, cfg.Auth.VerificationCodeTTL)
 
 	// Development sign-in without a code: only in a dev environment that is
 	// already skipping SMS. Anywhere else the handler stays nil.

@@ -19,14 +19,14 @@ import (
 // Banners of the customer app. The back office's list is answered by the index when there is one (search.go), the customer app's by
 // Postgres alone: it is a handful of rows and must never be behind a write.
 
-const bannerCols = `b.id, b.title, b.internal_notes, b.image_url, b.target_type, b.target_value, b.status, b.sort_index, b.starts_at, b.ends_at, b.created_at, b.updated_at`
+const bannerCols = `b.id, b.title, b.internal_notes, b.image_url, b.target_type, b.target_value, b.status, b.sort_index, b.starts_at, b.ends_at, b.created_at, b.updated_at, b.placement`
 
 // bannerOrderLock serialises the writes that decide the carousel's order (a create takes the last place; a reorder rewrites all).
 const bannerOrderLock = `SELECT pg_advisory_xact_lock(hashtext('banners_order'))`
 
 func scanBanner(r pgx.Row) (domain.Banner, error) {
 	var b domain.Banner
-	err := r.Scan(&b.ID, &b.Title, &b.InternalNotes, &b.ImageURL, &b.TargetType, &b.TargetValue, &b.Status, &b.SortIndex, &b.StartsAt, &b.EndsAt, &b.CreatedAt, &b.UpdatedAt)
+	err := r.Scan(&b.ID, &b.Title, &b.InternalNotes, &b.ImageURL, &b.TargetType, &b.TargetValue, &b.Status, &b.SortIndex, &b.StartsAt, &b.EndsAt, &b.CreatedAt, &b.UpdatedAt, &b.Placement)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return b, apperr.NotFound("Banner not found")
 	}
@@ -172,11 +172,12 @@ func getBanner(ctx context.Context, q queryer, id int64) (domain.Banner, error) 
 
 // ListLiveBanners reads, straight from Postgres, the banners on a phone at now for this outlet. With no outlet known only the banners
 // for every outlet apply. A handful is plenty for a carousel.
-func (s *Store) ListLiveBanners(ctx context.Context, outletID int64, now time.Time) ([]domain.Banner, error) {
+func (s *Store) ListLiveBanners(ctx context.Context, outletID int64, placement string, now time.Time) ([]domain.Banner, error) {
 	rows, err := s.pool.Query(ctx, `SELECT `+bannerCols+` FROM banners b WHERE `+liveSQL(1)+`
+		AND b.placement = $3
 		AND (NOT EXISTS (SELECT 1 FROM banner_outlets x WHERE x.banner_id = b.id)
 			OR ($2::bigint > 0 AND EXISTS (SELECT 1 FROM banner_outlets x WHERE x.banner_id = b.id AND x.outlet_id = $2)))
-		ORDER BY b.sort_index, b.id LIMIT 20`, now, outletID)
+		ORDER BY b.sort_index, b.id LIMIT 20`, now, outletID, placement)
 	if err != nil {
 		return nil, internal("Could not list banners", err)
 	}
@@ -261,9 +262,9 @@ func (s *Store) CreateBanner(ctx context.Context, b domain.Banner) (domain.Banne
 		}
 		var id int64
 		if err := tx.QueryRow(ctx, `
-			INSERT INTO banners (title, internal_notes, image_url, target_type, target_value, status, sort_index, starts_at, ends_at)
-			VALUES ($1, $2, $3, $4, $5, $6, (SELECT COALESCE(max(sort_index), 0) + 1 FROM banners), $7, $8) RETURNING id`,
-			b.Title, b.InternalNotes, b.ImageURL, b.TargetType, b.TargetValue, b.Status, b.StartsAt, b.EndsAt).Scan(&id); err != nil {
+			INSERT INTO banners (title, internal_notes, image_url, target_type, target_value, status, sort_index, starts_at, ends_at, placement)
+			VALUES ($1, $2, $3, $4, $5, $6, (SELECT COALESCE(max(sort_index), 0) + 1 FROM banners), $7, $8, $9) RETURNING id`,
+			b.Title, b.InternalNotes, b.ImageURL, b.TargetType, b.TargetValue, b.Status, b.StartsAt, b.EndsAt, b.Placement).Scan(&id); err != nil {
 			return err
 		}
 		if err := setBannerOutlets(ctx, tx, id, b.OutletIDs); err != nil {
@@ -294,8 +295,8 @@ func (s *Store) UpdateBanner(ctx context.Context, b domain.Banner) (domain.Banne
 			return err
 		}
 		if _, err := tx.Exec(ctx, `
-			UPDATE banners SET title=$2, internal_notes=$3, image_url=$4, target_type=$5, target_value=$6, status=$7, starts_at=$8, ends_at=$9, updated_at=now()
-			WHERE id=$1`, b.ID, b.Title, b.InternalNotes, b.ImageURL, b.TargetType, b.TargetValue, b.Status, b.StartsAt, b.EndsAt); err != nil {
+			UPDATE banners SET title=$2, internal_notes=$3, image_url=$4, target_type=$5, target_value=$6, status=$7, starts_at=$8, ends_at=$9, placement=$10, updated_at=now()
+			WHERE id=$1`, b.ID, b.Title, b.InternalNotes, b.ImageURL, b.TargetType, b.TargetValue, b.Status, b.StartsAt, b.EndsAt, b.Placement); err != nil {
 			return err
 		}
 		if err := setBannerOutlets(ctx, tx, b.ID, b.OutletIDs); err != nil {

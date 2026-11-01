@@ -40,8 +40,13 @@ type User struct {
 	XP        int64
 	Birthdate *time.Time
 	Status    string
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	// HasPin says a sign-in PIN is set. The hash itself never leaves the PinStore.
+	HasPin bool
+	// ReverifyRequired flags a customer who must prove the number with a code again before the PIN is trusted; cleared by
+	// a successful VerifyOtp or SetPin.
+	ReverifyRequired bool
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 func (u User) IsBanned() bool  { return u.Status == StatusBanned }
@@ -114,19 +119,27 @@ func NormaliseUsername(raw string) (string, error) {
 // plus, so "0812-3456-7890", "081234567890" and "6281234567890" are all one
 // subscriber and can be looked up by exact match.
 //
-// It is loose about what a country code looks like on purpose: a number that
-// already starts with "62" is left alone rather than double-prefixed, and a
-// number starting with "0" has that trunk prefix replaced with the default
-// country code. This does not generalise to other countries — the day it
-// needs to, this is the one function that has to change.
+// Without a leading "+" the number is taken as Indonesian, and it is loose
+// about what a country code looks like on purpose: a number that already
+// starts with "62" is left alone rather than double-prefixed, and a number
+// starting with "0" has that trunk prefix replaced with the default country
+// code. With a leading "+" the number is international and complete as it
+// stands: "+62812..." and "+1555..." are read as written and nothing is added,
+// which is how the app sends a number from a country other than Indonesia.
 func NormalisePhone(raw string) (string, error) {
 	digits, err := digitsOnly(raw)
 	if err != nil {
 		return "", apperr.Invalid("Enter a valid phone number")
 	}
+	international := strings.HasPrefix(digits, "+")
 	digits = strings.TrimPrefix(digits, "+")
 
 	switch {
+	case international:
+		// A country code never starts with 0, and a number given with its "+" is not completed with ours.
+		if strings.HasPrefix(digits, "0") {
+			return "", apperr.Invalid("Enter a valid phone number")
+		}
 	case strings.HasPrefix(digits, "0"):
 		digits = defaultCountryCode + strings.TrimPrefix(digits, "0")
 	case strings.HasPrefix(digits, defaultCountryCode):
@@ -136,7 +149,7 @@ func NormalisePhone(raw string) (string, error) {
 	}
 
 	// E.164 caps a full number at 15 digits; below 8 there is no room for a
-	// real subscriber number after the two-digit country code.
+	// real subscriber number after the country code.
 	if len(digits) < 8 || len(digits) > 15 {
 		return "", apperr.Invalid("Enter a valid phone number")
 	}

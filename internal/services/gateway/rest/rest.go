@@ -55,6 +55,7 @@ func Register(engine *gin.Engine, upstreams *clients.Clients, verifier *authn.Ve
 	appV1.GET("/services", catalog.BrowseServices)
 	appV1.GET("/services/:id", catalog.ServiceDetail)
 	appV1.GET("/banners", catalog.LiveBanners)
+	appV1.GET("/login-banners", catalog.LoginBanners)
 	// A customer's wallet and claiming a code (the claim is rate limited: a code is a guessable secret).
 	appV1.GET("/vouchers", authed, catalog.MyVouchers)
 	appV1.POST("/vouchers/claim", authed, httpx.RateLimit(rdb, "voucher-claim", 10, time.Minute), catalog.ClaimVoucher)

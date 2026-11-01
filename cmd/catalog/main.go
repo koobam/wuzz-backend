@@ -86,7 +86,7 @@ func realMain() error {
 	application := app.New(store, catalogpg.NewDiscovery(pool))
 
 	grpcServer := grpcx.NewServer(cfg, log, verifier)
-	cataloggrpc.Register(grpcServer.Registrar(), application, cfg.Internal.APIKey)
+	cataloggrpc.Register(grpcServer.Registrar(), application, cfg.Internal.APIKey, cfg.AppScheme)
 
 	admin := observability.NewAdminServer(cfg.HTTP.Addr, cfg.Version, pool.Ping, log)
 

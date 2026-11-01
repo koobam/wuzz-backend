@@ -151,6 +151,7 @@ type VerifyOtp struct {
 type VerifyOtpHandler struct {
 	users         Users
 	accounts      Accounts
+	pins          PinStore
 	pending       PendingRegistrations
 	verifications Verifications
 	sessions      Sessions
@@ -158,8 +159,8 @@ type VerifyOtpHandler struct {
 	accessTTL     time.Duration
 }
 
-func NewVerifyOtpHandler(users Users, accounts Accounts, pending PendingRegistrations, verifications Verifications, sessions Sessions, signer *authn.Signer, accessTTL time.Duration) *VerifyOtpHandler {
-	return &VerifyOtpHandler{users: users, accounts: accounts, pending: pending, verifications: verifications, sessions: sessions, signer: signer, accessTTL: accessTTL}
+func NewVerifyOtpHandler(users Users, accounts Accounts, pins PinStore, pending PendingRegistrations, verifications Verifications, sessions Sessions, signer *authn.Signer, accessTTL time.Duration) *VerifyOtpHandler {
+	return &VerifyOtpHandler{users: users, pins: pins, accounts: accounts, pending: pending, verifications: verifications, sessions: sessions, signer: signer, accessTTL: accessTTL}
 }
 
 func (h *VerifyOtpHandler) Handle(ctx context.Context, cmd VerifyOtp) (Session, error) {
@@ -198,6 +199,14 @@ func (h *VerifyOtpHandler) Handle(ctx context.Context, cmd VerifyOtp) (Session, 
 			return Session{}, apperr.Forbidden("Your account has been disabled. Please contact Customer Service.")
 		}
 		return Session{}, apperr.Forbidden("Your account is inactive. Please contact Customer Service.")
+	}
+
+	// The number was just proved with a code, which is what a "verify again" flag asks for.
+	if user.ReverifyRequired {
+		if err := h.pins.ClearReverify(ctx, user.ID); err != nil {
+			return Session{}, err
+		}
+		user.ReverifyRequired = false
 	}
 
 	return issueSession(ctx, h.sessions, h.signer, h.accessTTL, user)
@@ -404,4 +413,63 @@ func issue(ctx context.Context, sessions Sessions, signer *authn.Signer, accessT
 		RefreshToken:         refreshToken,
 		AccessTokenExpiresAt: time.Now().Add(accessTTL),
 	}, nil
+}
+
+// ---------- SendCustomerLoginCode ----------
+
+// Sign-in methods SendCustomerLoginCode can answer with.
+const (
+	MethodPin = "pin"
+	MethodOtp = "otp"
+)
+
+// SendCustomerLoginCode starts sign-in for an existing customer by phone number. A customer who can sign in with their PIN is
+// told so ("pin") and no code is sent; everyone else is answered "otp", and a code goes out only to a customer who may sign
+// in. An unknown or disabled number therefore looks exactly like a customer who has no PIN yet, so the answer cannot be used
+// to find out who has an account. The code it sends is checked by VerifyOtp.
+type SendCustomerLoginCode struct {
+	Phone string
+	// ForceOtp asks for a code even though a PIN would do: the customer forgot it.
+	ForceOtp bool
+}
+
+type SendCustomerLoginCodeResult struct {
+	Method    string
+	ExpiresAt time.Time
+}
+
+type SendCustomerLoginCodeHandler struct {
+	users         Users
+	verifications Verifications
+	codeTTL       time.Duration
+}
+
+func NewSendCustomerLoginCodeHandler(users Users, verifications Verifications, codeTTL time.Duration) *SendCustomerLoginCodeHandler {
+	return &SendCustomerLoginCodeHandler{users: users, verifications: verifications, codeTTL: codeTTL}
+}
+
+func (h *SendCustomerLoginCodeHandler) Handle(ctx context.Context, cmd SendCustomerLoginCode) (SendCustomerLoginCodeResult, error) {
+	phone, err := domain.NormalisePhone(cmd.Phone)
+	if err != nil {
+		return SendCustomerLoginCodeResult{}, err
+	}
+	otp := SendCustomerLoginCodeResult{Method: MethodOtp, ExpiresAt: time.Now().Add(h.codeTTL)}
+
+	user, err := h.users.ByPhone(ctx, phone)
+	if err != nil {
+		if apperr.IsKind(err, apperr.KindNotFound) {
+			return otp, nil
+		}
+		return SendCustomerLoginCodeResult{}, err
+	}
+	if !user.CanSignIn() {
+		return otp, nil
+	}
+	if user.HasPin && !user.ReverifyRequired && !cmd.ForceOtp {
+		return SendCustomerLoginCodeResult{Method: MethodPin, ExpiresAt: otp.ExpiresAt}, nil
+	}
+	if err := h.verifications.Start(ctx, phone); err != nil {
+		return SendCustomerLoginCodeResult{}, err
+	}
+	return otp, nil
 }

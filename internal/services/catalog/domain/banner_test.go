@@ -69,9 +69,13 @@ func TestBannerDeeplink(t *testing.T) {
 		{TargetScreen, "menu", "wuzz://screen/menu"},
 		{TargetExternal, "https://wuzz.care/promo", "https://wuzz.care/promo"},
 	} {
-		if got := (Banner{TargetType: c.typ, TargetValue: c.val}).Deeplink(); got != c.want {
+		if got := (Banner{TargetType: c.typ, TargetValue: c.val}).Deeplink("wuzz"); got != c.want {
 			t.Errorf("%s %q: Deeplink = %q, want %q", c.typ, c.val, got, c.want)
 		}
+	}
+
+	if got := (Banner{TargetType: TargetService, TargetValue: "13"}).Deeplink("wuzz-stg"); got != "wuzz-stg://service/13" {
+		t.Errorf("staging scheme: Deeplink = %q", got)
 	}
 }
 

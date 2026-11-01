@@ -24,6 +24,7 @@ type UserDTO struct {
 	Point       int64  `json:"point"`
 	XP          int64  `json:"xp"`
 	DateOfBirth string `json:"date_of_birth"`
+	HasPin      bool   `json:"has_pin"`
 	CreatedAt   string `json:"created_at"`
 	UpdatedAt   string `json:"updated_at"`
 }
@@ -40,6 +41,7 @@ func userDTOFromProto(u *userv1.User) UserDTO {
 		Point:       u.GetPoints(),
 		XP:          u.GetXp(),
 		DateOfBirth: u.GetDateOfBirth(),
+		HasPin:      u.GetHasPin(),
 	}
 	if t := u.GetCreatedAt(); t != nil {
 		dto.CreatedAt = t.AsTime().Format(timeLayout)
@@ -91,6 +93,8 @@ type VerifyOtpUserDTO struct {
 	Email    string `json:"email,omitempty"`
 	Phone    string `json:"phone,omitempty"`
 	Username string `json:"username,omitempty"`
+	// HasPin tells the app whether to ask the customer to make a PIN after a code signed them in.
+	HasPin bool `json:"has_pin"`
 }
 
 func verifyOtpResponseFromProto(s *userv1.Session) VerifyOtpResponseDTO {
@@ -102,6 +106,7 @@ func verifyOtpResponseFromProto(s *userv1.Session) VerifyOtpResponseDTO {
 			Email:    u.GetEmail(),
 			Phone:    u.GetPhone(),
 			Username: u.GetUsername(),
+			HasPin:   u.GetHasPin(),
 		},
 		AccessToken:  s.GetAccessToken(),
 		RefreshToken: s.GetRefreshToken(),
@@ -121,4 +126,38 @@ type RefreshRequestDTO struct {
 type RefreshResponseDTO struct {
 	AccessToken  string `json:"accessToken"`
 	RefreshToken string `json:"refreshToken"`
+}
+
+// LoginRequestDTO is what the app's phone-number sign-in sends: the number, and optionally force_otp to get a code even though a
+// PIN would do ("forgot PIN"). The code that follows goes to verify-otp.
+type LoginRequestDTO struct {
+	Phone    string `json:"phone" binding:"required"`
+	ForceOtp bool   `json:"force_otp"`
+}
+
+// LoginResponseDTO is RegisterResponseDTO plus method: "pin" (sign in at login/pin, no code sent) or "otp" (a code was sent).
+type LoginResponseDTO struct {
+	Phone     string `json:"phone"`
+	ExpiredAt string `json:"expired_at"`
+	Method    string `json:"method"`
+}
+
+// LoginWithPinRequestDTO is the body of POST /app/v1/login/pin.
+type LoginWithPinRequestDTO struct {
+	Phone string `json:"phone" binding:"required"`
+	Pin   string `json:"pin" binding:"required"`
+}
+
+// SetPinRequestDTO is the body of PUT /app/v1/pin.
+type SetPinRequestDTO struct {
+	Pin string `json:"pin" binding:"required"`
+}
+
+// UsernameCheckDTO is what GET /app/v1/check-username answers, always with a 200: whether the name can be taken is the answer,
+// not an error, so a client that gets any error status knows the check itself failed and not that the name is unavailable.
+// Reason is "taken" or "invalid" when Available is false; Message says why, in words a screen can show.
+type UsernameCheckDTO struct {
+	Available bool   `json:"available"`
+	Reason    string `json:"reason,omitempty"`
+	Message   string `json:"message,omitempty"`
 }

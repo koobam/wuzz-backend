@@ -40,6 +40,15 @@ service UserService {
   // It never reveals whether the number is known: it succeeds either way, and
   // only sends a code when there is a staff account to sign in to.
   rpc SendLoginCode(SendLoginCodeRequest) returns (SendLoginCodeResponse);
+  // SendCustomerLoginCode starts sign-in for an EXISTING customer: the app's phone-number login. Like SendLoginCode it
+  // succeeds the same whether or not the number is known, so it cannot be used to find out who has an account; a code is
+  // sent only to an active customer. The code is then checked by VerifyOtp, which signs that customer in.
+  rpc SendCustomerLoginCode(SendCustomerLoginCodeRequest) returns (SendCustomerLoginCodeResponse);
+  // LoginWithPin signs an existing customer in with the 6-digit PIN they set. A wrong PIN, an unknown number and a customer
+  // with no PIN all fail the same way; repeated failures lock the number out for a while.
+  rpc LoginWithPin(LoginWithPinRequest) returns (LoginWithPinResponse);
+  // SetPin sets (or changes) the signed-in customer's PIN and clears any "verify again" flag.
+  rpc SetPin(SetPinRequest) returns (SetPinResponse);
 
   // ListUsers and SetUserStatus are admin-only (the `admin` role in the token).
   rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
@@ -69,6 +78,8 @@ message User {
   google.protobuf.Timestamp created_at = 11;
   google.protobuf.Timestamp updated_at = 12;
   repeated string roles = 13;
+  // True once the customer has set a sign-in PIN. The PIN itself is never returned.
+  bool has_pin = 14;
 }
 
 message Session {
@@ -107,6 +118,33 @@ message SendLoginCodeRequest {
 message SendLoginCodeResponse {
   google.protobuf.Timestamp expires_at = 1;
 }
+
+message SendCustomerLoginCodeRequest {
+  string phone = 1;
+  // Ask for a code even when the customer could sign in with a PIN (forgot PIN).
+  bool force_otp = 2;
+}
+
+message SendCustomerLoginCodeResponse {
+  google.protobuf.Timestamp expires_at = 1;
+  // "pin": sign in with LoginWithPin, no code was sent. "otp": a code was sent (when the number can sign in) and goes to VerifyOtp.
+  string method = 2;
+}
+
+message LoginWithPinRequest {
+  string phone = 1;
+  string pin = 2;
+}
+
+message LoginWithPinResponse {
+  Session session = 1;
+}
+
+message SetPinRequest {
+  string pin = 1;
+}
+
+message SetPinResponse {}
 
 message ListUsersRequest {
   string query = 1;   // matches username, name or phone

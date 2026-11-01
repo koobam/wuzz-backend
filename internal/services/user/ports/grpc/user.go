@@ -144,6 +144,7 @@ func toProtoUser(u domain.User) *userv1.User {
 		Points:    u.Points,
 		Streak:    u.Streak,
 		Xp:        u.XP,
+		HasPin:    u.HasPin,
 		Status:    u.Status,
 		CreatedAt: timestamppb.New(u.CreatedAt),
 		UpdatedAt: timestamppb.New(u.UpdatedAt),
@@ -266,4 +267,32 @@ func (s *Server) SetUserStatus(ctx context.Context, req *userv1.SetUserStatusReq
 		return nil, err
 	}
 	return &userv1.SetUserStatusResponse{User: toProtoUser(u)}, nil
+}
+
+func (s *Server) SendCustomerLoginCode(ctx context.Context, req *userv1.SendCustomerLoginCodeRequest) (*userv1.SendCustomerLoginCodeResponse, error) {
+	res, err := s.app.Commands.SendCustomerLoginCode.Handle(ctx, command.SendCustomerLoginCode{Phone: req.GetPhone(), ForceOtp: req.GetForceOtp()})
+	if err != nil {
+		return nil, err
+	}
+	return &userv1.SendCustomerLoginCodeResponse{ExpiresAt: timestamppb.New(res.ExpiresAt), Method: res.Method}, nil
+}
+
+func (s *Server) LoginWithPin(ctx context.Context, req *userv1.LoginWithPinRequest) (*userv1.LoginWithPinResponse, error) {
+	session, err := s.app.Commands.LoginWithPin.Handle(ctx, command.LoginWithPin{Phone: req.GetPhone(), Pin: req.GetPin()})
+	if err != nil {
+		return nil, err
+	}
+	return &userv1.LoginWithPinResponse{Session: toProtoSession(session)}, nil
+}
+
+func (s *Server) SetPin(ctx context.Context, req *userv1.SetPinRequest) (*userv1.SetPinResponse, error) {
+	// The caller is whoever the access token names, as in GetUser.
+	identity, err := authn.Require(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := s.app.Commands.SetPin.Handle(ctx, command.SetPin{UserID: identity.UserID, Pin: req.GetPin()}); err != nil {
+		return nil, err
+	}
+	return &userv1.SetPinResponse{}, nil
 }

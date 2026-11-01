@@ -13,7 +13,7 @@ type Banners interface {
 	GetBanner(ctx context.Context, id int64) (domain.Banner, error)
 	// ListLiveBanners are the banners on a phone at now that apply to the outlet (0 = none known: only those for every outlet), in the
 	// carousel's order.
-	ListLiveBanners(ctx context.Context, outletID int64, now time.Time) ([]domain.Banner, error)
+	ListLiveBanners(ctx context.Context, outletID int64, placement string, now time.Time) ([]domain.Banner, error)
 }
 
 // ---------- ListBanners ----------
@@ -61,7 +61,11 @@ func (h *GetBannerHandler) Handle(ctx context.Context, q GetBanner) (domain.Bann
 
 // ---------- ListLiveBanners ----------
 
-type ListLiveBanners struct{ OutletID int64 }
+type ListLiveBanners struct {
+	OutletID int64
+	// Placement is home or login; empty is home.
+	Placement string
+}
 
 type ListLiveBannersHandler struct {
 	banners Banners
@@ -73,5 +77,9 @@ func NewListLiveBannersHandler(banners Banners) *ListLiveBannersHandler {
 }
 
 func (h *ListLiveBannersHandler) Handle(ctx context.Context, q ListLiveBanners) ([]domain.Banner, error) {
-	return h.banners.ListLiveBanners(ctx, q.OutletID, h.now())
+	placement := q.Placement
+	if placement == "" {
+		placement = domain.PlacementHome
+	}
+	return h.banners.ListLiveBanners(ctx, q.OutletID, placement, h.now())
 }

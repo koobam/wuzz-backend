@@ -70,6 +70,23 @@ components:
       properties:
         phone: { type: string, example: "081234500099" }
         otp_code: { type: string, example: "123456" }
+    Login:
+      type: object
+      required: [phone]
+      properties:
+        phone: { type: string, example: "081234500099" }
+        force_otp: { type: boolean, default: false, description: "send a code even when the customer has a PIN (forgot PIN)" }
+    LoginPin:
+      type: object
+      required: [phone, pin]
+      properties:
+        phone: { type: string, example: "081234500099" }
+        pin: { type: string, pattern: "^[0-9]{6}$", example: "482916" }
+    SetPin:
+      type: object
+      required: [pin]
+      properties:
+        pin: { type: string, pattern: "^[0-9]{6}$", description: "exactly 6 digits, not all the same and not a straight run (123456, 654321)", example: "482916" }
     Register:
       type: object
       required: [username, name, phone]
@@ -332,6 +349,7 @@ components:
         target_type: { type: string, enum: [none, service, outlet, screen, external], default: none, description: "what a tap opens" }
         target_value: { type: string, description: "a service id or an outlet id (it must exist), a screen key (see GET /backoffice/v1/banners/screens), a full https address for external; empty for none. A number is accepted for an id." }
         status: { type: string, enum: [active, inactive], default: inactive, description: "active needs an image" }
+        placement: { type: string, enum: [home, login], default: home, description: "where the app draws it: the home carousel (GET /app/v1/banners) or the login screen's (GET /app/v1/login-banners)" }
         starts_at: { type: string, format: date-time, nullable: true, description: "RFC 3339; kept to the second; null or empty = no start" }
         ends_at: { type: string, format: date-time, nullable: true, description: "RFC 3339; must be after starts_at; null or empty = no end. The banner stops showing the instant it is reached." }
         outlet_ids: { type: array, maxItems: 200, items: { type: integer, format: int64, minimum: 1 }, description: "show only at these outlets; empty = every outlet" }
@@ -396,6 +414,31 @@ paths:
         required: true
         content: { application/json: { schema: { $ref: "#/components/schemas/Register" } } }
       responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /app/v1/login:
+    post:
+      tags: [App auth]
+      summary: Start sign-in. data.method is "pin" (no code sent, go to /app/v1/login/pin) or "otp" (a code was sent, go to verify-otp); an unknown number is answered "otp"
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/Login" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /app/v1/login/pin:
+    post:
+      tags: [App auth]
+      summary: Sign in with the 6-digit PIN (same session shape as verify-otp; 5 wrong PINs lock the number for 15 minutes)
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/LoginPin" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /app/v1/pin:
+    put:
+      tags: [App auth]
+      summary: Set or change the signed-in customer's PIN
+      security: [{ bearer: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/SetPin" } } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
   /app/v1/verify-otp:
     post:
       tags: [App auth]
@@ -414,6 +457,8 @@ paths:
   /app/v1/check-username:
     get:
       tags: [App auth]
+      summary: Is a username free
+      description: Always a 200 with the verdict in data - available, or not available with reason taken or invalid - so a client that gets an error status knows the check itself failed.
       parameters:
         - { name: username, in: query, required: true, schema: { type: string } }
       responses: { "200": { $ref: "#/components/responses/Ok" } }
@@ -477,6 +522,14 @@ paths:
       tags: [App catalog]
       summary: The banners on a phone right now
       description: "Answers { banners: [{ id, title, image_url, target_type, target_value, deeplink }] }, first shown first, at most 20. A banner is in it when it is active and the server's clock is inside its schedule. With outlet_id: those for every outlet and those limited to it; without: only those for every outlet. deeplink is wuzz://service/<id>, wuzz://outlet/<id>, wuzz://screen/<key> or an https address, and empty for a banner that goes nowhere."
+      parameters:
+        - { name: outlet_id, in: query, schema: { type: integer, format: int64, minimum: 1 } }
+      responses: { "200": { $ref: "#/components/responses/Ok" } }
+  /app/v1/login-banners:
+    get:
+      tags: [App catalog]
+      summary: The banners of the login screen's carousel
+      description: "Public: the login screen is seen before anyone has signed in. Answers the same shape as GET /app/v1/banners ({ banners: [{ id, title, image_url, target_type, target_value, deeplink }] }), but only the banners whose placement is login; the home carousel never shows them and they never show the home banners. Live, ordered and limited to 20 the same way; outlet_id works the same."
       parameters:
         - { name: outlet_id, in: query, schema: { type: integer, format: int64, minimum: 1 } }
       responses: { "200": { $ref: "#/components/responses/Ok" } }

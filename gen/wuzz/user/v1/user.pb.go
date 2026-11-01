@@ -23,20 +23,22 @@ const (
 )
 
 type User struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Username      string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
-	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	Phone         string                 `protobuf:"bytes,4,opt,name=phone,proto3" json:"phone,omitempty"`
-	Email         string                 `protobuf:"bytes,5,opt,name=email,proto3" json:"email,omitempty"`
-	Points        int64                  `protobuf:"varint,6,opt,name=points,proto3" json:"points,omitempty"`
-	Streak        int64                  `protobuf:"varint,7,opt,name=streak,proto3" json:"streak,omitempty"`
-	Xp            int64                  `protobuf:"varint,8,opt,name=xp,proto3" json:"xp,omitempty"`
-	DateOfBirth   string                 `protobuf:"bytes,9,opt,name=date_of_birth,json=dateOfBirth,proto3" json:"date_of_birth,omitempty"`
-	Status        string                 `protobuf:"bytes,10,opt,name=status,proto3" json:"status,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	Roles         []string               `protobuf:"bytes,13,rep,name=roles,proto3" json:"roles,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Id          string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Username    string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
+	Name        string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Phone       string                 `protobuf:"bytes,4,opt,name=phone,proto3" json:"phone,omitempty"`
+	Email       string                 `protobuf:"bytes,5,opt,name=email,proto3" json:"email,omitempty"`
+	Points      int64                  `protobuf:"varint,6,opt,name=points,proto3" json:"points,omitempty"`
+	Streak      int64                  `protobuf:"varint,7,opt,name=streak,proto3" json:"streak,omitempty"`
+	Xp          int64                  `protobuf:"varint,8,opt,name=xp,proto3" json:"xp,omitempty"`
+	DateOfBirth string                 `protobuf:"bytes,9,opt,name=date_of_birth,json=dateOfBirth,proto3" json:"date_of_birth,omitempty"`
+	Status      string                 `protobuf:"bytes,10,opt,name=status,proto3" json:"status,omitempty"`
+	CreatedAt   *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt   *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	Roles       []string               `protobuf:"bytes,13,rep,name=roles,proto3" json:"roles,omitempty"`
+	// True once the customer has set a sign-in PIN. The PIN itself is never returned.
+	HasPin        bool `protobuf:"varint,14,opt,name=has_pin,json=hasPin,proto3" json:"has_pin,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -160,6 +162,13 @@ func (x *User) GetRoles() []string {
 		return x.Roles
 	}
 	return nil
+}
+
+func (x *User) GetHasPin() bool {
+	if x != nil {
+		return x.HasPin
+	}
+	return false
 }
 
 type Session struct {
@@ -509,6 +518,288 @@ func (x *SendLoginCodeResponse) GetExpiresAt() *timestamppb.Timestamp {
 	return nil
 }
 
+type SendCustomerLoginCodeRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Phone string                 `protobuf:"bytes,1,opt,name=phone,proto3" json:"phone,omitempty"`
+	// Ask for a code even when the customer could sign in with a PIN (forgot PIN).
+	ForceOtp      bool `protobuf:"varint,2,opt,name=force_otp,json=forceOtp,proto3" json:"force_otp,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SendCustomerLoginCodeRequest) Reset() {
+	*x = SendCustomerLoginCodeRequest{}
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SendCustomerLoginCodeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SendCustomerLoginCodeRequest) ProtoMessage() {}
+
+func (x *SendCustomerLoginCodeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SendCustomerLoginCodeRequest.ProtoReflect.Descriptor instead.
+func (*SendCustomerLoginCodeRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *SendCustomerLoginCodeRequest) GetPhone() string {
+	if x != nil {
+		return x.Phone
+	}
+	return ""
+}
+
+func (x *SendCustomerLoginCodeRequest) GetForceOtp() bool {
+	if x != nil {
+		return x.ForceOtp
+	}
+	return false
+}
+
+type SendCustomerLoginCodeResponse struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	ExpiresAt *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	// "pin": sign in with LoginWithPin, no code was sent. "otp": a code was sent (when the number can sign in) and goes to VerifyOtp.
+	Method        string `protobuf:"bytes,2,opt,name=method,proto3" json:"method,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SendCustomerLoginCodeResponse) Reset() {
+	*x = SendCustomerLoginCodeResponse{}
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SendCustomerLoginCodeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SendCustomerLoginCodeResponse) ProtoMessage() {}
+
+func (x *SendCustomerLoginCodeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SendCustomerLoginCodeResponse.ProtoReflect.Descriptor instead.
+func (*SendCustomerLoginCodeResponse) Descriptor() ([]byte, []int) {
+	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *SendCustomerLoginCodeResponse) GetExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return nil
+}
+
+func (x *SendCustomerLoginCodeResponse) GetMethod() string {
+	if x != nil {
+		return x.Method
+	}
+	return ""
+}
+
+type LoginWithPinRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Phone         string                 `protobuf:"bytes,1,opt,name=phone,proto3" json:"phone,omitempty"`
+	Pin           string                 `protobuf:"bytes,2,opt,name=pin,proto3" json:"pin,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LoginWithPinRequest) Reset() {
+	*x = LoginWithPinRequest{}
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LoginWithPinRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LoginWithPinRequest) ProtoMessage() {}
+
+func (x *LoginWithPinRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LoginWithPinRequest.ProtoReflect.Descriptor instead.
+func (*LoginWithPinRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *LoginWithPinRequest) GetPhone() string {
+	if x != nil {
+		return x.Phone
+	}
+	return ""
+}
+
+func (x *LoginWithPinRequest) GetPin() string {
+	if x != nil {
+		return x.Pin
+	}
+	return ""
+}
+
+type LoginWithPinResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Session       *Session               `protobuf:"bytes,1,opt,name=session,proto3" json:"session,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LoginWithPinResponse) Reset() {
+	*x = LoginWithPinResponse{}
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LoginWithPinResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LoginWithPinResponse) ProtoMessage() {}
+
+func (x *LoginWithPinResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LoginWithPinResponse.ProtoReflect.Descriptor instead.
+func (*LoginWithPinResponse) Descriptor() ([]byte, []int) {
+	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *LoginWithPinResponse) GetSession() *Session {
+	if x != nil {
+		return x.Session
+	}
+	return nil
+}
+
+type SetPinRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Pin           string                 `protobuf:"bytes,1,opt,name=pin,proto3" json:"pin,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetPinRequest) Reset() {
+	*x = SetPinRequest{}
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetPinRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetPinRequest) ProtoMessage() {}
+
+func (x *SetPinRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetPinRequest.ProtoReflect.Descriptor instead.
+func (*SetPinRequest) Descriptor() ([]byte, []int) {
+	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *SetPinRequest) GetPin() string {
+	if x != nil {
+		return x.Pin
+	}
+	return ""
+}
+
+type SetPinResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetPinResponse) Reset() {
+	*x = SetPinResponse{}
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetPinResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetPinResponse) ProtoMessage() {}
+
+func (x *SetPinResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetPinResponse.ProtoReflect.Descriptor instead.
+func (*SetPinResponse) Descriptor() ([]byte, []int) {
+	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{12}
+}
+
 type ListUsersRequest struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	Query  string                 `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`   // matches username, name or phone
@@ -524,7 +815,7 @@ type ListUsersRequest struct {
 
 func (x *ListUsersRequest) Reset() {
 	*x = ListUsersRequest{}
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[7]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -536,7 +827,7 @@ func (x *ListUsersRequest) String() string {
 func (*ListUsersRequest) ProtoMessage() {}
 
 func (x *ListUsersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[7]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -549,7 +840,7 @@ func (x *ListUsersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListUsersRequest.ProtoReflect.Descriptor instead.
 func (*ListUsersRequest) Descriptor() ([]byte, []int) {
-	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{7}
+	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ListUsersRequest) GetQuery() string {
@@ -604,7 +895,7 @@ type ListUsersResponse struct {
 
 func (x *ListUsersResponse) Reset() {
 	*x = ListUsersResponse{}
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[8]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -616,7 +907,7 @@ func (x *ListUsersResponse) String() string {
 func (*ListUsersResponse) ProtoMessage() {}
 
 func (x *ListUsersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[8]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -629,7 +920,7 @@ func (x *ListUsersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListUsersResponse.ProtoReflect.Descriptor instead.
 func (*ListUsersResponse) Descriptor() ([]byte, []int) {
-	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{8}
+	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ListUsersResponse) GetUsers() []*User {
@@ -656,7 +947,7 @@ type ResolveCustomersRequest struct {
 
 func (x *ResolveCustomersRequest) Reset() {
 	*x = ResolveCustomersRequest{}
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[9]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -668,7 +959,7 @@ func (x *ResolveCustomersRequest) String() string {
 func (*ResolveCustomersRequest) ProtoMessage() {}
 
 func (x *ResolveCustomersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[9]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -681,7 +972,7 @@ func (x *ResolveCustomersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResolveCustomersRequest.ProtoReflect.Descriptor instead.
 func (*ResolveCustomersRequest) Descriptor() ([]byte, []int) {
-	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{9}
+	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ResolveCustomersRequest) GetIds() []string {
@@ -709,7 +1000,7 @@ type ResolveCustomersResponse struct {
 
 func (x *ResolveCustomersResponse) Reset() {
 	*x = ResolveCustomersResponse{}
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[10]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -721,7 +1012,7 @@ func (x *ResolveCustomersResponse) String() string {
 func (*ResolveCustomersResponse) ProtoMessage() {}
 
 func (x *ResolveCustomersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[10]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -734,7 +1025,7 @@ func (x *ResolveCustomersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResolveCustomersResponse.ProtoReflect.Descriptor instead.
 func (*ResolveCustomersResponse) Descriptor() ([]byte, []int) {
-	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{10}
+	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ResolveCustomersResponse) GetUsers() []*User {
@@ -769,7 +1060,7 @@ type Account struct {
 
 func (x *Account) Reset() {
 	*x = Account{}
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[11]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -781,7 +1072,7 @@ func (x *Account) String() string {
 func (*Account) ProtoMessage() {}
 
 func (x *Account) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[11]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -794,7 +1085,7 @@ func (x *Account) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Account.ProtoReflect.Descriptor instead.
 func (*Account) Descriptor() ([]byte, []int) {
-	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{11}
+	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *Account) GetId() string {
@@ -878,7 +1169,7 @@ type ListAccountsRequest struct {
 
 func (x *ListAccountsRequest) Reset() {
 	*x = ListAccountsRequest{}
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[12]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -890,7 +1181,7 @@ func (x *ListAccountsRequest) String() string {
 func (*ListAccountsRequest) ProtoMessage() {}
 
 func (x *ListAccountsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[12]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -903,7 +1194,7 @@ func (x *ListAccountsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAccountsRequest.ProtoReflect.Descriptor instead.
 func (*ListAccountsRequest) Descriptor() ([]byte, []int) {
-	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{12}
+	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ListAccountsRequest) GetKind() string {
@@ -972,7 +1263,7 @@ type ListAccountsResponse struct {
 
 func (x *ListAccountsResponse) Reset() {
 	*x = ListAccountsResponse{}
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[13]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -984,7 +1275,7 @@ func (x *ListAccountsResponse) String() string {
 func (*ListAccountsResponse) ProtoMessage() {}
 
 func (x *ListAccountsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[13]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -997,7 +1288,7 @@ func (x *ListAccountsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAccountsResponse.ProtoReflect.Descriptor instead.
 func (*ListAccountsResponse) Descriptor() ([]byte, []int) {
-	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{13}
+	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ListAccountsResponse) GetAccounts() []*Account {
@@ -1024,7 +1315,7 @@ type SetUserStatusRequest struct {
 
 func (x *SetUserStatusRequest) Reset() {
 	*x = SetUserStatusRequest{}
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[14]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1036,7 +1327,7 @@ func (x *SetUserStatusRequest) String() string {
 func (*SetUserStatusRequest) ProtoMessage() {}
 
 func (x *SetUserStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[14]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1049,7 +1340,7 @@ func (x *SetUserStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetUserStatusRequest.ProtoReflect.Descriptor instead.
 func (*SetUserStatusRequest) Descriptor() ([]byte, []int) {
-	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{14}
+	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *SetUserStatusRequest) GetUserId() string {
@@ -1075,7 +1366,7 @@ type SetUserStatusResponse struct {
 
 func (x *SetUserStatusResponse) Reset() {
 	*x = SetUserStatusResponse{}
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[15]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1087,7 +1378,7 @@ func (x *SetUserStatusResponse) String() string {
 func (*SetUserStatusResponse) ProtoMessage() {}
 
 func (x *SetUserStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[15]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1100,7 +1391,7 @@ func (x *SetUserStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetUserStatusResponse.ProtoReflect.Descriptor instead.
 func (*SetUserStatusResponse) Descriptor() ([]byte, []int) {
-	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{15}
+	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *SetUserStatusResponse) GetUser() *User {
@@ -1119,7 +1410,7 @@ type VerifyOtpResponse struct {
 
 func (x *VerifyOtpResponse) Reset() {
 	*x = VerifyOtpResponse{}
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[16]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1131,7 +1422,7 @@ func (x *VerifyOtpResponse) String() string {
 func (*VerifyOtpResponse) ProtoMessage() {}
 
 func (x *VerifyOtpResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[16]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1144,7 +1435,7 @@ func (x *VerifyOtpResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VerifyOtpResponse.ProtoReflect.Descriptor instead.
 func (*VerifyOtpResponse) Descriptor() ([]byte, []int) {
-	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{16}
+	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *VerifyOtpResponse) GetSession() *Session {
@@ -1165,7 +1456,7 @@ type SuggestUsernameRequest struct {
 
 func (x *SuggestUsernameRequest) Reset() {
 	*x = SuggestUsernameRequest{}
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[17]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1177,7 +1468,7 @@ func (x *SuggestUsernameRequest) String() string {
 func (*SuggestUsernameRequest) ProtoMessage() {}
 
 func (x *SuggestUsernameRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[17]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1190,7 +1481,7 @@ func (x *SuggestUsernameRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SuggestUsernameRequest.ProtoReflect.Descriptor instead.
 func (*SuggestUsernameRequest) Descriptor() ([]byte, []int) {
-	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{17}
+	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *SuggestUsernameRequest) GetName() string {
@@ -1223,7 +1514,7 @@ type SuggestUsernameResponse struct {
 
 func (x *SuggestUsernameResponse) Reset() {
 	*x = SuggestUsernameResponse{}
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[18]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1235,7 +1526,7 @@ func (x *SuggestUsernameResponse) String() string {
 func (*SuggestUsernameResponse) ProtoMessage() {}
 
 func (x *SuggestUsernameResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[18]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1248,7 +1539,7 @@ func (x *SuggestUsernameResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SuggestUsernameResponse.ProtoReflect.Descriptor instead.
 func (*SuggestUsernameResponse) Descriptor() ([]byte, []int) {
-	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{18}
+	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *SuggestUsernameResponse) GetUsernames() []string {
@@ -1267,7 +1558,7 @@ type CheckUsernameRequest struct {
 
 func (x *CheckUsernameRequest) Reset() {
 	*x = CheckUsernameRequest{}
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[19]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1279,7 +1570,7 @@ func (x *CheckUsernameRequest) String() string {
 func (*CheckUsernameRequest) ProtoMessage() {}
 
 func (x *CheckUsernameRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[19]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1292,7 +1583,7 @@ func (x *CheckUsernameRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CheckUsernameRequest.ProtoReflect.Descriptor instead.
 func (*CheckUsernameRequest) Descriptor() ([]byte, []int) {
-	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{19}
+	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *CheckUsernameRequest) GetUsername() string {
@@ -1311,7 +1602,7 @@ type CheckUsernameResponse struct {
 
 func (x *CheckUsernameResponse) Reset() {
 	*x = CheckUsernameResponse{}
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[20]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1323,7 +1614,7 @@ func (x *CheckUsernameResponse) String() string {
 func (*CheckUsernameResponse) ProtoMessage() {}
 
 func (x *CheckUsernameResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[20]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1336,7 +1627,7 @@ func (x *CheckUsernameResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CheckUsernameResponse.ProtoReflect.Descriptor instead.
 func (*CheckUsernameResponse) Descriptor() ([]byte, []int) {
-	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{20}
+	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *CheckUsernameResponse) GetAvailable() bool {
@@ -1354,7 +1645,7 @@ type GetUserRequest struct {
 
 func (x *GetUserRequest) Reset() {
 	*x = GetUserRequest{}
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[21]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1366,7 +1657,7 @@ func (x *GetUserRequest) String() string {
 func (*GetUserRequest) ProtoMessage() {}
 
 func (x *GetUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[21]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1379,7 +1670,7 @@ func (x *GetUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUserRequest.ProtoReflect.Descriptor instead.
 func (*GetUserRequest) Descriptor() ([]byte, []int) {
-	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{21}
+	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{27}
 }
 
 type GetUserResponse struct {
@@ -1391,7 +1682,7 @@ type GetUserResponse struct {
 
 func (x *GetUserResponse) Reset() {
 	*x = GetUserResponse{}
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[22]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1403,7 +1694,7 @@ func (x *GetUserResponse) String() string {
 func (*GetUserResponse) ProtoMessage() {}
 
 func (x *GetUserResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[22]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1416,7 +1707,7 @@ func (x *GetUserResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUserResponse.ProtoReflect.Descriptor instead.
 func (*GetUserResponse) Descriptor() ([]byte, []int) {
-	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{22}
+	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *GetUserResponse) GetUser() *User {
@@ -1435,7 +1726,7 @@ type RefreshRequest struct {
 
 func (x *RefreshRequest) Reset() {
 	*x = RefreshRequest{}
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[23]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1447,7 +1738,7 @@ func (x *RefreshRequest) String() string {
 func (*RefreshRequest) ProtoMessage() {}
 
 func (x *RefreshRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[23]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1460,7 +1751,7 @@ func (x *RefreshRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RefreshRequest.ProtoReflect.Descriptor instead.
 func (*RefreshRequest) Descriptor() ([]byte, []int) {
-	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{23}
+	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *RefreshRequest) GetRefreshToken() string {
@@ -1479,7 +1770,7 @@ type RefreshResponse struct {
 
 func (x *RefreshResponse) Reset() {
 	*x = RefreshResponse{}
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[24]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1491,7 +1782,7 @@ func (x *RefreshResponse) String() string {
 func (*RefreshResponse) ProtoMessage() {}
 
 func (x *RefreshResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[24]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1504,7 +1795,7 @@ func (x *RefreshResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RefreshResponse.ProtoReflect.Descriptor instead.
 func (*RefreshResponse) Descriptor() ([]byte, []int) {
-	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{24}
+	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *RefreshResponse) GetSession() *Session {
@@ -1523,7 +1814,7 @@ type LogoutRequest struct {
 
 func (x *LogoutRequest) Reset() {
 	*x = LogoutRequest{}
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[25]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1535,7 +1826,7 @@ func (x *LogoutRequest) String() string {
 func (*LogoutRequest) ProtoMessage() {}
 
 func (x *LogoutRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[25]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1548,7 +1839,7 @@ func (x *LogoutRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogoutRequest.ProtoReflect.Descriptor instead.
 func (*LogoutRequest) Descriptor() ([]byte, []int) {
-	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{25}
+	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *LogoutRequest) GetRefreshToken() string {
@@ -1566,7 +1857,7 @@ type LogoutResponse struct {
 
 func (x *LogoutResponse) Reset() {
 	*x = LogoutResponse{}
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[26]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1578,7 +1869,7 @@ func (x *LogoutResponse) String() string {
 func (*LogoutResponse) ProtoMessage() {}
 
 func (x *LogoutResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[26]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1591,7 +1882,7 @@ func (x *LogoutResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogoutResponse.ProtoReflect.Descriptor instead.
 func (*LogoutResponse) Descriptor() ([]byte, []int) {
-	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{26}
+	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{32}
 }
 
 type GetMemberSummaryRequest struct {
@@ -1602,7 +1893,7 @@ type GetMemberSummaryRequest struct {
 
 func (x *GetMemberSummaryRequest) Reset() {
 	*x = GetMemberSummaryRequest{}
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[27]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1614,7 +1905,7 @@ func (x *GetMemberSummaryRequest) String() string {
 func (*GetMemberSummaryRequest) ProtoMessage() {}
 
 func (x *GetMemberSummaryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[27]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1627,7 +1918,7 @@ func (x *GetMemberSummaryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMemberSummaryRequest.ProtoReflect.Descriptor instead.
 func (*GetMemberSummaryRequest) Descriptor() ([]byte, []int) {
-	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{27}
+	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{33}
 }
 
 type MemberLevel struct {
@@ -1643,7 +1934,7 @@ type MemberLevel struct {
 
 func (x *MemberLevel) Reset() {
 	*x = MemberLevel{}
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[28]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1655,7 +1946,7 @@ func (x *MemberLevel) String() string {
 func (*MemberLevel) ProtoMessage() {}
 
 func (x *MemberLevel) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[28]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1668,7 +1959,7 @@ func (x *MemberLevel) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MemberLevel.ProtoReflect.Descriptor instead.
 func (*MemberLevel) Descriptor() ([]byte, []int) {
-	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{28}
+	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *MemberLevel) GetName() string {
@@ -1711,7 +2002,7 @@ type MemberSummary struct {
 
 func (x *MemberSummary) Reset() {
 	*x = MemberSummary{}
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[29]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1723,7 +2014,7 @@ func (x *MemberSummary) String() string {
 func (*MemberSummary) ProtoMessage() {}
 
 func (x *MemberSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[29]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1736,7 +2027,7 @@ func (x *MemberSummary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MemberSummary.ProtoReflect.Descriptor instead.
 func (*MemberSummary) Descriptor() ([]byte, []int) {
-	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{29}
+	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *MemberSummary) GetName() string {
@@ -1797,7 +2088,7 @@ type GetMemberSummaryResponse struct {
 
 func (x *GetMemberSummaryResponse) Reset() {
 	*x = GetMemberSummaryResponse{}
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[30]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1809,7 +2100,7 @@ func (x *GetMemberSummaryResponse) String() string {
 func (*GetMemberSummaryResponse) ProtoMessage() {}
 
 func (x *GetMemberSummaryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[30]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1822,7 +2113,7 @@ func (x *GetMemberSummaryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMemberSummaryResponse.ProtoReflect.Descriptor instead.
 func (*GetMemberSummaryResponse) Descriptor() ([]byte, []int) {
-	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{30}
+	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *GetMemberSummaryResponse) GetSummary() *MemberSummary {
@@ -1841,7 +2132,7 @@ type DevLoginRequest struct {
 
 func (x *DevLoginRequest) Reset() {
 	*x = DevLoginRequest{}
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[31]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1853,7 +2144,7 @@ func (x *DevLoginRequest) String() string {
 func (*DevLoginRequest) ProtoMessage() {}
 
 func (x *DevLoginRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[31]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1866,7 +2157,7 @@ func (x *DevLoginRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DevLoginRequest.ProtoReflect.Descriptor instead.
 func (*DevLoginRequest) Descriptor() ([]byte, []int) {
-	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{31}
+	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *DevLoginRequest) GetPhone() string {
@@ -1885,7 +2176,7 @@ type DevLoginResponse struct {
 
 func (x *DevLoginResponse) Reset() {
 	*x = DevLoginResponse{}
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[32]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1897,7 +2188,7 @@ func (x *DevLoginResponse) String() string {
 func (*DevLoginResponse) ProtoMessage() {}
 
 func (x *DevLoginResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wuzz_user_v1_user_proto_msgTypes[32]
+	mi := &file_wuzz_user_v1_user_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1910,7 +2201,7 @@ func (x *DevLoginResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DevLoginResponse.ProtoReflect.Descriptor instead.
 func (*DevLoginResponse) Descriptor() ([]byte, []int) {
-	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{32}
+	return file_wuzz_user_v1_user_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *DevLoginResponse) GetSession() *Session {
@@ -1924,7 +2215,7 @@ var File_wuzz_user_v1_user_proto protoreflect.FileDescriptor
 
 const file_wuzz_user_v1_user_proto_rawDesc = "" +
 	"\n" +
-	"\x17wuzz/user/v1/user.proto\x12\fwuzz.user.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xfa\x02\n" +
+	"\x17wuzz/user/v1/user.proto\x12\fwuzz.user.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x93\x03\n" +
 	"\x04User\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12\x12\n" +
@@ -1941,7 +2232,8 @@ const file_wuzz_user_v1_user_proto_rawDesc = "" +
 	"created_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x14\n" +
-	"\x05roles\x18\r \x03(\tR\x05roles\"\xcc\x01\n" +
+	"\x05roles\x18\r \x03(\tR\x05roles\x12\x17\n" +
+	"\ahas_pin\x18\x0e \x01(\bR\x06hasPin\"\xcc\x01\n" +
 	"\aSession\x12!\n" +
 	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x12#\n" +
 	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\x12&\n" +
@@ -1965,7 +2257,22 @@ const file_wuzz_user_v1_user_proto_rawDesc = "" +
 	"\x05phone\x18\x01 \x01(\tR\x05phone\"R\n" +
 	"\x15SendLoginCodeResponse\x129\n" +
 	"\n" +
-	"expires_at\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\"\xa2\x01\n" +
+	"expires_at\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\"Q\n" +
+	"\x1cSendCustomerLoginCodeRequest\x12\x14\n" +
+	"\x05phone\x18\x01 \x01(\tR\x05phone\x12\x1b\n" +
+	"\tforce_otp\x18\x02 \x01(\bR\bforceOtp\"r\n" +
+	"\x1dSendCustomerLoginCodeResponse\x129\n" +
+	"\n" +
+	"expires_at\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x12\x16\n" +
+	"\x06method\x18\x02 \x01(\tR\x06method\"=\n" +
+	"\x13LoginWithPinRequest\x12\x14\n" +
+	"\x05phone\x18\x01 \x01(\tR\x05phone\x12\x10\n" +
+	"\x03pin\x18\x02 \x01(\tR\x03pin\"G\n" +
+	"\x14LoginWithPinResponse\x12/\n" +
+	"\asession\x18\x01 \x01(\v2\x15.wuzz.user.v1.SessionR\asession\"!\n" +
+	"\rSetPinRequest\x12\x10\n" +
+	"\x03pin\x18\x01 \x01(\tR\x03pin\"\x10\n" +
+	"\x0eSetPinResponse\"\xa2\x01\n" +
 	"\x10ListUsersRequest\x12\x14\n" +
 	"\x05query\x18\x01 \x01(\tR\x05query\x12\x16\n" +
 	"\x06status\x18\x02 \x01(\tR\x06status\x12\x14\n" +
@@ -2053,7 +2360,7 @@ const file_wuzz_user_v1_user_proto_rawDesc = "" +
 	"\x0fDevLoginRequest\x12\x14\n" +
 	"\x05phone\x18\x01 \x01(\tR\x05phone\"C\n" +
 	"\x10DevLoginResponse\x12/\n" +
-	"\asession\x18\x01 \x01(\v2\x15.wuzz.user.v1.SessionR\asession2\x9f\t\n" +
+	"\asession\x18\x01 \x01(\v2\x15.wuzz.user.v1.SessionR\asession2\xad\v\n" +
 	"\vUserService\x12I\n" +
 	"\bRegister\x12\x1d.wuzz.user.v1.RegisterRequest\x1a\x1e.wuzz.user.v1.RegisterResponse\x12L\n" +
 	"\tVerifyOtp\x12\x1e.wuzz.user.v1.VerifyOtpRequest\x1a\x1f.wuzz.user.v1.VerifyOtpResponse\x12I\n" +
@@ -2062,7 +2369,10 @@ const file_wuzz_user_v1_user_proto_rawDesc = "" +
 	"\rCheckUsername\x12\".wuzz.user.v1.CheckUsernameRequest\x1a#.wuzz.user.v1.CheckUsernameResponse\x12F\n" +
 	"\aGetUser\x12\x1c.wuzz.user.v1.GetUserRequest\x1a\x1d.wuzz.user.v1.GetUserResponse\x12a\n" +
 	"\x10GetMemberSummary\x12%.wuzz.user.v1.GetMemberSummaryRequest\x1a&.wuzz.user.v1.GetMemberSummaryResponse\x12X\n" +
-	"\rSendLoginCode\x12\".wuzz.user.v1.SendLoginCodeRequest\x1a#.wuzz.user.v1.SendLoginCodeResponse\x12L\n" +
+	"\rSendLoginCode\x12\".wuzz.user.v1.SendLoginCodeRequest\x1a#.wuzz.user.v1.SendLoginCodeResponse\x12p\n" +
+	"\x15SendCustomerLoginCode\x12*.wuzz.user.v1.SendCustomerLoginCodeRequest\x1a+.wuzz.user.v1.SendCustomerLoginCodeResponse\x12U\n" +
+	"\fLoginWithPin\x12!.wuzz.user.v1.LoginWithPinRequest\x1a\".wuzz.user.v1.LoginWithPinResponse\x12C\n" +
+	"\x06SetPin\x12\x1b.wuzz.user.v1.SetPinRequest\x1a\x1c.wuzz.user.v1.SetPinResponse\x12L\n" +
 	"\tListUsers\x12\x1e.wuzz.user.v1.ListUsersRequest\x1a\x1f.wuzz.user.v1.ListUsersResponse\x12X\n" +
 	"\rSetUserStatus\x12\".wuzz.user.v1.SetUserStatusRequest\x1a#.wuzz.user.v1.SetUserStatusResponse\x12a\n" +
 	"\x10ResolveCustomers\x12%.wuzz.user.v1.ResolveCustomersRequest\x1a&.wuzz.user.v1.ResolveCustomersResponse\x12U\n" +
@@ -2082,95 +2392,109 @@ func file_wuzz_user_v1_user_proto_rawDescGZIP() []byte {
 	return file_wuzz_user_v1_user_proto_rawDescData
 }
 
-var file_wuzz_user_v1_user_proto_msgTypes = make([]protoimpl.MessageInfo, 33)
+var file_wuzz_user_v1_user_proto_msgTypes = make([]protoimpl.MessageInfo, 39)
 var file_wuzz_user_v1_user_proto_goTypes = []any{
-	(*User)(nil),                     // 0: wuzz.user.v1.User
-	(*Session)(nil),                  // 1: wuzz.user.v1.Session
-	(*RegisterRequest)(nil),          // 2: wuzz.user.v1.RegisterRequest
-	(*RegisterResponse)(nil),         // 3: wuzz.user.v1.RegisterResponse
-	(*VerifyOtpRequest)(nil),         // 4: wuzz.user.v1.VerifyOtpRequest
-	(*SendLoginCodeRequest)(nil),     // 5: wuzz.user.v1.SendLoginCodeRequest
-	(*SendLoginCodeResponse)(nil),    // 6: wuzz.user.v1.SendLoginCodeResponse
-	(*ListUsersRequest)(nil),         // 7: wuzz.user.v1.ListUsersRequest
-	(*ListUsersResponse)(nil),        // 8: wuzz.user.v1.ListUsersResponse
-	(*ResolveCustomersRequest)(nil),  // 9: wuzz.user.v1.ResolveCustomersRequest
-	(*ResolveCustomersResponse)(nil), // 10: wuzz.user.v1.ResolveCustomersResponse
-	(*Account)(nil),                  // 11: wuzz.user.v1.Account
-	(*ListAccountsRequest)(nil),      // 12: wuzz.user.v1.ListAccountsRequest
-	(*ListAccountsResponse)(nil),     // 13: wuzz.user.v1.ListAccountsResponse
-	(*SetUserStatusRequest)(nil),     // 14: wuzz.user.v1.SetUserStatusRequest
-	(*SetUserStatusResponse)(nil),    // 15: wuzz.user.v1.SetUserStatusResponse
-	(*VerifyOtpResponse)(nil),        // 16: wuzz.user.v1.VerifyOtpResponse
-	(*SuggestUsernameRequest)(nil),   // 17: wuzz.user.v1.SuggestUsernameRequest
-	(*SuggestUsernameResponse)(nil),  // 18: wuzz.user.v1.SuggestUsernameResponse
-	(*CheckUsernameRequest)(nil),     // 19: wuzz.user.v1.CheckUsernameRequest
-	(*CheckUsernameResponse)(nil),    // 20: wuzz.user.v1.CheckUsernameResponse
-	(*GetUserRequest)(nil),           // 21: wuzz.user.v1.GetUserRequest
-	(*GetUserResponse)(nil),          // 22: wuzz.user.v1.GetUserResponse
-	(*RefreshRequest)(nil),           // 23: wuzz.user.v1.RefreshRequest
-	(*RefreshResponse)(nil),          // 24: wuzz.user.v1.RefreshResponse
-	(*LogoutRequest)(nil),            // 25: wuzz.user.v1.LogoutRequest
-	(*LogoutResponse)(nil),           // 26: wuzz.user.v1.LogoutResponse
-	(*GetMemberSummaryRequest)(nil),  // 27: wuzz.user.v1.GetMemberSummaryRequest
-	(*MemberLevel)(nil),              // 28: wuzz.user.v1.MemberLevel
-	(*MemberSummary)(nil),            // 29: wuzz.user.v1.MemberSummary
-	(*GetMemberSummaryResponse)(nil), // 30: wuzz.user.v1.GetMemberSummaryResponse
-	(*DevLoginRequest)(nil),          // 31: wuzz.user.v1.DevLoginRequest
-	(*DevLoginResponse)(nil),         // 32: wuzz.user.v1.DevLoginResponse
-	(*timestamppb.Timestamp)(nil),    // 33: google.protobuf.Timestamp
+	(*User)(nil),                          // 0: wuzz.user.v1.User
+	(*Session)(nil),                       // 1: wuzz.user.v1.Session
+	(*RegisterRequest)(nil),               // 2: wuzz.user.v1.RegisterRequest
+	(*RegisterResponse)(nil),              // 3: wuzz.user.v1.RegisterResponse
+	(*VerifyOtpRequest)(nil),              // 4: wuzz.user.v1.VerifyOtpRequest
+	(*SendLoginCodeRequest)(nil),          // 5: wuzz.user.v1.SendLoginCodeRequest
+	(*SendLoginCodeResponse)(nil),         // 6: wuzz.user.v1.SendLoginCodeResponse
+	(*SendCustomerLoginCodeRequest)(nil),  // 7: wuzz.user.v1.SendCustomerLoginCodeRequest
+	(*SendCustomerLoginCodeResponse)(nil), // 8: wuzz.user.v1.SendCustomerLoginCodeResponse
+	(*LoginWithPinRequest)(nil),           // 9: wuzz.user.v1.LoginWithPinRequest
+	(*LoginWithPinResponse)(nil),          // 10: wuzz.user.v1.LoginWithPinResponse
+	(*SetPinRequest)(nil),                 // 11: wuzz.user.v1.SetPinRequest
+	(*SetPinResponse)(nil),                // 12: wuzz.user.v1.SetPinResponse
+	(*ListUsersRequest)(nil),              // 13: wuzz.user.v1.ListUsersRequest
+	(*ListUsersResponse)(nil),             // 14: wuzz.user.v1.ListUsersResponse
+	(*ResolveCustomersRequest)(nil),       // 15: wuzz.user.v1.ResolveCustomersRequest
+	(*ResolveCustomersResponse)(nil),      // 16: wuzz.user.v1.ResolveCustomersResponse
+	(*Account)(nil),                       // 17: wuzz.user.v1.Account
+	(*ListAccountsRequest)(nil),           // 18: wuzz.user.v1.ListAccountsRequest
+	(*ListAccountsResponse)(nil),          // 19: wuzz.user.v1.ListAccountsResponse
+	(*SetUserStatusRequest)(nil),          // 20: wuzz.user.v1.SetUserStatusRequest
+	(*SetUserStatusResponse)(nil),         // 21: wuzz.user.v1.SetUserStatusResponse
+	(*VerifyOtpResponse)(nil),             // 22: wuzz.user.v1.VerifyOtpResponse
+	(*SuggestUsernameRequest)(nil),        // 23: wuzz.user.v1.SuggestUsernameRequest
+	(*SuggestUsernameResponse)(nil),       // 24: wuzz.user.v1.SuggestUsernameResponse
+	(*CheckUsernameRequest)(nil),          // 25: wuzz.user.v1.CheckUsernameRequest
+	(*CheckUsernameResponse)(nil),         // 26: wuzz.user.v1.CheckUsernameResponse
+	(*GetUserRequest)(nil),                // 27: wuzz.user.v1.GetUserRequest
+	(*GetUserResponse)(nil),               // 28: wuzz.user.v1.GetUserResponse
+	(*RefreshRequest)(nil),                // 29: wuzz.user.v1.RefreshRequest
+	(*RefreshResponse)(nil),               // 30: wuzz.user.v1.RefreshResponse
+	(*LogoutRequest)(nil),                 // 31: wuzz.user.v1.LogoutRequest
+	(*LogoutResponse)(nil),                // 32: wuzz.user.v1.LogoutResponse
+	(*GetMemberSummaryRequest)(nil),       // 33: wuzz.user.v1.GetMemberSummaryRequest
+	(*MemberLevel)(nil),                   // 34: wuzz.user.v1.MemberLevel
+	(*MemberSummary)(nil),                 // 35: wuzz.user.v1.MemberSummary
+	(*GetMemberSummaryResponse)(nil),      // 36: wuzz.user.v1.GetMemberSummaryResponse
+	(*DevLoginRequest)(nil),               // 37: wuzz.user.v1.DevLoginRequest
+	(*DevLoginResponse)(nil),              // 38: wuzz.user.v1.DevLoginResponse
+	(*timestamppb.Timestamp)(nil),         // 39: google.protobuf.Timestamp
 }
 var file_wuzz_user_v1_user_proto_depIdxs = []int32{
-	33, // 0: wuzz.user.v1.User.created_at:type_name -> google.protobuf.Timestamp
-	33, // 1: wuzz.user.v1.User.updated_at:type_name -> google.protobuf.Timestamp
+	39, // 0: wuzz.user.v1.User.created_at:type_name -> google.protobuf.Timestamp
+	39, // 1: wuzz.user.v1.User.updated_at:type_name -> google.protobuf.Timestamp
 	0,  // 2: wuzz.user.v1.Session.user:type_name -> wuzz.user.v1.User
-	33, // 3: wuzz.user.v1.Session.access_token_expires_at:type_name -> google.protobuf.Timestamp
-	33, // 4: wuzz.user.v1.RegisterResponse.expires_at:type_name -> google.protobuf.Timestamp
-	33, // 5: wuzz.user.v1.SendLoginCodeResponse.expires_at:type_name -> google.protobuf.Timestamp
-	0,  // 6: wuzz.user.v1.ListUsersResponse.users:type_name -> wuzz.user.v1.User
-	0,  // 7: wuzz.user.v1.ResolveCustomersResponse.users:type_name -> wuzz.user.v1.User
-	33, // 8: wuzz.user.v1.Account.created_at:type_name -> google.protobuf.Timestamp
-	33, // 9: wuzz.user.v1.Account.updated_at:type_name -> google.protobuf.Timestamp
-	11, // 10: wuzz.user.v1.ListAccountsResponse.accounts:type_name -> wuzz.user.v1.Account
-	0,  // 11: wuzz.user.v1.SetUserStatusResponse.user:type_name -> wuzz.user.v1.User
-	1,  // 12: wuzz.user.v1.VerifyOtpResponse.session:type_name -> wuzz.user.v1.Session
-	0,  // 13: wuzz.user.v1.GetUserResponse.user:type_name -> wuzz.user.v1.User
-	1,  // 14: wuzz.user.v1.RefreshResponse.session:type_name -> wuzz.user.v1.Session
-	28, // 15: wuzz.user.v1.MemberSummary.level:type_name -> wuzz.user.v1.MemberLevel
-	29, // 16: wuzz.user.v1.GetMemberSummaryResponse.summary:type_name -> wuzz.user.v1.MemberSummary
-	1,  // 17: wuzz.user.v1.DevLoginResponse.session:type_name -> wuzz.user.v1.Session
-	2,  // 18: wuzz.user.v1.UserService.Register:input_type -> wuzz.user.v1.RegisterRequest
-	4,  // 19: wuzz.user.v1.UserService.VerifyOtp:input_type -> wuzz.user.v1.VerifyOtpRequest
-	31, // 20: wuzz.user.v1.UserService.DevLogin:input_type -> wuzz.user.v1.DevLoginRequest
-	17, // 21: wuzz.user.v1.UserService.SuggestUsername:input_type -> wuzz.user.v1.SuggestUsernameRequest
-	19, // 22: wuzz.user.v1.UserService.CheckUsername:input_type -> wuzz.user.v1.CheckUsernameRequest
-	21, // 23: wuzz.user.v1.UserService.GetUser:input_type -> wuzz.user.v1.GetUserRequest
-	27, // 24: wuzz.user.v1.UserService.GetMemberSummary:input_type -> wuzz.user.v1.GetMemberSummaryRequest
-	5,  // 25: wuzz.user.v1.UserService.SendLoginCode:input_type -> wuzz.user.v1.SendLoginCodeRequest
-	7,  // 26: wuzz.user.v1.UserService.ListUsers:input_type -> wuzz.user.v1.ListUsersRequest
-	14, // 27: wuzz.user.v1.UserService.SetUserStatus:input_type -> wuzz.user.v1.SetUserStatusRequest
-	9,  // 28: wuzz.user.v1.UserService.ResolveCustomers:input_type -> wuzz.user.v1.ResolveCustomersRequest
-	12, // 29: wuzz.user.v1.UserService.ListAccounts:input_type -> wuzz.user.v1.ListAccountsRequest
-	23, // 30: wuzz.user.v1.UserService.Refresh:input_type -> wuzz.user.v1.RefreshRequest
-	25, // 31: wuzz.user.v1.UserService.Logout:input_type -> wuzz.user.v1.LogoutRequest
-	3,  // 32: wuzz.user.v1.UserService.Register:output_type -> wuzz.user.v1.RegisterResponse
-	16, // 33: wuzz.user.v1.UserService.VerifyOtp:output_type -> wuzz.user.v1.VerifyOtpResponse
-	32, // 34: wuzz.user.v1.UserService.DevLogin:output_type -> wuzz.user.v1.DevLoginResponse
-	18, // 35: wuzz.user.v1.UserService.SuggestUsername:output_type -> wuzz.user.v1.SuggestUsernameResponse
-	20, // 36: wuzz.user.v1.UserService.CheckUsername:output_type -> wuzz.user.v1.CheckUsernameResponse
-	22, // 37: wuzz.user.v1.UserService.GetUser:output_type -> wuzz.user.v1.GetUserResponse
-	30, // 38: wuzz.user.v1.UserService.GetMemberSummary:output_type -> wuzz.user.v1.GetMemberSummaryResponse
-	6,  // 39: wuzz.user.v1.UserService.SendLoginCode:output_type -> wuzz.user.v1.SendLoginCodeResponse
-	8,  // 40: wuzz.user.v1.UserService.ListUsers:output_type -> wuzz.user.v1.ListUsersResponse
-	15, // 41: wuzz.user.v1.UserService.SetUserStatus:output_type -> wuzz.user.v1.SetUserStatusResponse
-	10, // 42: wuzz.user.v1.UserService.ResolveCustomers:output_type -> wuzz.user.v1.ResolveCustomersResponse
-	13, // 43: wuzz.user.v1.UserService.ListAccounts:output_type -> wuzz.user.v1.ListAccountsResponse
-	24, // 44: wuzz.user.v1.UserService.Refresh:output_type -> wuzz.user.v1.RefreshResponse
-	26, // 45: wuzz.user.v1.UserService.Logout:output_type -> wuzz.user.v1.LogoutResponse
-	32, // [32:46] is the sub-list for method output_type
-	18, // [18:32] is the sub-list for method input_type
-	18, // [18:18] is the sub-list for extension type_name
-	18, // [18:18] is the sub-list for extension extendee
-	0,  // [0:18] is the sub-list for field type_name
+	39, // 3: wuzz.user.v1.Session.access_token_expires_at:type_name -> google.protobuf.Timestamp
+	39, // 4: wuzz.user.v1.RegisterResponse.expires_at:type_name -> google.protobuf.Timestamp
+	39, // 5: wuzz.user.v1.SendLoginCodeResponse.expires_at:type_name -> google.protobuf.Timestamp
+	39, // 6: wuzz.user.v1.SendCustomerLoginCodeResponse.expires_at:type_name -> google.protobuf.Timestamp
+	1,  // 7: wuzz.user.v1.LoginWithPinResponse.session:type_name -> wuzz.user.v1.Session
+	0,  // 8: wuzz.user.v1.ListUsersResponse.users:type_name -> wuzz.user.v1.User
+	0,  // 9: wuzz.user.v1.ResolveCustomersResponse.users:type_name -> wuzz.user.v1.User
+	39, // 10: wuzz.user.v1.Account.created_at:type_name -> google.protobuf.Timestamp
+	39, // 11: wuzz.user.v1.Account.updated_at:type_name -> google.protobuf.Timestamp
+	17, // 12: wuzz.user.v1.ListAccountsResponse.accounts:type_name -> wuzz.user.v1.Account
+	0,  // 13: wuzz.user.v1.SetUserStatusResponse.user:type_name -> wuzz.user.v1.User
+	1,  // 14: wuzz.user.v1.VerifyOtpResponse.session:type_name -> wuzz.user.v1.Session
+	0,  // 15: wuzz.user.v1.GetUserResponse.user:type_name -> wuzz.user.v1.User
+	1,  // 16: wuzz.user.v1.RefreshResponse.session:type_name -> wuzz.user.v1.Session
+	34, // 17: wuzz.user.v1.MemberSummary.level:type_name -> wuzz.user.v1.MemberLevel
+	35, // 18: wuzz.user.v1.GetMemberSummaryResponse.summary:type_name -> wuzz.user.v1.MemberSummary
+	1,  // 19: wuzz.user.v1.DevLoginResponse.session:type_name -> wuzz.user.v1.Session
+	2,  // 20: wuzz.user.v1.UserService.Register:input_type -> wuzz.user.v1.RegisterRequest
+	4,  // 21: wuzz.user.v1.UserService.VerifyOtp:input_type -> wuzz.user.v1.VerifyOtpRequest
+	37, // 22: wuzz.user.v1.UserService.DevLogin:input_type -> wuzz.user.v1.DevLoginRequest
+	23, // 23: wuzz.user.v1.UserService.SuggestUsername:input_type -> wuzz.user.v1.SuggestUsernameRequest
+	25, // 24: wuzz.user.v1.UserService.CheckUsername:input_type -> wuzz.user.v1.CheckUsernameRequest
+	27, // 25: wuzz.user.v1.UserService.GetUser:input_type -> wuzz.user.v1.GetUserRequest
+	33, // 26: wuzz.user.v1.UserService.GetMemberSummary:input_type -> wuzz.user.v1.GetMemberSummaryRequest
+	5,  // 27: wuzz.user.v1.UserService.SendLoginCode:input_type -> wuzz.user.v1.SendLoginCodeRequest
+	7,  // 28: wuzz.user.v1.UserService.SendCustomerLoginCode:input_type -> wuzz.user.v1.SendCustomerLoginCodeRequest
+	9,  // 29: wuzz.user.v1.UserService.LoginWithPin:input_type -> wuzz.user.v1.LoginWithPinRequest
+	11, // 30: wuzz.user.v1.UserService.SetPin:input_type -> wuzz.user.v1.SetPinRequest
+	13, // 31: wuzz.user.v1.UserService.ListUsers:input_type -> wuzz.user.v1.ListUsersRequest
+	20, // 32: wuzz.user.v1.UserService.SetUserStatus:input_type -> wuzz.user.v1.SetUserStatusRequest
+	15, // 33: wuzz.user.v1.UserService.ResolveCustomers:input_type -> wuzz.user.v1.ResolveCustomersRequest
+	18, // 34: wuzz.user.v1.UserService.ListAccounts:input_type -> wuzz.user.v1.ListAccountsRequest
+	29, // 35: wuzz.user.v1.UserService.Refresh:input_type -> wuzz.user.v1.RefreshRequest
+	31, // 36: wuzz.user.v1.UserService.Logout:input_type -> wuzz.user.v1.LogoutRequest
+	3,  // 37: wuzz.user.v1.UserService.Register:output_type -> wuzz.user.v1.RegisterResponse
+	22, // 38: wuzz.user.v1.UserService.VerifyOtp:output_type -> wuzz.user.v1.VerifyOtpResponse
+	38, // 39: wuzz.user.v1.UserService.DevLogin:output_type -> wuzz.user.v1.DevLoginResponse
+	24, // 40: wuzz.user.v1.UserService.SuggestUsername:output_type -> wuzz.user.v1.SuggestUsernameResponse
+	26, // 41: wuzz.user.v1.UserService.CheckUsername:output_type -> wuzz.user.v1.CheckUsernameResponse
+	28, // 42: wuzz.user.v1.UserService.GetUser:output_type -> wuzz.user.v1.GetUserResponse
+	36, // 43: wuzz.user.v1.UserService.GetMemberSummary:output_type -> wuzz.user.v1.GetMemberSummaryResponse
+	6,  // 44: wuzz.user.v1.UserService.SendLoginCode:output_type -> wuzz.user.v1.SendLoginCodeResponse
+	8,  // 45: wuzz.user.v1.UserService.SendCustomerLoginCode:output_type -> wuzz.user.v1.SendCustomerLoginCodeResponse
+	10, // 46: wuzz.user.v1.UserService.LoginWithPin:output_type -> wuzz.user.v1.LoginWithPinResponse
+	12, // 47: wuzz.user.v1.UserService.SetPin:output_type -> wuzz.user.v1.SetPinResponse
+	14, // 48: wuzz.user.v1.UserService.ListUsers:output_type -> wuzz.user.v1.ListUsersResponse
+	21, // 49: wuzz.user.v1.UserService.SetUserStatus:output_type -> wuzz.user.v1.SetUserStatusResponse
+	16, // 50: wuzz.user.v1.UserService.ResolveCustomers:output_type -> wuzz.user.v1.ResolveCustomersResponse
+	19, // 51: wuzz.user.v1.UserService.ListAccounts:output_type -> wuzz.user.v1.ListAccountsResponse
+	30, // 52: wuzz.user.v1.UserService.Refresh:output_type -> wuzz.user.v1.RefreshResponse
+	32, // 53: wuzz.user.v1.UserService.Logout:output_type -> wuzz.user.v1.LogoutResponse
+	37, // [37:54] is the sub-list for method output_type
+	20, // [20:37] is the sub-list for method input_type
+	20, // [20:20] is the sub-list for extension type_name
+	20, // [20:20] is the sub-list for extension extendee
+	0,  // [0:20] is the sub-list for field type_name
 }
 
 func init() { file_wuzz_user_v1_user_proto_init() }
@@ -2184,7 +2508,7 @@ func file_wuzz_user_v1_user_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_wuzz_user_v1_user_proto_rawDesc), len(file_wuzz_user_v1_user_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   33,
+			NumMessages:   39,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

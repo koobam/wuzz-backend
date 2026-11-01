@@ -28,11 +28,11 @@ func fromOptTime(ts *timestamppb.Timestamp) *time.Time {
 }
 
 // bannerToProto is a banner at the instant now: is_live is the server's judgement, never the client's.
-func bannerToProto(b domain.Banner, now time.Time) *catalogv1.Banner {
+func bannerToProto(b domain.Banner, now time.Time, scheme string) *catalogv1.Banner {
 	out := &catalogv1.Banner{
 		Id: b.ID, Title: b.Title, InternalNotes: b.InternalNotes, ImageUrl: b.ImageURL, TargetType: b.TargetType, TargetValue: b.TargetValue,
 		Status: b.Status, SortIndex: b.SortIndex, StartsAt: optTime(b.StartsAt), EndsAt: optTime(b.EndsAt), OutletIds: b.OutletIDs,
-		IsLive: b.IsLive(now), Deeplink: b.Deeplink(), CreatedAt: timestamppb.New(b.CreatedAt), UpdatedAt: timestamppb.New(b.UpdatedAt),
+		IsLive: b.IsLive(now), Deeplink: b.Deeplink(scheme), Placement: b.Placement, CreatedAt: timestamppb.New(b.CreatedAt), UpdatedAt: timestamppb.New(b.UpdatedAt),
 	}
 	for _, o := range b.Outlets {
 		out.Outlets = append(out.Outlets, &catalogv1.BannerOutlet{Id: o.ID, Name: o.Name})
@@ -42,7 +42,7 @@ func bannerToProto(b domain.Banner, now time.Time) *catalogv1.Banner {
 
 func bannerInput(in *catalogv1.Banner) domain.BannerInput {
 	return domain.BannerInput{Title: in.GetTitle(), InternalNotes: in.GetInternalNotes(), ImageURL: in.GetImageUrl(), TargetType: in.GetTargetType(),
-		TargetValue: in.GetTargetValue(), Status: in.GetStatus(), StartsAt: fromOptTime(in.GetStartsAt()), EndsAt: fromOptTime(in.GetEndsAt()), OutletIDs: in.GetOutletIds()}
+		TargetValue: in.GetTargetValue(), Status: in.GetStatus(), Placement: in.GetPlacement(), StartsAt: fromOptTime(in.GetStartsAt()), EndsAt: fromOptTime(in.GetEndsAt()), OutletIDs: in.GetOutletIds()}
 }
 
 func (s *Server) ListBanners(ctx context.Context, req *catalogv1.ListBannersRequest) (*catalogv1.ListBannersResponse, error) {
@@ -56,7 +56,7 @@ func (s *Server) ListBanners(ctx context.Context, req *catalogv1.ListBannersRequ
 	}
 	out := &catalogv1.ListBannersResponse{Total: res.Total}
 	for _, b := range res.Banners {
-		out.Banners = append(out.Banners, bannerToProto(b, res.Now))
+		out.Banners = append(out.Banners, bannerToProto(b, res.Now, s.scheme))
 	}
 	return out, nil
 }
@@ -69,7 +69,7 @@ func (s *Server) GetBanner(ctx context.Context, req *catalogv1.GetBannerRequest)
 	if err != nil {
 		return nil, err
 	}
-	return &catalogv1.BannerResponse{Banner: bannerToProto(b, time.Now())}, nil
+	return &catalogv1.BannerResponse{Banner: bannerToProto(b, time.Now(), s.scheme)}, nil
 }
 
 func (s *Server) CreateBanner(ctx context.Context, req *catalogv1.SaveBannerRequest) (*catalogv1.BannerResponse, error) {
@@ -80,7 +80,7 @@ func (s *Server) CreateBanner(ctx context.Context, req *catalogv1.SaveBannerRequ
 	if err != nil {
 		return nil, err
 	}
-	return &catalogv1.BannerResponse{Banner: bannerToProto(b, time.Now())}, nil
+	return &catalogv1.BannerResponse{Banner: bannerToProto(b, time.Now(), s.scheme)}, nil
 }
 
 func (s *Server) UpdateBanner(ctx context.Context, req *catalogv1.SaveBannerRequest) (*catalogv1.BannerResponse, error) {
@@ -91,7 +91,7 @@ func (s *Server) UpdateBanner(ctx context.Context, req *catalogv1.SaveBannerRequ
 	if err != nil {
 		return nil, err
 	}
-	return &catalogv1.BannerResponse{Banner: bannerToProto(b, time.Now())}, nil
+	return &catalogv1.BannerResponse{Banner: bannerToProto(b, time.Now(), s.scheme)}, nil
 }
 
 func (s *Server) SetBannerStatus(ctx context.Context, req *catalogv1.SetBannerStatusRequest) (*catalogv1.BannerResponse, error) {
@@ -102,7 +102,7 @@ func (s *Server) SetBannerStatus(ctx context.Context, req *catalogv1.SetBannerSt
 	if err != nil {
 		return nil, err
 	}
-	return &catalogv1.BannerResponse{Banner: bannerToProto(b, time.Now())}, nil
+	return &catalogv1.BannerResponse{Banner: bannerToProto(b, time.Now(), s.scheme)}, nil
 }
 
 func (s *Server) DeleteBanner(ctx context.Context, req *catalogv1.GetBannerRequest) (*catalogv1.DeleteGroupResponse, error) {
@@ -136,14 +136,14 @@ func (s *Server) ListBannerScreens(ctx context.Context, _ *catalogv1.ListBannerS
 // ListLiveBanners is public: the customer app reads it without signing in. Nothing private leaves here — the internal note and the
 // status are blanked, and so is the outlet limit.
 func (s *Server) ListLiveBanners(ctx context.Context, req *catalogv1.ListLiveBannersRequest) (*catalogv1.ListLiveBannersResponse, error) {
-	banners, err := s.app.Queries.ListLiveBanners.Handle(ctx, query.ListLiveBanners{OutletID: req.GetOutletId()})
+	banners, err := s.app.Queries.ListLiveBanners.Handle(ctx, query.ListLiveBanners{OutletID: req.GetOutletId(), Placement: req.GetPlacement()})
 	if err != nil {
 		return nil, err
 	}
 	out := &catalogv1.ListLiveBannersResponse{}
 	for _, b := range banners {
 		out.Banners = append(out.Banners, &catalogv1.Banner{Id: b.ID, Title: b.Title, ImageUrl: b.ImageURL, TargetType: b.TargetType, TargetValue: b.TargetValue,
-			SortIndex: b.SortIndex, IsLive: true, Deeplink: b.Deeplink()})
+			SortIndex: b.SortIndex, IsLive: true, Deeplink: b.Deeplink(s.scheme)})
 	}
 	return out, nil
 }

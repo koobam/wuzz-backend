@@ -19,20 +19,23 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	UserService_Register_FullMethodName         = "/wuzz.user.v1.UserService/Register"
-	UserService_VerifyOtp_FullMethodName        = "/wuzz.user.v1.UserService/VerifyOtp"
-	UserService_DevLogin_FullMethodName         = "/wuzz.user.v1.UserService/DevLogin"
-	UserService_SuggestUsername_FullMethodName  = "/wuzz.user.v1.UserService/SuggestUsername"
-	UserService_CheckUsername_FullMethodName    = "/wuzz.user.v1.UserService/CheckUsername"
-	UserService_GetUser_FullMethodName          = "/wuzz.user.v1.UserService/GetUser"
-	UserService_GetMemberSummary_FullMethodName = "/wuzz.user.v1.UserService/GetMemberSummary"
-	UserService_SendLoginCode_FullMethodName    = "/wuzz.user.v1.UserService/SendLoginCode"
-	UserService_ListUsers_FullMethodName        = "/wuzz.user.v1.UserService/ListUsers"
-	UserService_SetUserStatus_FullMethodName    = "/wuzz.user.v1.UserService/SetUserStatus"
-	UserService_ResolveCustomers_FullMethodName = "/wuzz.user.v1.UserService/ResolveCustomers"
-	UserService_ListAccounts_FullMethodName     = "/wuzz.user.v1.UserService/ListAccounts"
-	UserService_Refresh_FullMethodName          = "/wuzz.user.v1.UserService/Refresh"
-	UserService_Logout_FullMethodName           = "/wuzz.user.v1.UserService/Logout"
+	UserService_Register_FullMethodName              = "/wuzz.user.v1.UserService/Register"
+	UserService_VerifyOtp_FullMethodName             = "/wuzz.user.v1.UserService/VerifyOtp"
+	UserService_DevLogin_FullMethodName              = "/wuzz.user.v1.UserService/DevLogin"
+	UserService_SuggestUsername_FullMethodName       = "/wuzz.user.v1.UserService/SuggestUsername"
+	UserService_CheckUsername_FullMethodName         = "/wuzz.user.v1.UserService/CheckUsername"
+	UserService_GetUser_FullMethodName               = "/wuzz.user.v1.UserService/GetUser"
+	UserService_GetMemberSummary_FullMethodName      = "/wuzz.user.v1.UserService/GetMemberSummary"
+	UserService_SendLoginCode_FullMethodName         = "/wuzz.user.v1.UserService/SendLoginCode"
+	UserService_SendCustomerLoginCode_FullMethodName = "/wuzz.user.v1.UserService/SendCustomerLoginCode"
+	UserService_LoginWithPin_FullMethodName          = "/wuzz.user.v1.UserService/LoginWithPin"
+	UserService_SetPin_FullMethodName                = "/wuzz.user.v1.UserService/SetPin"
+	UserService_ListUsers_FullMethodName             = "/wuzz.user.v1.UserService/ListUsers"
+	UserService_SetUserStatus_FullMethodName         = "/wuzz.user.v1.UserService/SetUserStatus"
+	UserService_ResolveCustomers_FullMethodName      = "/wuzz.user.v1.UserService/ResolveCustomers"
+	UserService_ListAccounts_FullMethodName          = "/wuzz.user.v1.UserService/ListAccounts"
+	UserService_Refresh_FullMethodName               = "/wuzz.user.v1.UserService/Refresh"
+	UserService_Logout_FullMethodName                = "/wuzz.user.v1.UserService/Logout"
 )
 
 // UserServiceClient is the client API for UserService service.
@@ -69,6 +72,15 @@ type UserServiceClient interface {
 	// It never reveals whether the number is known: it succeeds either way, and
 	// only sends a code when there is a staff account to sign in to.
 	SendLoginCode(ctx context.Context, in *SendLoginCodeRequest, opts ...grpc.CallOption) (*SendLoginCodeResponse, error)
+	// SendCustomerLoginCode starts sign-in for an EXISTING customer: the app's phone-number login. Like SendLoginCode it
+	// succeeds the same whether or not the number is known, so it cannot be used to find out who has an account; a code is
+	// sent only to an active customer. The code is then checked by VerifyOtp, which signs that customer in.
+	SendCustomerLoginCode(ctx context.Context, in *SendCustomerLoginCodeRequest, opts ...grpc.CallOption) (*SendCustomerLoginCodeResponse, error)
+	// LoginWithPin signs an existing customer in with the 6-digit PIN they set. A wrong PIN, an unknown number and a customer
+	// with no PIN all fail the same way; repeated failures lock the number out for a while.
+	LoginWithPin(ctx context.Context, in *LoginWithPinRequest, opts ...grpc.CallOption) (*LoginWithPinResponse, error)
+	// SetPin sets (or changes) the signed-in customer's PIN and clears any "verify again" flag.
+	SetPin(ctx context.Context, in *SetPinRequest, opts ...grpc.CallOption) (*SetPinResponse, error)
 	// ListUsers and SetUserStatus are admin-only (the `admin` role in the token).
 	ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error)
 	SetUserStatus(ctx context.Context, in *SetUserStatusRequest, opts ...grpc.CallOption) (*SetUserStatusResponse, error)
@@ -169,6 +181,36 @@ func (c *userServiceClient) SendLoginCode(ctx context.Context, in *SendLoginCode
 	return out, nil
 }
 
+func (c *userServiceClient) SendCustomerLoginCode(ctx context.Context, in *SendCustomerLoginCodeRequest, opts ...grpc.CallOption) (*SendCustomerLoginCodeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SendCustomerLoginCodeResponse)
+	err := c.cc.Invoke(ctx, UserService_SendCustomerLoginCode_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) LoginWithPin(ctx context.Context, in *LoginWithPinRequest, opts ...grpc.CallOption) (*LoginWithPinResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LoginWithPinResponse)
+	err := c.cc.Invoke(ctx, UserService_LoginWithPin_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) SetPin(ctx context.Context, in *SetPinRequest, opts ...grpc.CallOption) (*SetPinResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetPinResponse)
+	err := c.cc.Invoke(ctx, UserService_SetPin_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *userServiceClient) ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListUsersResponse)
@@ -263,6 +305,15 @@ type UserServiceServer interface {
 	// It never reveals whether the number is known: it succeeds either way, and
 	// only sends a code when there is a staff account to sign in to.
 	SendLoginCode(context.Context, *SendLoginCodeRequest) (*SendLoginCodeResponse, error)
+	// SendCustomerLoginCode starts sign-in for an EXISTING customer: the app's phone-number login. Like SendLoginCode it
+	// succeeds the same whether or not the number is known, so it cannot be used to find out who has an account; a code is
+	// sent only to an active customer. The code is then checked by VerifyOtp, which signs that customer in.
+	SendCustomerLoginCode(context.Context, *SendCustomerLoginCodeRequest) (*SendCustomerLoginCodeResponse, error)
+	// LoginWithPin signs an existing customer in with the 6-digit PIN they set. A wrong PIN, an unknown number and a customer
+	// with no PIN all fail the same way; repeated failures lock the number out for a while.
+	LoginWithPin(context.Context, *LoginWithPinRequest) (*LoginWithPinResponse, error)
+	// SetPin sets (or changes) the signed-in customer's PIN and clears any "verify again" flag.
+	SetPin(context.Context, *SetPinRequest) (*SetPinResponse, error)
 	// ListUsers and SetUserStatus are admin-only (the `admin` role in the token).
 	ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error)
 	SetUserStatus(context.Context, *SetUserStatusRequest) (*SetUserStatusResponse, error)
@@ -306,6 +357,15 @@ func (UnimplementedUserServiceServer) GetMemberSummary(context.Context, *GetMemb
 }
 func (UnimplementedUserServiceServer) SendLoginCode(context.Context, *SendLoginCodeRequest) (*SendLoginCodeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SendLoginCode not implemented")
+}
+func (UnimplementedUserServiceServer) SendCustomerLoginCode(context.Context, *SendCustomerLoginCodeRequest) (*SendCustomerLoginCodeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SendCustomerLoginCode not implemented")
+}
+func (UnimplementedUserServiceServer) LoginWithPin(context.Context, *LoginWithPinRequest) (*LoginWithPinResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method LoginWithPin not implemented")
+}
+func (UnimplementedUserServiceServer) SetPin(context.Context, *SetPinRequest) (*SetPinResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetPin not implemented")
 }
 func (UnimplementedUserServiceServer) ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListUsers not implemented")
@@ -490,6 +550,60 @@ func _UserService_SendLoginCode_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserService_SendCustomerLoginCode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SendCustomerLoginCodeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).SendCustomerLoginCode(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_SendCustomerLoginCode_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).SendCustomerLoginCode(ctx, req.(*SendCustomerLoginCodeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_LoginWithPin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LoginWithPinRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).LoginWithPin(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_LoginWithPin_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).LoginWithPin(ctx, req.(*LoginWithPinRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_SetPin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetPinRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).SetPin(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_SetPin_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).SetPin(ctx, req.(*SetPinRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _UserService_ListUsers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListUsersRequest)
 	if err := dec(in); err != nil {
@@ -636,6 +750,18 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SendLoginCode",
 			Handler:    _UserService_SendLoginCode_Handler,
+		},
+		{
+			MethodName: "SendCustomerLoginCode",
+			Handler:    _UserService_SendCustomerLoginCode_Handler,
+		},
+		{
+			MethodName: "LoginWithPin",
+			Handler:    _UserService_LoginWithPin_Handler,
+		},
+		{
+			MethodName: "SetPin",
+			Handler:    _UserService_SetPin_Handler,
 		},
 		{
 			MethodName: "ListUsers",

@@ -5047,6 +5047,7 @@ type Banner struct {
 	Deeplink      string                 `protobuf:"bytes,14,opt,name=deeplink,proto3" json:"deeplink,omitempty"`            // derived: what a tap opens; empty for none
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	Placement     string                 `protobuf:"bytes,17,opt,name=placement,proto3" json:"placement,omitempty"` // home | login: where the app draws it
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5191,6 +5192,13 @@ func (x *Banner) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *Banner) GetPlacement() string {
+	if x != nil {
+		return x.Placement
+	}
+	return ""
 }
 
 type BannerOutlet struct {
@@ -5716,6 +5724,7 @@ func (x *ListBannerScreensResponse) GetScreens() []string {
 type ListLiveBannersRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	OutletId      int64                  `protobuf:"varint,1,opt,name=outlet_id,json=outletId,proto3" json:"outlet_id,omitempty"`
+	Placement     string                 `protobuf:"bytes,2,opt,name=placement,proto3" json:"placement,omitempty"` // home or login; empty is home
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5755,6 +5764,13 @@ func (x *ListLiveBannersRequest) GetOutletId() int64 {
 		return x.OutletId
 	}
 	return 0
+}
+
+func (x *ListLiveBannersRequest) GetPlacement() string {
+	if x != nil {
+		return x.Placement
+	}
+	return ""
 }
 
 type ListLiveBannersResponse struct {
@@ -10272,7 +10288,7 @@ const file_wuzz_catalog_v1_catalog_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x125\n" +
 	"\bmaterial\x18\x02 \x01(\v2\x19.wuzz.catalog.v1.MaterialR\bmaterial\"I\n" +
 	"\x10MaterialResponse\x125\n" +
-	"\bmaterial\x18\x01 \x01(\v2\x19.wuzz.catalog.v1.MaterialR\bmaterial\"\xde\x04\n" +
+	"\bmaterial\x18\x01 \x01(\v2\x19.wuzz.catalog.v1.MaterialR\bmaterial\"\xfc\x04\n" +
 	"\x06Banner\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12%\n" +
@@ -10295,7 +10311,8 @@ const file_wuzz_catalog_v1_catalog_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"2\n" +
+	"updated_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1c\n" +
+	"\tplacement\x18\x11 \x01(\tR\tplacement\"2\n" +
 	"\fBannerOutlet\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\"\xcd\x01\n" +
@@ -10325,9 +10342,10 @@ const file_wuzz_catalog_v1_catalog_proto_rawDesc = "" +
 	"\x03ids\x18\x01 \x03(\x03R\x03ids\"\x1a\n" +
 	"\x18ListBannerScreensRequest\"5\n" +
 	"\x19ListBannerScreensResponse\x12\x18\n" +
-	"\ascreens\x18\x01 \x03(\tR\ascreens\"5\n" +
+	"\ascreens\x18\x01 \x03(\tR\ascreens\"S\n" +
 	"\x16ListLiveBannersRequest\x12\x1b\n" +
-	"\toutlet_id\x18\x01 \x01(\x03R\boutletId\"L\n" +
+	"\toutlet_id\x18\x01 \x01(\x03R\boutletId\x12\x1c\n" +
+	"\tplacement\x18\x02 \x01(\tR\tplacement\"L\n" +
 	"\x17ListLiveBannersResponse\x121\n" +
 	"\abanners\x18\x01 \x03(\v2\x17.wuzz.catalog.v1.BannerR\abanners\"\xfc\x06\n" +
 	"\aVoucher\x12\x0e\n" +
