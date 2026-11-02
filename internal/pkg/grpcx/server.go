@@ -27,16 +27,16 @@ type Server struct {
 // NewServer builds a gRPC server with the standard interceptor chain: token
 // verification, then panic recovery, then error-kind mapping so an *apperr
 // returned by a handler reaches the caller as the matching gRPC status code
-// instead of an opaque Unknown.
-func NewServer(cfg *config.Config, log *slog.Logger, verifier *authn.Verifier) *Server {
-	server := grpc.NewServer(
+// instead of an opaque Unknown. opts are added after those (the media service raises its message size with one).
+func NewServer(cfg *config.Config, log *slog.Logger, verifier *authn.Verifier, opts ...grpc.ServerOption) *Server {
+	server := grpc.NewServer(append([]grpc.ServerOption{
 		grpc.StatsHandler(otelgrpc.NewServerHandler(otelgrpc.WithMessageEvents())),
 		grpc.ChainUnaryInterceptor(
 			authn.UnaryServerInterceptor(verifier),
 			recoveryInterceptor(log),
 			errorInterceptor(),
 		),
-	)
+	}, opts...)...)
 
 	healthServer := health.NewServer()
 	healthServer.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
@@ -97,7 +97,7 @@ func errorInterceptor() grpc.UnaryServerInterceptor {
 			return resp, nil
 		}
 		appErr := apperr.From(err)
-		return resp, status.Error(appErr.GRPCCode(), appErr.Message)
+		return resp, appErr.GRPCStatus().Err()
 	}
 }
 

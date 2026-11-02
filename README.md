@@ -13,6 +13,7 @@ codes, Kafka via the transactional outbox, Ed25519 JWTs signed only by `user`.
 | `user` | accounts, sessions, staff roles | phone + SMS code, no passwords |
 | `catalog` | outlets, laundry services, service areas | public reads (menu and areas cached 30 s), admin writes; all in Postgres |
 | `transaction` | orders | idempotent create, status lifecycle, outlet scoping |
+| `media` | uploaded pictures | inspects and stores them (bucket, or `.data/media` in dev), one row per picture under a media id |
 
 Chat and calls live in the sibling `wuzz-support` (Elixir/Phoenix + MongoDB).
 
@@ -155,7 +156,7 @@ look for `verification code`). Logs for every process are in `/tmp/wuzz-local/`.
 Needs Docker, Go, pnpm, and the sibling repos `wuzz-support` and `wuzz-frontend`.
 
 By hand: `make dev` (postgres, redis, kafka, mongo + migrations), then
-`make run SERVICE=<user|catalog|transaction|gateway>` in separate terminals.
+`make run SERVICE=<user|catalog|transaction|media|gateway>` in separate terminals.
 
 `make run`, `make migrate` and `make local` read `.env` first (gitignored; copy
 `.env.example`), so a value there wins over the defaults in `internal/pkg/config`.
@@ -168,8 +169,8 @@ What you export in your shell still wins over the file.
 ```
 make run SERVICE=gateway                 # one service, reads .env
 make run SERVICE=gateway ENV=staging     # reads .env.staging
-make run                                 # no SERVICE: user, catalog, transaction and gateway in one terminal
-make migrate                             # no SERVICE: the user, catalog and transaction databases
+make run                                 # no SERVICE: user, catalog, transaction, media and gateway in one terminal
+make migrate                             # no SERVICE: the user, catalog, transaction and media databases
 make migrate SERVICE=user ENV=staging
 make local ENV=staging                   # everything: infra, services, chat, web apps
 ```

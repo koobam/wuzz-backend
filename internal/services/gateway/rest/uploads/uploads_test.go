@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"image"
 	"image/png"
 	"mime/multipart"
@@ -14,39 +13,110 @@ import (
 	"regexp"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/gin-gonic/gin"
+	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/koobam/wuzz-backend/internal/pkg/config"
+	mediav1 "github.com/koobam/wuzz-backend/gen/wuzz/media/v1"
+	"github.com/koobam/wuzz-backend/internal/pkg/apperr"
 	"github.com/koobam/wuzz-backend/internal/pkg/httpx"
+	"github.com/koobam/wuzz-backend/internal/services/media/app"
+	"github.com/koobam/wuzz-backend/internal/services/media/domain"
 )
 
-type fakeStore struct {
-	puts   map[string][]byte
-	types  map[string]string
-	cache  map[string]string
-	failed error
+// fakeMedia is the media service in-process: the real use cases over an in-memory repository and store, with errors turned into
+// gRPC statuses the way the service's interceptor does, so the gateway is tested against what it really receives.
+type fakeMedia struct {
+	mediav1.MediaServiceClient
+	app     *app.App
+	store   *memStore
+	uploads int
 }
 
-func newFake() *fakeStore {
-	return &fakeStore{puts: map[string][]byte{}, types: map[string]string{}, cache: map[string]string{}}
-}
-func (f *fakeStore) Put(_ context.Context, key, ct, cc string, body []byte) error {
-	if f.failed != nil {
-		return f.failed
-	}
-	f.puts[key], f.types[key], f.cache[key] = body, ct, cc
+type memStore struct{ objects map[string][]byte }
+
+func (m *memStore) Put(_ context.Context, key, _, _ string, body []byte) error {
+	m.objects[key] = body
 	return nil
 }
-func (f *fakeStore) Delete(context.Context, string) error { return nil }
-func (f *fakeStore) URL(key string) string                { return "https://assets.test/" + key }
+func (m *memStore) Delete(_ context.Context, key string) error { delete(m.objects, key); return nil }
+func (m *memStore) URL(key string) string                      { return "https://assets.test/" + key }
+
+type memRepo struct{ rows map[string]domain.Media }
+
+func (r *memRepo) Insert(_ context.Context, m domain.Media) (domain.Media, error) {
+	m.ID = "6f9619ff-8b86-d011-b42d-00c04fc964ff"
+	r.rows[m.ID] = m
+	return m, nil
+}
+func (r *memRepo) Get(_ context.Context, id string) (domain.Media, error) {
+	if m, ok := r.rows[id]; ok {
+		return m, nil
+	}
+	return domain.Media{}, apperr.NotFound("Media not found")
+}
+func (r *memRepo) BatchGet(context.Context, []string) ([]domain.Media, error) { return nil, nil }
+func (r *memRepo) List(context.Context, domain.ListQuery) ([]domain.Media, int64, error) {
+	out := make([]domain.Media, 0, len(r.rows))
+	for _, m := range r.rows {
+		out = append(out, m)
+	}
+	return out, int64(len(out)), nil
+}
+func (r *memRepo) Delete(ctx context.Context, id string) (domain.Media, error) {
+	m, err := r.Get(ctx, id)
+	if err == nil {
+		delete(r.rows, id)
+	}
+	return m, err
+}
+
+func newFakeMedia(max int64) *fakeMedia {
+	store := &memStore{objects: map[string][]byte{}}
+	return &fakeMedia{app: app.New(&memRepo{rows: map[string]domain.Media{}}, store, max, nil), store: store}
+}
+
+func asStatus(err error) error { return apperr.From(err).GRPCStatus().Err() }
+
+func proto(m domain.Media) *mediav1.Media {
+	return &mediav1.Media{Id: m.ID, Key: m.Key, Url: m.URL, Folder: m.Folder, FileName: m.FileName, ContentType: m.ContentType, Size: m.Size,
+		Width: int32(m.Width), Height: int32(m.Height), CreatedAt: timestamppb.New(m.CreatedAt)}
+}
+
+func (f *fakeMedia) Upload(ctx context.Context, in *mediav1.UploadRequest, _ ...grpc.CallOption) (*mediav1.UploadResponse, error) {
+	f.uploads++
+	m, err := f.app.Upload(ctx, app.Upload{Data: in.GetData(), FileName: in.GetFileName(), Folder: in.GetFolder()})
+	if err != nil {
+		return nil, asStatus(err)
+	}
+	return &mediav1.UploadResponse{Media: proto(m)}, nil
+}
+func (f *fakeMedia) ListMedia(ctx context.Context, in *mediav1.ListMediaRequest, _ ...grpc.CallOption) (*mediav1.ListMediaResponse, error) {
+	list, total, err := f.app.List(ctx, domain.ListQuery{Folder: in.GetFolder(), Limit: int(in.GetLimit()), Offset: int(in.GetOffset())})
+	if err != nil {
+		return nil, asStatus(err)
+	}
+	out := &mediav1.ListMediaResponse{Total: total}
+	for _, m := range list {
+		out.Media = append(out.Media, proto(m))
+	}
+	return out, nil
+}
+func (f *fakeMedia) DeleteMedia(ctx context.Context, in *mediav1.DeleteMediaRequest, _ ...grpc.CallOption) (*mediav1.DeleteMediaResponse, error) {
+	if err := f.app.Delete(ctx, in.GetId()); err != nil {
+		return nil, asStatus(err)
+	}
+	return &mediav1.DeleteMediaResponse{}, nil
+}
 
 func router(h *Handler) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	e := gin.New()
 	e.Use(httpx.ErrorHandler())
 	e.POST("/uploads", h.Create)
+	e.GET("/media", h.List)
+	e.DELETE("/media/:id", h.Delete)
 	return e
 }
 
@@ -85,9 +155,14 @@ func form(t *testing.T, fields map[string]string, parts ...part) (*bytes.Buffer,
 	return &body, w.FormDataContentType()
 }
 
-func post(e *gin.Engine, body *bytes.Buffer, contentType string) *httptest.ResponseRecorder {
-	req := httptest.NewRequest(http.MethodPost, "/uploads", body)
-	req.Header.Set("Content-Type", contentType)
+func do(e *gin.Engine, method, path string, body *bytes.Buffer, contentType string) *httptest.ResponseRecorder {
+	if body == nil {
+		body = &bytes.Buffer{}
+	}
+	req := httptest.NewRequest(method, path, body)
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
+	}
 	rec := httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
 	return rec
@@ -101,7 +176,7 @@ type envelope struct {
 
 func TestCreate(t *testing.T) {
 	big := bytes.Repeat([]byte("x"), 3000)
-	keyShape := regexp.MustCompile(`^(outlets|banners|vouchers)/2026/10/[0-9a-f]{32}\.png$`)
+	keyShape := regexp.MustCompile(`^(outlets|banners|vouchers|services)/\d{4}/\d{2}/[0-9a-f]{32}\.png$`)
 	cases := []struct {
 		name     string
 		fields   map[string]string
@@ -112,21 +187,20 @@ func TestCreate(t *testing.T) {
 	}{
 		{"a png", nil, []part{{"file", "Pusat Depan.PNG", "image/jpeg", pngFile(t, 20, 10)}}, 1 << 20, 201, ""},
 		{"the declared type and the extension do not matter", nil, []part{{"file", "photo.exe", "application/x-msdownload", pngFile(t, 8, 8)}}, 1 << 20, 201, ""},
-		{"an allowed folder", map[string]string{"folder": "outlets"}, []part{{"file", "a.png", "image/png", pngFile(t, 8, 8)}}, 1 << 20, 201, ""},
 		{"the banners folder", map[string]string{"folder": "banners"}, []part{{"file", "a.png", "image/png", pngFile(t, 8, 8)}}, 1 << 20, 201, ""},
+		{"the services folder", map[string]string{"folder": "services"}, []part{{"file", "kiloan.png", "image/png", pngFile(t, 8, 8)}}, 1 << 20, 201, ""},
 		{"a folder that is not allowed", map[string]string{"folder": "../etc"}, []part{{"file", "a.png", "image/png", pngFile(t, 8, 8)}}, 1 << 20, 400, "folder"},
 		{"no file field", nil, nil, 1 << 20, 400, "required"},
-		{"the file under another field name", nil, []part{{"image", "a.png", "image/png", pngFile(t, 8, 8)}}, 1 << 20, 400, "required"},
 		{"text renamed .png", nil, []part{{"file", "evil.png", "image/png", []byte("<html><script>alert(1)</script></html>")}}, 1 << 20, 415, "JPEG, PNG, WebP or AVIF"},
 		{"an empty file", nil, []part{{"file", "a.png", "image/png", nil}}, 1 << 20, 400, "empty"},
 		{"over the limit", nil, []part{{"file", "a.png", "image/png", append(pngFile(t, 8, 8), big...)}}, 2048, 413, "limit"},
 		{"a broken png", nil, []part{{"file", "a.png", "image/png", pngFile(t, 30, 30)[:40]}}, 1 << 20, 400, "damaged"},
 	}
 	for _, c := range cases {
-		store := newFake()
-		h := &Handler{Store: store, MaxBytes: c.max, Now: func() time.Time { return time.Date(2026, 10, 25, 9, 0, 0, 0, time.UTC) }}
+		fm := newFakeMedia(c.max)
+		h := &Handler{Media: fm, MaxBytes: c.max}
 		body, ct := form(t, c.fields, c.parts...)
-		rec := post(router(h), body, ct)
+		rec := do(router(h), http.MethodPost, "/uploads", body, ct)
 		if rec.Code != c.wantHTTP {
 			t.Errorf("%s: status %d, want %d (%s)", c.name, rec.Code, c.wantHTTP, rec.Body.String())
 			continue
@@ -134,8 +208,8 @@ func TestCreate(t *testing.T) {
 		var env envelope
 		_ = json.Unmarshal(rec.Body.Bytes(), &env)
 		if c.wantHTTP != 201 {
-			if len(store.puts) != 0 {
-				t.Errorf("%s: a refused upload must store nothing, stored %d", c.name, len(store.puts))
+			if len(fm.store.objects) != 0 {
+				t.Errorf("%s: a refused upload must store nothing, stored %d", c.name, len(fm.store.objects))
 			}
 			if !strings.Contains(strings.ToLower(env.Message), strings.ToLower(c.wantMsg)) {
 				t.Errorf("%s: message %q should mention %q", c.name, env.Message, c.wantMsg)
@@ -146,11 +220,9 @@ func TestCreate(t *testing.T) {
 		if err := json.Unmarshal(env.Data, &res); err != nil {
 			t.Fatalf("%s: %v", c.name, err)
 		}
-		if !keyShape.MatchString(res.Key) || res.URL != "https://assets.test/"+res.Key || res.ContentType != "image/png" || res.Width == 0 || res.Height == 0 || res.Size != len(store.puts[res.Key]) {
+		if res.ID == "" || !keyShape.MatchString(res.Key) || res.URL != "https://assets.test/"+res.Key || res.ContentType != "image/png" ||
+			res.Width == 0 || res.Height == 0 || res.Size != len(fm.store.objects[res.Key]) {
 			t.Errorf("%s: result %+v", c.name, res)
-		}
-		if store.types[res.Key] != "image/png" || store.cache[res.Key] != "public, max-age=31536000, immutable" {
-			t.Errorf("%s: stored as %q with cache %q", c.name, store.types[res.Key], store.cache[res.Key])
 		}
 		if strings.Contains(res.Key, "evil") || strings.Contains(strings.ToLower(res.Key), "photo") || strings.Contains(strings.ToLower(res.Key), "pusat") {
 			t.Errorf("%s: the client's file name leaked into the key %q", c.name, res.Key)
@@ -158,11 +230,25 @@ func TestCreate(t *testing.T) {
 	}
 }
 
-func TestCreateKeepsTheFileNameOutOfTheKeyButReportsIt(t *testing.T) {
-	store := newFake()
-	h := &Handler{Store: store, MaxBytes: 1 << 20}
+func TestCreateRefusesAtTheEdgeWithoutCallingTheService(t *testing.T) {
+	fm := newFakeMedia(2048)
+	h := &Handler{Media: fm, MaxBytes: 2048}
+	body, ct := form(t, nil, part{"file", "a.png", "image/png", bytes.Repeat([]byte("x"), 5000)})
+	if rec := do(router(h), http.MethodPost, "/uploads", body, ct); rec.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("status %d", rec.Code)
+	}
+	if rec := do(router(h), http.MethodPost, "/uploads", bytes.NewBufferString(`{"file":"x"}`), "application/json"); rec.Code != http.StatusBadRequest {
+		t.Fatalf("status %d", rec.Code)
+	}
+	if fm.uploads != 0 {
+		t.Fatalf("what the edge refuses must not reach the media service, got %d calls", fm.uploads)
+	}
+}
+
+func TestCreateReportsTheFileName(t *testing.T) {
+	h := &Handler{Media: newFakeMedia(1 << 20), MaxBytes: 1 << 20}
 	body, ct := form(t, nil, part{"file", "../../etc/Pusat Depan.png", "image/png", pngFile(t, 8, 8)})
-	rec := post(router(h), body, ct)
+	rec := do(router(h), http.MethodPost, "/uploads", body, ct)
 	var env envelope
 	_ = json.Unmarshal(rec.Body.Bytes(), &env)
 	var res Result
@@ -172,13 +258,10 @@ func TestCreateKeepsTheFileNameOutOfTheKeyButReportsIt(t *testing.T) {
 	}
 }
 
-func TestCreateNotConfigured(t *testing.T) {
-	h, local := New(config.Media{MaxUploadBytes: 1 << 20}, nil)
-	if local != nil || h.Store != nil {
-		t.Fatal("with no media settings there is no store")
-	}
+func TestNotConfigured(t *testing.T) {
+	h := &Handler{MaxBytes: 1 << 20}
 	body, ct := form(t, nil, part{"file", "a.png", "image/png", pngFile(t, 8, 8)})
-	rec := post(router(h), body, ct)
+	rec := do(router(h), http.MethodPost, "/uploads", body, ct)
 	var env envelope
 	_ = json.Unmarshal(rec.Body.Bytes(), &env)
 	if rec.Code != http.StatusServiceUnavailable || !strings.Contains(env.Message, "Uploads are not configured") {
@@ -186,44 +269,27 @@ func TestCreateNotConfigured(t *testing.T) {
 	}
 }
 
-func TestCreateNeedsMultipart(t *testing.T) {
-	h := &Handler{Store: newFake(), MaxBytes: 1 << 20}
-	rec := post(router(h), bytes.NewBufferString(`{"file":"x"}`), "application/json")
-	if rec.Code != http.StatusBadRequest {
-		t.Errorf("status %d", rec.Code)
+func TestListAndDelete(t *testing.T) {
+	fm := newFakeMedia(1 << 20)
+	h := &Handler{Media: fm, MaxBytes: 1 << 20}
+	body, ct := form(t, map[string]string{"folder": "services"}, part{"file", "kiloan.png", "image/png", pngFile(t, 8, 8)})
+	if rec := do(router(h), http.MethodPost, "/uploads", body, ct); rec.Code != 201 {
+		t.Fatalf("upload status %d", rec.Code)
 	}
-}
-
-func TestCreateStorageDown(t *testing.T) {
-	store := newFake()
-	store.failed = errors.New("dial tcp: connection refused")
-	h := &Handler{Store: store, MaxBytes: 1 << 20}
-	body, ct := form(t, nil, part{"file", "a.png", "image/png", pngFile(t, 8, 8)})
-	rec := post(router(h), body, ct)
-	var env envelope
-	_ = json.Unmarshal(rec.Body.Bytes(), &env)
-	if rec.Code != http.StatusServiceUnavailable || strings.Contains(env.Message, "refused") {
-		t.Errorf("status %d message %q: a 503 that does not leak the storage error", rec.Code, env.Message)
+	rec := do(router(h), http.MethodGet, "/media?folder=services", nil, "")
+	if rec.Code != 200 || !strings.Contains(rec.Body.String(), `"total":1`) || !strings.Contains(rec.Body.String(), "kiloan.png") {
+		t.Fatalf("list: %d %s", rec.Code, rec.Body.String())
 	}
-}
-
-func TestNewPicksTheStore(t *testing.T) {
-	s3, local := New(config.Media{Endpoint: "https://r2.example", Bucket: "b", AccessKeyID: "i", SecretAccessKey: "s", PublicBaseURL: "https://assets.wuzz.care", Region: "auto"}, nil)
-	if s3.Store == nil || local != nil || s3.Store.URL("k.png") != "https://assets.wuzz.care/k.png" {
-		t.Errorf("s3: %+v", s3.Store)
+	if rec := do(router(h), http.MethodGet, "/media?folder=secrets", nil, ""); rec.Code != http.StatusBadRequest {
+		t.Fatalf("an unknown folder is a 400, got %d", rec.Code)
 	}
-	dev, local := New(config.Media{LocalDir: t.TempDir(), PublicBaseURL: "http://localhost:8092/media"}, nil)
-	if dev.Store == nil || local == nil || dev.Store.URL("k.png") != "http://localhost:8092/media/k.png" {
-		t.Errorf("local: %+v", dev.Store)
+	if rec := do(router(h), http.MethodDelete, "/media/6f9619ff-8b86-d011-b42d-00c04fc964ff", nil, ""); rec.Code != 200 {
+		t.Fatalf("delete: %d %s", rec.Code, rec.Body.String())
 	}
-}
-
-func TestCleanName(t *testing.T) {
-	for in, want := range map[string]string{
-		"a.png": "a.png", "../../x/y.png": "y.png", `C:\fakepath\z.png`: "z.png", "": "picture", "..": "..", "tab\there.png": "tabhere.png", strings.Repeat("é", 200): strings.Repeat("é", 120),
-	} {
-		if got := cleanName(in); got != want && !(in == ".." && got == "..") {
-			t.Errorf("cleanName(%q) = %q, want %q", in, got, want)
-		}
+	if len(fm.store.objects) != 0 {
+		t.Fatal("the object must be gone after the delete")
+	}
+	if rec := do(router(h), http.MethodDelete, "/media/6f9619ff-8b86-d011-b42d-00c04fc964ff", nil, ""); rec.Code != http.StatusNotFound {
+		t.Fatalf("a second delete is a 404, got %d", rec.Code)
 	}
 }

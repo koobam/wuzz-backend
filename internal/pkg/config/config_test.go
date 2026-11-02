@@ -124,7 +124,8 @@ func TestMediaConfig(t *testing.T) {
 			t.Setenv(k, v)
 		}
 		t.Setenv("APP_ENV", c.env)
-		cfg, err := Load(ServiceGateway)
+		// The media service is the one that stores pictures, so it is the one held to the whole configuration.
+		cfg, err := Load(ServiceMedia)
 		if (err == nil) != c.ok {
 			t.Errorf("%s: err = %v, want ok=%v", c.name, err, c.ok)
 			continue
@@ -164,5 +165,25 @@ func TestAppSchemeDefaultsAndIsValidated(t *testing.T) {
 		if _, err := Load(ServiceCatalog); err == nil {
 			t.Errorf("AppScheme %q was accepted", bad)
 		}
+	}
+}
+
+// The gateway no longer stores pictures (the media service does), so a bucket setting it happens to share is not its concern;
+// it still refuses a dev directory outside dev, because it is the one that serves it.
+func TestGatewayMediaConfig(t *testing.T) {
+	t.Setenv("JWT_PUBLIC_KEYS", "pub")
+	for _, k := range []string{"MEDIA_ENDPOINT", "MEDIA_BUCKET", "MEDIA_ACCESS_KEY_ID", "MEDIA_SECRET_ACCESS_KEY", "MEDIA_PUBLIC_BASE_URL", "MEDIA_LOCAL_DIR", "MEDIA_MAX_UPLOAD_BYTES"} {
+		t.Setenv(k, "")
+	}
+	t.Setenv("APP_ENV", "staging")
+	t.Setenv("MEDIA_ENDPOINT", "https://r2.example")
+	if _, err := Load(ServiceGateway); err != nil {
+		t.Fatalf("a half-set bucket is the media service's to refuse, not the gateway's: %v", err)
+	}
+	t.Setenv("MEDIA_ENDPOINT", "")
+	t.Setenv("MEDIA_LOCAL_DIR", "/tmp/m")
+	t.Setenv("MEDIA_PUBLIC_BASE_URL", "https://x")
+	if _, err := Load(ServiceGateway); err == nil {
+		t.Fatal("a dev directory outside dev must still be refused by the gateway")
 	}
 }

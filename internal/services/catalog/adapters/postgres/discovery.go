@@ -198,7 +198,7 @@ func (d *Discovery) loadAreas(ctx context.Context) ([]area, error) {
 }
 
 const serviceViewCols = `id, name, description, price, unit, service_type, service_category,
-	min_kg, max_kg, discount_kind, discount_value, icon, image, tax_type`
+	min_kg, max_kg, discount_kind, discount_value, icon, image, tax_type, icon_url`
 
 // Services lists the active menu, in display order. category "" means all.
 func (d *Discovery) Services(ctx context.Context, category string, limit int) ([]domain.ServiceView, error) {
@@ -222,7 +222,7 @@ func (d *Discovery) Services(ctx context.Context, category string, limit int) ([
 		var kind string
 		var value int64
 		if err := rows.Scan(&v.ID, &v.Name, &v.Description, &v.Price, &v.Unit, &v.ServiceType, &cat,
-			&v.MinKg, &v.MaxKg, &kind, &value, &v.Icon, &v.Image, &v.TaxType); err != nil {
+			&v.MinKg, &v.MaxKg, &kind, &value, &v.Icon, &v.Image, &v.TaxType, &v.IconURL); err != nil {
 			return nil, apperr.Internal("Could not read services").WithCause(err)
 		}
 		if cat != nil {
@@ -262,7 +262,7 @@ func (d *Discovery) ServiceDetail(ctx context.Context, id int64) (domain.Service
 		SELECT `+serviceViewCols+` FROM services
 		WHERE id = $1 AND active AND service_category IS NOT NULL`, id).
 		Scan(&v.ID, &v.Name, &v.Description, &v.Price, &v.Unit, &v.ServiceType, &cat,
-			&v.MinKg, &v.MaxKg, &kind, &value, &v.Icon, &v.Image, &v.TaxType)
+			&v.MinKg, &v.MaxKg, &kind, &value, &v.Icon, &v.Image, &v.TaxType, &v.IconURL)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.ServiceDetail{}, apperr.NotFound("Service not found")
 	}

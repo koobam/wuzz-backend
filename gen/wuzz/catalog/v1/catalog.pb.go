@@ -324,8 +324,12 @@ type ServiceItem struct {
 	DiscountValue      int64  `protobuf:"varint,19,opt,name=discount_value,json=discountValue,proto3" json:"discount_value,omitempty"`
 	DiscountAmount     int64  `protobuf:"varint,20,opt,name=discount_amount,json=discountAmount,proto3" json:"discount_amount,omitempty"`
 	PriceAfterDiscount int64  `protobuf:"varint,21,opt,name=price_after_discount,json=priceAfterDiscount,proto3" json:"price_after_discount,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// The service's icon as an uploaded picture: its id in the media service and the address it is served from. Both empty = the app
+	// draws `icon` from its own set.
+	IconMediaId   string `protobuf:"bytes,22,opt,name=icon_media_id,json=iconMediaId,proto3" json:"icon_media_id,omitempty"`
+	IconUrl       string `protobuf:"bytes,23,opt,name=icon_url,json=iconUrl,proto3" json:"icon_url,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ServiceItem) Reset() {
@@ -503,6 +507,20 @@ func (x *ServiceItem) GetPriceAfterDiscount() int64 {
 		return x.PriceAfterDiscount
 	}
 	return 0
+}
+
+func (x *ServiceItem) GetIconMediaId() string {
+	if x != nil {
+		return x.IconMediaId
+	}
+	return ""
+}
+
+func (x *ServiceItem) GetIconUrl() string {
+	if x != nil {
+		return x.IconUrl
+	}
+	return ""
 }
 
 // A wrapper, so that "not given" (an update keeps the stored links) differs from an empty list (it clears them).
@@ -2727,8 +2745,11 @@ type CreateServiceRequest struct {
 	InternalNotes    string                 `protobuf:"bytes,8,opt,name=internal_notes,json=internalNotes,proto3" json:"internal_notes,omitempty"`
 	DiscountType     string                 `protobuf:"bytes,9,opt,name=discount_type,json=discountType,proto3" json:"discount_type,omitempty"`      // "none", "value" or "percent"; empty = "none"
 	DiscountValue    int64                  `protobuf:"varint,10,opt,name=discount_value,json=discountValue,proto3" json:"discount_value,omitempty"` // whole rupiah for "value", basis points for "percent"
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// The icon picture: its media id and address, both or neither (the gateway reads the address from the media service).
+	IconMediaId   string `protobuf:"bytes,11,opt,name=icon_media_id,json=iconMediaId,proto3" json:"icon_media_id,omitempty"`
+	IconUrl       string `protobuf:"bytes,12,opt,name=icon_url,json=iconUrl,proto3" json:"icon_url,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CreateServiceRequest) Reset() {
@@ -2831,6 +2852,20 @@ func (x *CreateServiceRequest) GetDiscountValue() int64 {
 	return 0
 }
 
+func (x *CreateServiceRequest) GetIconMediaId() string {
+	if x != nil {
+		return x.IconMediaId
+	}
+	return ""
+}
+
+func (x *CreateServiceRequest) GetIconUrl() string {
+	if x != nil {
+		return x.IconUrl
+	}
+	return ""
+}
+
 type CreateServiceResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Service       *ServiceItem           `protobuf:"bytes,1,opt,name=service,proto3" json:"service,omitempty"`
@@ -2889,8 +2924,11 @@ type UpdateServiceRequest struct {
 	InternalNotes    string                 `protobuf:"bytes,10,opt,name=internal_notes,json=internalNotes,proto3" json:"internal_notes,omitempty"`
 	DiscountType     string                 `protobuf:"bytes,11,opt,name=discount_type,json=discountType,proto3" json:"discount_type,omitempty"` // "none", "value" or "percent"; empty is refused (the gateway sends the stored one)
 	DiscountValue    int64                  `protobuf:"varint,12,opt,name=discount_value,json=discountValue,proto3" json:"discount_value,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// The icon picture. Not set = keep the stored one; set to "" (both) = no picture, the app draws `icon` again.
+	IconMediaId   *string `protobuf:"bytes,13,opt,name=icon_media_id,json=iconMediaId,proto3,oneof" json:"icon_media_id,omitempty"`
+	IconUrl       *string `protobuf:"bytes,14,opt,name=icon_url,json=iconUrl,proto3,oneof" json:"icon_url,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateServiceRequest) Reset() {
@@ -3005,6 +3043,20 @@ func (x *UpdateServiceRequest) GetDiscountValue() int64 {
 		return x.DiscountValue
 	}
 	return 0
+}
+
+func (x *UpdateServiceRequest) GetIconMediaId() string {
+	if x != nil && x.IconMediaId != nil {
+		return *x.IconMediaId
+	}
+	return ""
+}
+
+func (x *UpdateServiceRequest) GetIconUrl() string {
+	if x != nil && x.IconUrl != nil {
+		return *x.IconUrl
+	}
+	return ""
 }
 
 // A group of services, as the POS lists them.
@@ -3816,8 +3868,10 @@ type ServiceView struct {
 	// "percentage" or "fixed"; empty when there is no discount.
 	DiscountType string `protobuf:"bytes,11,opt,name=discount_type,json=discountType,proto3" json:"discount_type,omitempty"`
 	// Name of an icon in the app's icon set.
-	Icon          string `protobuf:"bytes,12,opt,name=icon,proto3" json:"icon,omitempty"`
-	Image         string `protobuf:"bytes,13,opt,name=image,proto3" json:"image,omitempty"`
+	Icon  string `protobuf:"bytes,12,opt,name=icon,proto3" json:"icon,omitempty"`
+	Image string `protobuf:"bytes,13,opt,name=image,proto3" json:"image,omitempty"`
+	// The icon as an uploaded picture, when the service has one; the app draws it instead of `icon`.
+	IconUrl       string `protobuf:"bytes,20,opt,name=icon_url,json=iconUrl,proto3" json:"icon_url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3981,6 +4035,13 @@ func (x *ServiceView) GetIcon() string {
 func (x *ServiceView) GetImage() string {
 	if x != nil {
 		return x.Image
+	}
+	return ""
+}
+
+func (x *ServiceView) GetIconUrl() string {
+	if x != nil {
+		return x.IconUrl
 	}
 	return ""
 }
@@ -9893,7 +9954,7 @@ const file_wuzz_catalog_v1_catalog_proto_rawDesc = "" +
 	"\topen_time\x18\x03 \x01(\tR\bopenTime\x12\x1d\n" +
 	"\n" +
 	"close_time\x18\x04 \x01(\tR\tcloseTime\x12\x19\n" +
-	"\bopen_24h\x18\x05 \x01(\bR\aopen24h\"\xac\x06\n" +
+	"\bopen_24h\x18\x05 \x01(\bR\aopen24h\"\xeb\x06\n" +
 	"\vServiceItem\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
@@ -9920,7 +9981,9 @@ const file_wuzz_catalog_v1_catalog_proto_rawDesc = "" +
 	"\rdiscount_type\x18\x12 \x01(\tR\fdiscountType\x12%\n" +
 	"\x0ediscount_value\x18\x13 \x01(\x03R\rdiscountValue\x12'\n" +
 	"\x0fdiscount_amount\x18\x14 \x01(\x03R\x0ediscountAmount\x120\n" +
-	"\x14price_after_discount\x18\x15 \x01(\x03R\x12priceAfterDiscount\"\x1a\n" +
+	"\x14price_after_discount\x18\x15 \x01(\x03R\x12priceAfterDiscount\x12\"\n" +
+	"\ricon_media_id\x18\x16 \x01(\tR\viconMediaId\x12\x19\n" +
+	"\bicon_url\x18\x17 \x01(\tR\aiconUrl\"\x1a\n" +
 	"\x06IdList\x12\x10\n" +
 	"\x03ids\x18\x01 \x03(\x03R\x03ids\"0\n" +
 	"\n" +
@@ -10096,7 +10159,7 @@ const file_wuzz_catalog_v1_catalog_proto_rawDesc = "" +
 	"\rdiscount_type\x18\v \x01(\tR\fdiscountType\"f\n" +
 	"\x14ListServicesResponse\x128\n" +
 	"\bservices\x18\x01 \x03(\v2\x1c.wuzz.catalog.v1.ServiceItemR\bservices\x12\x14\n" +
-	"\x05total\x18\x02 \x01(\x03R\x05total\"\x8f\x03\n" +
+	"\x05total\x18\x02 \x01(\x03R\x05total\"\xce\x03\n" +
 	"\x14CreateServiceRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04unit\x18\x02 \x01(\tR\x04unit\x12\x14\n" +
@@ -10109,9 +10172,11 @@ const file_wuzz_catalog_v1_catalog_proto_rawDesc = "" +
 	"\x0einternal_notes\x18\b \x01(\tR\rinternalNotes\x12#\n" +
 	"\rdiscount_type\x18\t \x01(\tR\fdiscountType\x12%\n" +
 	"\x0ediscount_value\x18\n" +
-	" \x01(\x03R\rdiscountValue\"O\n" +
+	" \x01(\x03R\rdiscountValue\x12\"\n" +
+	"\ricon_media_id\x18\v \x01(\tR\viconMediaId\x12\x19\n" +
+	"\bicon_url\x18\f \x01(\tR\aiconUrl\"O\n" +
 	"\x15CreateServiceResponse\x126\n" +
-	"\aservice\x18\x01 \x01(\v2\x1c.wuzz.catalog.v1.ServiceItemR\aservice\"\xb7\x03\n" +
+	"\aservice\x18\x01 \x01(\v2\x1c.wuzz.catalog.v1.ServiceItemR\aservice\"\x9f\x04\n" +
 	"\x14UpdateServiceRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
@@ -10126,7 +10191,11 @@ const file_wuzz_catalog_v1_catalog_proto_rawDesc = "" +
 	"\x0einternal_notes\x18\n" +
 	" \x01(\tR\rinternalNotes\x12#\n" +
 	"\rdiscount_type\x18\v \x01(\tR\fdiscountType\x12%\n" +
-	"\x0ediscount_value\x18\f \x01(\x03R\rdiscountValue\"h\n" +
+	"\x0ediscount_value\x18\f \x01(\x03R\rdiscountValue\x12'\n" +
+	"\ricon_media_id\x18\r \x01(\tH\x00R\viconMediaId\x88\x01\x01\x12\x1e\n" +
+	"\bicon_url\x18\x0e \x01(\tH\x01R\aiconUrl\x88\x01\x01B\x10\n" +
+	"\x0e_icon_media_idB\v\n" +
+	"\t_icon_url\"h\n" +
 	"\x0fServiceCategory\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
@@ -10183,7 +10252,7 @@ const file_wuzz_catalog_v1_catalog_proto_rawDesc = "" +
 	"\x04name\x18\x02 \x01(\tR\x04name\"f\n" +
 	"\x17ResolveCoverageResponse\x12\x18\n" +
 	"\acovered\x18\x01 \x01(\bR\acovered\x121\n" +
-	"\x04area\x18\x02 \x01(\v2\x1d.wuzz.catalog.v1.CoverageAreaR\x04area\"\xce\x04\n" +
+	"\x04area\x18\x02 \x01(\v2\x1d.wuzz.catalog.v1.CoverageAreaR\x04area\"\xe9\x04\n" +
 	"\vServiceView\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
@@ -10205,7 +10274,8 @@ const file_wuzz_catalog_v1_catalog_proto_rawDesc = "" +
 	" \x01(\x01R\bdiscount\x12#\n" +
 	"\rdiscount_type\x18\v \x01(\tR\fdiscountType\x12\x12\n" +
 	"\x04icon\x18\f \x01(\tR\x04icon\x12\x14\n" +
-	"\x05image\x18\r \x01(\tR\x05image\"n\n" +
+	"\x05image\x18\r \x01(\tR\x05image\x12\x19\n" +
+	"\bicon_url\x18\x14 \x01(\tR\aiconUrl\"n\n" +
 	"\x15BrowseServicesRequest\x12)\n" +
 	"\x10service_category\x18\x01 \x01(\tR\x0fserviceCategory\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x14\n" +
@@ -11190,6 +11260,7 @@ func file_wuzz_catalog_v1_catalog_proto_init() {
 		return
 	}
 	file_wuzz_catalog_v1_catalog_proto_msgTypes[8].OneofWrappers = []any{}
+	file_wuzz_catalog_v1_catalog_proto_msgTypes[38].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

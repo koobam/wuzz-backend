@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+package wuzz.media.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/koobam/wuzz-backend/gen/wuzz/media/v1;mediav1";
+
+// MediaService owns every uploaded picture: it inspects the bytes, stores them in the media bucket (or, in dev, on disk) and keeps
+// one row per picture, so the rest of the system refers to a picture by its id instead of copying addresses around.
+//
+// Pictures are small (MEDIA_MAX_UPLOAD_BYTES, 5 MB by default) and already re-encoded by the time they are stored, so they travel
+// through the gateway and one gRPC hop; the server raises its message limit to fit.
+service MediaService {
+  // Upload inspects, stores and records one picture. Administrators only.
+  rpc Upload(UploadRequest) returns (UploadResponse);
+  // GetMedia is one picture by id. NOT_FOUND when there is none.
+  rpc GetMedia(GetMediaRequest) returns (GetMediaResponse);
+  // BatchGetMedia is several pictures by id, in no particular order; ids that do not exist are left out.
+  rpc BatchGetMedia(BatchGetMediaRequest) returns (BatchGetMediaResponse);
+  // ListMedia is the library, newest first, for the back office's gallery. Administrators only.
+  rpc ListMedia(ListMediaRequest) returns (ListMediaResponse);
+  // DeleteMedia removes the row and the stored object. Administrators only. Whoever still points at the picture keeps a dead address,
+  // so a caller deletes only what nothing uses.
+  rpc DeleteMedia(DeleteMediaRequest) returns (DeleteMediaResponse);
+}
+
+message Media {
+  // A UUID, the only id that leaves the service.
+  string id = 1;
+  // Where the object is kept: "<folder>/<yyyy>/<mm>/<random>.<ext>". Never reused, so a copy never goes stale.
+  string key = 2;
+  // The address a browser or the app reads it from.
+  string url = 3;
+  // What it is for: outlets, banners, vouchers, services.
+  string folder = 4;
+  // The uploader's file name, for people to recognise; it never decides where or as what the picture is kept.
+  string file_name = 5;
+  string content_type = 6;
+  int64 size = 7;
+  int32 width = 8;
+  int32 height = 9;
+  string uploaded_by = 10;
+  google.protobuf.Timestamp created_at = 11;
+}
+
+message UploadRequest {
+  bytes data = 1;
+  string file_name = 2;
+  // Empty = outlets.
+  string folder = 3;
+}
+message UploadResponse { Media media = 1; }
+
+message GetMediaRequest { string id = 1; }
+message GetMediaResponse { Media media = 1; }
+
+message BatchGetMediaRequest { repeated string ids = 1; }
+message BatchGetMediaResponse { repeated Media media = 1; }
+
+message ListMediaRequest {
+  // Empty = every folder.
+  string folder = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+message ListMediaResponse {
+  repeated Media media = 1;
+  int64 total = 2;
+}
+
+message DeleteMediaRequest { string id = 1; }
+message DeleteMediaResponse {}
