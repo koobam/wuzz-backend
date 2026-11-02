@@ -1,56 +1,32 @@
-// Package uploads is POST /backoffice/v1/uploads: a picture goes in as multipart form data and comes back as the address it is now
-// served from. The bytes are inspected before anything is stored (what they really are, how big, how many pixels), the key is random,
-// and nothing the client named (its file name above all) decides where or as what the picture is kept.
+// Package uploads is the back office's picture library: POST /backoffice/v1/uploads sends a picture to the media service, which
+// inspects it (what it really is, how big, how many pixels), stores it under a random key and records it. The answer carries the
+// picture's media id, which is what the rest of the system refers to it by, and the address it is served from.
+//
+// GET /backoffice/v1/media lists the library and DELETE /backoffice/v1/media/:id removes a picture. The gateway only checks what it
+// cheaply can at the edge (the form, the size); everything about the bytes is the media service's.
 package uploads
 
 import (
 	"errors"
 	"io"
-	"log/slog"
 	"net/http"
-	"path/filepath"
 	"strings"
-	"time"
-	"unicode"
-	"unicode/utf8"
 
 	"github.com/gin-gonic/gin"
 
+	mediav1 "github.com/koobam/wuzz-backend/gen/wuzz/media/v1"
 	"github.com/koobam/wuzz-backend/internal/pkg/apperr"
-	"github.com/koobam/wuzz-backend/internal/pkg/config"
 	"github.com/koobam/wuzz-backend/internal/pkg/httpx"
 	"github.com/koobam/wuzz-backend/internal/pkg/media"
 )
 
-// Handler serves the upload route. Store nil means uploads are not configured: the route answers 503 and nothing else.
+// Handler serves the library routes. MaxBytes is the edge's own size check; the media service checks again.
 type Handler struct {
-	Store    media.Storage
+	Media    mediav1.MediaServiceClient
 	MaxBytes int64
-	Now      func() time.Time
-	Log      *slog.Logger
 }
 
-// New builds the handler for a media configuration. It returns the local-disk store too (nil otherwise) so the gateway can serve it.
-func New(cfg config.Media, log *slog.Logger) (*Handler, *media.Local) {
-	h := &Handler{MaxBytes: cfg.MaxUploadBytes, Log: log}
-	if h.MaxBytes <= 0 {
-		h.MaxBytes = 5 << 20
-	}
-	switch {
-	case cfg.LocalDir != "":
-		local := &media.Local{Dir: cfg.LocalDir, PublicBaseURL: cfg.PublicBaseURL}
-		h.Store = local
-		return h, local
-	case cfg.Configured():
-		h.Store = &media.S3{
-			Endpoint: cfg.Endpoint, Bucket: cfg.Bucket, AccessKeyID: cfg.AccessKeyID, SecretAccessKey: cfg.SecretAccessKey,
-			Region: cfg.Region, PublicBaseURL: cfg.PublicBaseURL,
-		}
-	}
-	return h, nil
-}
-
-// Result is what a successful upload answers.
+// Result is a picture as the back office sees it. The first seven fields are what uploads have always answered.
 type Result struct {
 	URL         string `json:"url"`
 	Key         string `json:"key"`
@@ -59,13 +35,33 @@ type Result struct {
 	Size        int    `json:"size"`
 	Width       int    `json:"width"`
 	Height      int    `json:"height"`
+	// ID is the media id: store this, not the address, where a picture is referred to.
+	ID        string `json:"id"`
+	Folder    string `json:"folder"`
+	CreatedAt string `json:"created_at,omitempty"`
+}
+
+func result(m *mediav1.Media) Result {
+	r := Result{URL: m.GetUrl(), Key: m.GetKey(), FileName: m.GetFileName(), ContentType: m.GetContentType(), Size: int(m.GetSize()),
+		Width: int(m.GetWidth()), Height: int(m.GetHeight()), ID: m.GetId(), Folder: m.GetFolder()}
+	if m.GetCreatedAt() != nil {
+		r.CreatedAt = m.GetCreatedAt().AsTime().UTC().Format("2006-01-02T15:04:05Z")
+	}
+	return r
 }
 
 // formOverhead is room for the multipart framing and the small text fields around the file.
 const formOverhead = 64 << 10
 
+func (h *Handler) maxBytes() int64 {
+	if h.MaxBytes <= 0 {
+		return 5 << 20
+	}
+	return h.MaxBytes
+}
+
 func (h *Handler) Create(c *gin.Context) {
-	if h.Store == nil {
+	if h.Media == nil {
 		httpx.Fail(c, apperr.Unavailable("Uploads are not configured"))
 		return
 	}
@@ -73,7 +69,8 @@ func (h *Handler) Create(c *gin.Context) {
 		httpx.Fail(c, apperr.Invalid("Send the picture as multipart/form-data in the field \"file\""))
 		return
 	}
-	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, h.MaxBytes+formOverhead)
+	max := h.maxBytes()
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, max+formOverhead)
 
 	folder := strings.TrimSpace(c.PostForm("folder"))
 	if folder == "" {
@@ -88,14 +85,14 @@ func (h *Handler) Create(c *gin.Context) {
 	if err != nil {
 		var tooBig *http.MaxBytesError
 		if errors.As(err, &tooBig) {
-			httpx.Fail(c, apperr.TooLarge(sizeMessage(h.MaxBytes)))
+			httpx.Fail(c, apperr.TooLarge(sizeMessage(max)))
 			return
 		}
 		httpx.Fail(c, apperr.Invalid("A picture is required in the form field \"file\""))
 		return
 	}
-	if fh.Size > h.MaxBytes {
-		httpx.Fail(c, apperr.TooLarge(sizeMessage(h.MaxBytes)))
+	if fh.Size > max {
+		httpx.Fail(c, apperr.TooLarge(sizeMessage(max)))
 		return
 	}
 	f, err := fh.Open()
@@ -105,58 +102,61 @@ func (h *Handler) Create(c *gin.Context) {
 	}
 	defer f.Close()
 	// One byte more than allowed, so a file that lies about its size is still caught.
-	data, err := io.ReadAll(io.LimitReader(f, h.MaxBytes+1))
+	data, err := io.ReadAll(io.LimitReader(f, max+1))
 	if err != nil {
 		httpx.Fail(c, apperr.Invalid("The picture could not be read"))
 		return
 	}
+	if int64(len(data)) > max {
+		httpx.Fail(c, apperr.TooLarge(sizeMessage(max)))
+		return
+	}
 
-	img, err := media.Process(data, h.MaxBytes)
+	res, err := h.Media.Upload(c.Request.Context(), &mediav1.UploadRequest{Data: data, FileName: fh.Filename, Folder: folder})
 	if err != nil {
-		httpx.Fail(c, processError(err, h.MaxBytes))
+		httpx.Fail(c, httpx.Upstream(err))
 		return
 	}
-	now := time.Now
-	if h.Now != nil {
-		now = h.Now
-	}
-	key, err := media.NewKey(folder, now(), img.Ext)
-	if err != nil {
-		httpx.Fail(c, apperr.Internal("The picture could not be stored").WithCause(err))
-		return
-	}
-	if err := h.Store.Put(c.Request.Context(), key, img.ContentType, media.CacheControl, img.Data); err != nil {
-		if h.Log != nil {
-			h.Log.Error("upload: storing the picture failed", slog.String("key", key), slog.Any("error", err))
-		}
-		httpx.Fail(c, apperr.Unavailable("The picture could not be stored, try again").WithCause(err))
-		return
-	}
-	httpx.Created(c, Result{
-		URL: h.Store.URL(key), Key: key, FileName: cleanName(fh.Filename), ContentType: img.ContentType,
-		Size: len(img.Data), Width: img.Width, Height: img.Height,
-	})
+	httpx.Created(c, result(res.GetMedia()))
 }
 
-func processError(err error, max int64) *apperr.Error {
-	switch {
-	case errors.Is(err, media.ErrEmpty):
-		return apperr.Invalid("The file is empty")
-	case errors.Is(err, media.ErrTooLarge):
-		return apperr.TooLarge(sizeMessage(max))
-	case errors.Is(err, media.ErrUnsupported):
-		return apperr.Unsupported("Only JPEG, PNG, WebP or AVIF pictures can be uploaded")
-	case errors.Is(err, media.ErrDimensions):
-		return apperr.Invalid("The picture is too large in pixels: at most 8000 pixels on a side and 25 megapixels")
-	default:
-		return apperr.Invalid("The picture is damaged or not a valid image")
+// List is GET /backoffice/v1/media?folder=&limit=&offset=: the library, newest first.
+func (h *Handler) List(c *gin.Context) {
+	if h.Media == nil {
+		httpx.Fail(c, apperr.Unavailable("Uploads are not configured"))
+		return
 	}
+	res, err := h.Media.ListMedia(c.Request.Context(), &mediav1.ListMediaRequest{Folder: c.Query("folder"),
+		Limit: int32(httpx.IntQuery(c, "limit", 40)), Offset: int32(httpx.IntQuery(c, "offset", 0))})
+	if err != nil {
+		httpx.Fail(c, httpx.Upstream(err))
+		return
+	}
+	items := make([]Result, 0, len(res.GetMedia()))
+	for _, m := range res.GetMedia() {
+		items = append(items, result(m))
+	}
+	httpx.OK(c, gin.H{"items": items, "total": res.GetTotal()})
+}
+
+// Delete is DELETE /backoffice/v1/media/:id. Whatever still shows the picture keeps a dead address, so the back office deletes only
+// what nothing uses.
+func (h *Handler) Delete(c *gin.Context) {
+	if h.Media == nil {
+		httpx.Fail(c, apperr.Unavailable("Uploads are not configured"))
+		return
+	}
+	id := c.Param("id")
+	if _, err := h.Media.DeleteMedia(c.Request.Context(), &mediav1.DeleteMediaRequest{Id: id}); err != nil {
+		httpx.Fail(c, httpx.Upstream(err))
+		return
+	}
+	httpx.OK(c, gin.H{"id": id})
 }
 
 func sizeMessage(max int64) string {
-	mb := float64(max) / (1 << 20)
-	if mb == float64(int64(mb)) {
-		return "The picture is over the " + itoa(int64(mb)) + " MB limit"
+	if max%(1<<20) == 0 {
+		return "The picture is over the " + itoa(max>>20) + " MB limit"
 	}
 	return "The picture is over the size limit"
 }
@@ -173,25 +173,4 @@ func itoa(n int64) string {
 		n /= 10
 	}
 	return string(b[i:])
-}
-
-// cleanName is the file name as people see it in the log: the base name only, without control characters, at most 120 characters. It
-// is never used to build a key or a path.
-func cleanName(name string) string {
-	name = filepath.Base(strings.ReplaceAll(name, "\\", "/"))
-	name = strings.Map(func(r rune) rune {
-		if unicode.IsControl(r) {
-			return -1
-		}
-		return r
-	}, name)
-	name = strings.TrimSpace(name)
-	if name == "." || name == "/" || name == "" {
-		return "picture"
-	}
-	for utf8.RuneCountInString(name) > 120 {
-		_, size := utf8.DecodeLastRuneInString(name)
-		name = name[:len(name)-size]
-	}
-	return name
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs the four Go services on this machine in one terminal. Ctrl+C stops all of them.
+# Runs the five Go services on this machine in one terminal. Ctrl+C stops all of them.
 #
 #   scripts/run-all.sh                  reads .env
 #   ENV=staging scripts/run-all.sh      reads .env.staging   (same as: make run ENV=staging)
@@ -11,7 +11,7 @@ set -uo pipefail
 
 cd "$(dirname "$0")/.." || exit 1
 
-services=(user catalog transaction gateway)
+services=(user catalog transaction media gateway)
 bin="$(mktemp -d "${TMPDIR:-/tmp}/wuzz-run.XXXXXX")"
 
 cleanup() {

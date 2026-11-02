@@ -1,4 +1,4 @@
-SERVICES := gateway user catalog transaction
+SERVICES := gateway user catalog transaction media
 GOBIN    := $(shell go env GOPATH)/bin
 VERSION  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo dev)
 
@@ -57,12 +57,12 @@ dev: ## Start local dependencies (postgres, redis) and run migrations
 	docker compose up migrate-user
 
 .PHONY: run
-run: ## Run on the host: make run SERVICE=gateway, or no SERVICE for all four in one terminal
+run: ## Run on the host: make run SERVICE=gateway, or no SERVICE for all five in one terminal
 	@if [ -n "$(SERVICE)" ]; then scripts/dev-env.sh go run ./cmd/$(SERVICE); else scripts/run-all.sh; fi
 
 .PHONY: migrate
-migrate: ## Apply migrations: make migrate SERVICE=user, or no SERVICE for user, catalog and transaction
-	@for svc in $(if $(SERVICE),$(SERVICE),user catalog transaction); do \
+migrate: ## Apply migrations: make migrate SERVICE=user, or no SERVICE for user, catalog, transaction and media
+	@for svc in $(if $(SERVICE),$(SERVICE),user catalog transaction media); do \
 		MIGRATE_SERVICE=$$svc scripts/dev-env.sh go run ./cmd/migrate || exit 1; \
 	done
 
@@ -91,7 +91,7 @@ reset: ## Stop the stack and delete its data
 
 .PHONY: logs
 logs: ## Tail the application services
-	docker compose logs -f gateway user catalog transaction
+	docker compose logs -f gateway user catalog transaction media
 
 .PHONY: images
 images: ## Build an image per service. SERVICES=... to narrow it down.

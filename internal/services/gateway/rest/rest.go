@@ -9,7 +9,6 @@
 package rest
 
 import (
-	"log/slog"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -17,6 +16,7 @@ import (
 	"github.com/koobam/wuzz-backend/internal/pkg/authn"
 	"github.com/koobam/wuzz-backend/internal/pkg/config"
 	"github.com/koobam/wuzz-backend/internal/pkg/httpx"
+	"github.com/koobam/wuzz-backend/internal/pkg/media"
 	"github.com/koobam/wuzz-backend/internal/platform/redisx"
 	"github.com/koobam/wuzz-backend/internal/services/gateway/activity"
 	"github.com/koobam/wuzz-backend/internal/services/gateway/clients"
@@ -43,7 +43,7 @@ func Register(engine *gin.Engine, upstreams *clients.Clients, verifier *authn.Ve
 	}
 
 	authed := httpx.Authenticate(verifier, true)
-	catalog := &catalogapi.Handler{Catalog: upstreams.Catalog, User: upstreams.User, Tx: upstreams.Transaction}
+	catalog := &catalogapi.Handler{Catalog: upstreams.Catalog, User: upstreams.User, Tx: upstreams.Transaction, Media: upstreams.Media}
 	orderAPI := &orders.Handler{Tx: upstreams.Transaction}
 
 	// Customer app: public catalog reads. Outlet discovery and service browsing
@@ -78,10 +78,14 @@ func Register(engine *gin.Engine, upstreams *clients.Clients, verifier *authn.Ve
 	accounts := &backoffice.Accounts{User: upstreams.User}
 	boAdmin.GET("/admins", accounts.ListAdmins())
 	boAdmin.GET("/staff", accounts.ListStaff())
-	// Pictures: uploaded here, stored in the media bucket (or, in dev, on disk and served by this gateway under /media).
-	uploader, localMedia := uploads.New(cfg.Media, slog.Default())
+	// Pictures: uploaded here and handed to the media service, which stores them in the media bucket (or, in dev, on disk, which
+	// this gateway serves under /media) and records each one under a media id.
+	uploader := &uploads.Handler{Media: upstreams.Media, MaxBytes: cfg.Media.MaxUploadBytes}
 	boAdmin.POST("/uploads", uploader.Create)
-	if localMedia != nil {
+	boAdmin.GET("/media", uploader.List)
+	boAdmin.DELETE("/media/:id", uploader.Delete)
+	if cfg.Media.LocalDir != "" {
+		localMedia := &media.Local{Dir: cfg.Media.LocalDir, PublicBaseURL: cfg.Media.PublicBaseURL}
 		engine.GET("/media/*path", gin.WrapH(localMedia.Handler("/media")))
 		engine.HEAD("/media/*path", gin.WrapH(localMedia.Handler("/media")))
 	}

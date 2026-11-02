@@ -221,7 +221,7 @@ func serviceViewToProto(it domain.ServiceView) *catalogv1.ServiceView {
 	return &catalogv1.ServiceView{
 		Id: it.ID, Name: it.Name, Description: it.Description, Price: it.Price, Unit: it.Unit,
 		ServiceType: it.ServiceType, ServiceCategory: it.ServiceCategory, MinKg: it.MinKg, MaxKg: it.MaxKg,
-		Discount: it.Discount, DiscountType: it.DiscountType, Icon: it.Icon, Image: it.Image,
+		Discount: it.Discount, DiscountType: it.DiscountType, Icon: it.Icon, Image: it.Image, IconUrl: it.IconURL,
 		PriceBeforeTax: it.PriceBeforeTax, PriceAfterTax: it.PriceAfterTax, TaxType: it.TaxType, TaxRateBps: it.TaxRateBps,
 		DiscountAmount: it.DiscountAmount, PriceAfterDiscount: it.PriceAfterDiscount,
 	}
@@ -273,7 +273,7 @@ func (s *Server) CreateService(ctx context.Context, req *catalogv1.CreateService
 	}
 	it, err := s.app.Commands.CreateService.Handle(ctx, command.CreateService{Service: domain.ServiceItem{
 		Name: req.GetName(), Unit: req.GetUnit(), Price: req.GetPrice(), CategoryID: req.GetCategoryId(), TaxType: req.GetTaxType(), InternalNotes: req.GetInternalNotes(),
-		DiscountType: req.GetDiscountType(), DiscountValue: req.GetDiscountValue(),
+		DiscountType: req.GetDiscountType(), DiscountValue: req.GetDiscountValue(), IconMediaID: req.GetIconMediaId(), IconURL: req.GetIconUrl(),
 		VariantGroupIDs: idsFromProto(req.GetVariantGroupIds()), ModifierGroupIDs: idsFromProto(req.GetModifierGroupIds()),
 	}})
 	if err != nil {
@@ -289,6 +289,8 @@ func (s *Server) UpdateService(ctx context.Context, req *catalogv1.UpdateService
 	it, err := s.app.Commands.UpdateService.Handle(ctx, command.UpdateService{Service: domain.ServiceItem{
 		ID: req.GetId(), Name: req.GetName(), Unit: req.GetUnit(), Price: req.GetPrice(), Active: req.GetActive(), CategoryID: req.GetCategoryId(), TaxType: req.GetTaxType(), InternalNotes: req.GetInternalNotes(),
 		DiscountType: req.GetDiscountType(), DiscountValue: req.GetDiscountValue(),
+		// Either half of the icon set means the update writes the icon picture; neither keeps the stored one.
+		SetIcon: req.IconMediaId != nil || req.IconUrl != nil, IconMediaID: req.GetIconMediaId(), IconURL: req.GetIconUrl(),
 		VariantGroupIDs: idsFromProto(req.GetVariantGroupIds()), ModifierGroupIDs: idsFromProto(req.GetModifierGroupIds()),
 	}})
 	if err != nil {
@@ -350,7 +352,7 @@ func serviceToProto(s domain.ServiceItem) *catalogv1.ServiceItem {
 	return &catalogv1.ServiceItem{
 		Id: s.ID, Name: s.Name, Unit: s.Unit, Price: s.PriceAfterTax, Active: s.Active,
 		PriceBeforeTax: s.Price, PriceAfterTax: s.PriceAfterTax, TaxRateBps: s.TaxRateBps, InternalNotes: s.InternalNotes,
-		CategoryId: s.CategoryID, Icon: s.Icon, Description: s.Description, TaxType: s.TaxType,
+		CategoryId: s.CategoryID, Icon: s.Icon, IconMediaId: s.IconMediaID, IconUrl: s.IconURL, Description: s.Description, TaxType: s.TaxType,
 		DiscountType: s.DiscountType, DiscountValue: s.DiscountValue, DiscountAmount: s.DiscountAmount, PriceAfterDiscount: s.PriceAfterDiscount,
 		VariantGroups: variantGroupsToProto(s.VariantGroups), ModifierGroups: modifierGroupsToProto(s.ModifierGroups),
 		CreatedAt: timestamppb.New(s.CreatedAt), UpdatedAt: timestamppb.New(s.UpdatedAt),

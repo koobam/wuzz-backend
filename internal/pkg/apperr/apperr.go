@@ -7,7 +7,9 @@ import (
 	"errors"
 	"net/http"
 
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type Kind string
@@ -142,6 +144,33 @@ func From(err error) *Error {
 func IsKind(err error, kind Kind) bool {
 	var appErr *Error
 	return errors.As(err, &appErr) && appErr.Kind == kind
+}
+
+// errorDomain marks the ErrorInfo detail GRPCStatus attaches, so only this system's own reasons are read back.
+const errorDomain = "wuzz"
+
+// GRPCStatus is the error as a gRPC status: the code GRPCCode picks, the message, and the kind as an ErrorInfo detail. Several kinds
+// share one code (a picture too large or of the wrong format is InvalidArgument, like any bad input), and the detail is what lets
+// the gateway answer 413 and 415 instead of a plain 400.
+func (e *Error) GRPCStatus() *status.Status {
+	st := status.New(e.GRPCCode(), e.Message)
+	if withKind, err := st.WithDetails(&errdetails.ErrorInfo{Reason: string(e.Kind), Domain: errorDomain}); err == nil {
+		return withKind
+	}
+	return st
+}
+
+// FromGRPCStatus maps a gRPC status back to an app error: the kind its ErrorInfo detail names when there is one, else by its code.
+func FromGRPCStatus(st *status.Status) *Error {
+	for _, d := range st.Details() {
+		if info, ok := d.(*errdetails.ErrorInfo); ok && info.GetDomain() == errorDomain {
+			switch kind := Kind(info.GetReason()); kind {
+			case KindTooLarge, KindUnsupported:
+				return newErr(kind, st.Message())
+			}
+		}
+	}
+	return FromGRPCCode(st.Code(), st.Message())
 }
 
 // FromGRPCCode maps a gRPC status code back to an app error kind — the

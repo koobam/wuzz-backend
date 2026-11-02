@@ -27,7 +27,7 @@ type Storage interface {
 }
 
 // Folders is the allow-list of places an upload can go (a request names one; anything else is refused).
-var Folders = []string{"outlets", "banners", "vouchers"}
+var Folders = []string{"outlets", "banners", "vouchers", "services"}
 
 // DefaultFolder is where an upload goes when the request does not say.
 const DefaultFolder = "outlets"

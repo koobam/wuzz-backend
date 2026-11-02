@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	catalogv1 "github.com/koobam/wuzz-backend/gen/wuzz/catalog/v1"
+	mediav1 "github.com/koobam/wuzz-backend/gen/wuzz/media/v1"
 	transactionv1 "github.com/koobam/wuzz-backend/gen/wuzz/transaction/v1"
 	userv1 "github.com/koobam/wuzz-backend/gen/wuzz/user/v1"
 	"github.com/koobam/wuzz-backend/internal/pkg/apperr"
@@ -27,6 +28,9 @@ type Handler struct {
 	// (their ids live in other databases, so no foreign key can say so). Without them that route refuses rather than guess.
 	User userv1.UserServiceClient
 	Tx   transactionv1.TransactionServiceClient
+	// Media resolves a service's icon_media_id to the picture's address when a service is saved. Without it a body that names an
+	// icon picture is refused.
+	Media mediav1.MediaServiceClient
 }
 
 type OutletDTO struct {
@@ -103,8 +107,12 @@ type ServiceDTO struct {
 	// InternalNotes is a note for staff, never shown to customers.
 	InternalNotes string `json:"internal_notes"`
 	// CategoryID is the category it is listed under (0 = none); Icon is the name of the icon it is drawn with.
-	CategoryID  int64  `json:"category_id"`
-	Icon        string `json:"icon"`
+	CategoryID int64  `json:"category_id"`
+	Icon       string `json:"icon"`
+	// IconMediaID and IconURL are the icon as an uploaded picture (a media id from POST /uploads, and its address); both empty
+	// when the app draws Icon from its own set.
+	IconMediaID string `json:"icon_media_id"`
+	IconURL     string `json:"icon_url"`
 	Description string `json:"description"`
 	// TaxType is how tax is added to the price: "none" or "ppn" (the rate is the checkout's configuration).
 	TaxType string `json:"tax_type"`
@@ -131,7 +139,7 @@ func serviceDTO(s *catalogv1.ServiceItem) ServiceDTO {
 	return ServiceDTO{ID: s.GetId(), Name: s.GetName(), Unit: s.GetUnit(), Price: s.GetPrice(), Active: s.GetActive(),
 		PriceBeforeTax: s.GetPriceBeforeTax(), PriceAfterTax: s.GetPriceAfterTax(), TaxRateBps: s.GetTaxRateBps(), InternalNotes: s.GetInternalNotes(),
 		DiscountType: s.GetDiscountType(), DiscountValue: s.GetDiscountValue(), DiscountAmount: s.GetDiscountAmount(), PriceAfterDiscount: s.GetPriceAfterDiscount(),
-		CategoryID: s.GetCategoryId(), Icon: s.GetIcon(), Description: s.GetDescription(), TaxType: s.GetTaxType(),
+		CategoryID: s.GetCategoryId(), Icon: s.GetIcon(), IconMediaID: s.GetIconMediaId(), IconURL: s.GetIconUrl(), Description: s.GetDescription(), TaxType: s.GetTaxType(),
 		VariantGroups: variantGroupDTOs(s.GetVariantGroups()), ModifierGroups: modifierGroupDTOs(s.GetModifierGroups())}
 }
 
@@ -291,6 +299,9 @@ type serviceBody struct {
 	// The groups the service offers, by id and in order: left out keeps the stored links, [] removes them all.
 	VariantGroupIDs  *[]int64 `json:"variant_group_ids"`
 	ModifierGroupIDs *[]int64 `json:"modifier_group_ids"`
+	// IconMediaID is the icon as an uploaded picture: a media id from POST /uploads (folder "services"). Left out, a create has none
+	// and an update keeps the stored one; "" removes it (the app draws `icon` again).
+	IconMediaID *string `json:"icon_media_id"`
 }
 
 // boundsFrom reads ?south=&west=&north=&east= (all four, or none: everywhere). Anything else is a mistake worth saying so.
@@ -518,9 +529,13 @@ func (h *Handler) BOCreateService(c *gin.Context) {
 	if !ok {
 		return
 	}
+	iconID, iconURL, ok := h.serviceIcon(c, derefStr(b.IconMediaID))
+	if !ok {
+		return
+	}
 	res, err := h.Catalog.CreateService(c.Request.Context(), &catalogv1.CreateServiceRequest{
 		Name: b.Name, Unit: b.Unit, Price: price, CategoryId: derefInt(b.CategoryID), TaxType: derefStr(b.TaxType), InternalNotes: derefStr(b.InternalNotes),
-		DiscountType: derefStr(b.DiscountType), DiscountValue: derefInt(b.DiscountValue),
+		DiscountType: derefStr(b.DiscountType), DiscountValue: derefInt(b.DiscountValue), IconMediaId: iconID, IconUrl: iconURL,
 		VariantGroupIds: idListProto(b.VariantGroupIDs), ModifierGroupIds: idListProto(b.ModifierGroupIDs)})
 	if err != nil {
 		httpx.Fail(c, httpx.Upstream(err))
@@ -541,6 +556,29 @@ func priceBeforeTax(c *gin.Context, b serviceBody, taxType string, stored int64)
 		return 0, false
 	}
 	return stored, true
+}
+
+// serviceIcon resolves an icon picture's media id to the id and address the catalog stores. "" is no picture. A media id that
+// does not exist is a 400 (it names nothing the service could show), not the media service's 404.
+func (h *Handler) serviceIcon(c *gin.Context, mediaID string) (string, string, bool) {
+	mediaID = strings.TrimSpace(mediaID)
+	if mediaID == "" {
+		return "", "", true
+	}
+	if h.Media == nil {
+		httpx.Fail(c, apperr.Unavailable("Icon pictures are not available: the media service is not configured"))
+		return "", "", false
+	}
+	res, err := h.Media.GetMedia(c.Request.Context(), &mediav1.GetMediaRequest{Id: mediaID})
+	if err != nil {
+		e := httpx.Upstream(err)
+		if apperr.IsKind(e, apperr.KindNotFound) {
+			e = apperr.Invalid("icon_media_id names no uploaded picture")
+		}
+		httpx.Fail(c, e)
+		return "", "", false
+	}
+	return res.GetMedia().GetId(), res.GetMedia().GetUrl(), true
 }
 
 func derefStr(s *string) string {
@@ -632,10 +670,19 @@ func (h *Handler) BOUpdateService(c *gin.Context) {
 	if b.Active != nil {
 		active = *b.Active
 	}
-	res, err := h.Catalog.UpdateService(c.Request.Context(), &catalogv1.UpdateServiceRequest{
+	req := &catalogv1.UpdateServiceRequest{
 		Id: id, Name: b.Name, Unit: b.Unit, Price: price, Active: active, CategoryId: category, TaxType: taxType, InternalNotes: notes,
 		DiscountType: discountType, DiscountValue: discountValue,
-		VariantGroupIds: idListProto(b.VariantGroupIDs), ModifierGroupIds: idListProto(b.ModifierGroupIDs)})
+		VariantGroupIds: idListProto(b.VariantGroupIDs), ModifierGroupIds: idListProto(b.ModifierGroupIDs)}
+	// Left out keeps the stored icon picture (the two fields stay unset); given, it is written, "" removing it.
+	if b.IconMediaID != nil {
+		iconID, iconURL, ok := h.serviceIcon(c, *b.IconMediaID)
+		if !ok {
+			return
+		}
+		req.IconMediaId, req.IconUrl = &iconID, &iconURL
+	}
+	res, err := h.Catalog.UpdateService(c.Request.Context(), req)
 	if err != nil {
 		httpx.Fail(c, httpx.Upstream(err))
 		return
@@ -807,6 +854,8 @@ type ServiceViewDTO struct {
 	DiscountType       string  `json:"discount_type"`
 	Icon               string  `json:"icon"`
 	Image              string  `json:"image,omitempty"`
+	// IconURL is the icon as an uploaded picture, when the service has one: the app draws it instead of Icon.
+	IconURL string `json:"icon_url,omitempty"`
 }
 
 func serviceViewDTO(s *catalogv1.ServiceView) ServiceViewDTO {
@@ -815,7 +864,7 @@ func serviceViewDTO(s *catalogv1.ServiceView) ServiceViewDTO {
 		PriceBeforeTax: s.GetPriceBeforeTax(), PriceAfterTax: s.GetPriceAfterTax(), TaxType: s.GetTaxType(), TaxRateBps: s.GetTaxRateBps(),
 		DiscountAmount: s.GetDiscountAmount(), PriceAfterDiscount: s.GetPriceAfterDiscount(),
 		ServiceType: s.GetServiceType(), ServiceCategory: s.GetServiceCategory(), Discount: s.GetDiscount(),
-		DiscountType: s.GetDiscountType(), Icon: s.GetIcon(), Image: s.GetImage(),
+		DiscountType: s.GetDiscountType(), Icon: s.GetIcon(), Image: s.GetImage(), IconURL: s.GetIconUrl(),
 	}
 	if s.GetMaxKg() > 0 {
 		minKg, maxKg := s.GetMinKg(), s.GetMaxKg()

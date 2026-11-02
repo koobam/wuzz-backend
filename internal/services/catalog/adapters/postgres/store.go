@@ -28,7 +28,7 @@ type Store struct {
 func NewStore(pool *postgres.Pool) *Store { return &Store{pool: pool} }
 
 const outletCols = `id, name, address, phone, email, latitude, longitude, active, images, category, delivery_types, open_time, close_time, timezone, version, created_at, updated_at`
-const serviceCols = `id, name, unit, price, active, COALESCE(category_id, 0), icon, description, tax_type, internal_notes, discount_kind, discount_value, version, created_at, updated_at`
+const serviceCols = `id, name, unit, price, active, COALESCE(category_id, 0), icon, icon_media_id, icon_url, description, tax_type, internal_notes, discount_kind, discount_value, version, created_at, updated_at`
 
 type scanner interface{ Scan(dest ...any) error }
 
@@ -46,7 +46,7 @@ func scanOutlet(r scanner) (domain.Outlet, error) {
 
 func scanService(r scanner) (domain.ServiceItem, error) {
 	var s domain.ServiceItem
-	err := r.Scan(&s.ID, &s.Name, &s.Unit, &s.Price, &s.Active, &s.CategoryID, &s.Icon, &s.Description, &s.TaxType, &s.InternalNotes, &s.DiscountType, &s.DiscountValue, &s.Version, &s.CreatedAt, &s.UpdatedAt)
+	err := r.Scan(&s.ID, &s.Name, &s.Unit, &s.Price, &s.Active, &s.CategoryID, &s.Icon, &s.IconMediaID, &s.IconURL, &s.Description, &s.TaxType, &s.InternalNotes, &s.DiscountType, &s.DiscountValue, &s.Version, &s.CreatedAt, &s.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return s, apperr.NotFound("Service not found")
 	}
@@ -304,8 +304,8 @@ func (s *Store) CreateService(ctx context.Context, it domain.ServiceItem) (domai
 	err := postgres.InTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var err error
 		created, err = scanService(tx.QueryRow(ctx, `
-			INSERT INTO services (name, unit, price, active, category_id, tax_type, internal_notes, discount_kind, discount_value) VALUES ($1, $2, $3, $4, NULLIF($5::bigint, 0), COALESCE(NULLIF($6, ''), 'none'), $7, COALESCE(NULLIF($8, ''), 'none'), $9)
-			RETURNING `+serviceCols, it.Name, it.Unit, it.Price, it.Active, it.CategoryID, it.TaxType, it.InternalNotes, it.DiscountType, it.DiscountValue))
+			INSERT INTO services (name, unit, price, active, category_id, tax_type, internal_notes, discount_kind, discount_value, icon_media_id, icon_url) VALUES ($1, $2, $3, $4, NULLIF($5::bigint, 0), COALESCE(NULLIF($6, ''), 'none'), $7, COALESCE(NULLIF($8, ''), 'none'), $9, $10, $11)
+			RETURNING `+serviceCols, it.Name, it.Unit, it.Price, it.Active, it.CategoryID, it.TaxType, it.InternalNotes, it.DiscountType, it.DiscountValue, it.IconMediaID, it.IconURL))
 		if err != nil {
 			return err
 		}
@@ -335,8 +335,11 @@ func (s *Store) UpdateService(ctx context.Context, it domain.ServiceItem) (domai
 	err := postgres.InTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var err error
 		updated, err = scanService(tx.QueryRow(ctx, `
-			UPDATE services SET name=$2, unit=$3, price=$4, active=$5, category_id=NULLIF($6::bigint, 0), tax_type=$7, internal_notes=$8, discount_kind=$9, discount_value=$10, version = version + 1, updated_at = now()
-			WHERE id = $1 RETURNING `+serviceCols, it.ID, it.Name, it.Unit, it.Price, it.Active, it.CategoryID, it.TaxType, it.InternalNotes, it.DiscountType, it.DiscountValue))
+			UPDATE services SET name=$2, unit=$3, price=$4, active=$5, category_id=NULLIF($6::bigint, 0), tax_type=$7, internal_notes=$8, discount_kind=$9, discount_value=$10,
+				icon_media_id = CASE WHEN $11 THEN $12 ELSE icon_media_id END, icon_url = CASE WHEN $11 THEN $13 ELSE icon_url END,
+				version = version + 1, updated_at = now()
+			WHERE id = $1 RETURNING `+serviceCols, it.ID, it.Name, it.Unit, it.Price, it.Active, it.CategoryID, it.TaxType, it.InternalNotes, it.DiscountType, it.DiscountValue,
+			it.SetIcon, it.IconMediaID, it.IconURL))
 		if err != nil {
 			return err
 		}

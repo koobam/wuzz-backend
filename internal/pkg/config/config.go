@@ -23,6 +23,7 @@ const (
 	ServiceUser        Service = "user"
 	ServiceCatalog     Service = "catalog"
 	ServiceTransaction Service = "transaction"
+	ServiceMedia       Service = "media"
 )
 
 type Config struct {
@@ -83,7 +84,8 @@ type Typesense struct {
 	ReconcileInterval time.Duration
 }
 
-// Media is where uploaded pictures are kept, and the address they are served from. Only the gateway uses it. Either an
+// Media is where uploaded pictures are kept, and the address they are served from. The media service stores them; the gateway
+// only reads LocalDir, to serve the dev disk under /media. Either an
 // S3-compatible bucket (Cloudflare R2, Google Cloud Storage's S3 interoperability, MinIO...) or, in dev only, a local
 // directory the gateway serves itself. With neither set, uploads answer 503: there is no quiet fallback.
 type Media struct {
@@ -94,7 +96,7 @@ type Media struct {
 	Region          string // "auto" for R2 and GCS
 	// PublicBaseURL is where a stored key is read from by browsers, without a trailing slash: https://assets.wuzz.care.
 	PublicBaseURL string
-	// LocalDir keeps the pictures on this machine's disk and the gateway serves them under /media (dev only).
+	// LocalDir keeps the pictures on this machine's disk (dev only): the media service writes there and the gateway serves it under /media.
 	LocalDir       string
 	MaxUploadBytes int64
 }
@@ -164,6 +166,7 @@ type Upstreams struct {
 	User        string
 	Catalog     string
 	Transaction string
+	Media       string
 }
 
 type Telemetry struct {
@@ -255,6 +258,7 @@ func Load(service Service) (*Config, error) {
 			User:        getenv("USER_ADDR", "localhost:9090"),
 			Catalog:     getenv("CATALOG_ADDR", "localhost:9091"),
 			Transaction: getenv("TRANSACTION_ADDR", "localhost:9092"),
+			Media:       getenv("MEDIA_ADDR", "localhost:9093"),
 		},
 		Telemetry: Telemetry{
 			LogLevel:  getenv("LOG_LEVEL", "info"),
@@ -342,6 +346,8 @@ func devAddr(env string, service Service) addrs {
 		return addrs{http: ":8093", grpc: ":9091"}
 	case ServiceTransaction:
 		return addrs{http: ":8094", grpc: ":9092"}
+	case ServiceMedia:
+		return addrs{http: ":8095", grpc: ":9093"}
 	default: // gateway
 		return addrs{http: ":8092", grpc: ":9090"}
 	}
@@ -351,7 +357,7 @@ func devAddr(env string, service Service) addrs {
 // all on the dev Postgres. (user keeps the original `wuzz` database.)
 func DefaultDSN(service Service) string {
 	name := "wuzz"
-	if service == ServiceCatalog || service == ServiceTransaction || service == ServiceGateway {
+	if service == ServiceCatalog || service == ServiceTransaction || service == ServiceGateway || service == ServiceMedia {
 		name = "wuzz_" + string(service)
 	}
 	return "postgres://wuzz:wuzz@localhost:5433/" + name + "?sslmode=disable"
@@ -415,9 +421,10 @@ func splitCSV(v string) []string {
 }
 
 // validate refuses a half-set media configuration at start-up (a deploy that forgot one variable must not look like "uploads
-// are off") and keeps the local directory out of anything but dev. Only the gateway uses media; the other services ignore it.
+// are off") and keeps the local directory out of anything but dev. The media service stores pictures, so it is checked in full; the
+// gateway only serves the dev directory, so for it only that part is checked. The other services ignore media.
 func (m Media) validate(env string, service Service) error {
-	if service != ServiceGateway {
+	if service != ServiceMedia && service != ServiceGateway {
 		return nil
 	}
 	if m.LocalDir != "" {
@@ -427,6 +434,9 @@ func (m Media) validate(env string, service Service) error {
 		if m.PublicBaseURL == "" {
 			return fmt.Errorf("config: MEDIA_PUBLIC_BASE_URL is required with MEDIA_LOCAL_DIR (the address the gateway serves /media at)")
 		}
+		return nil
+	}
+	if service == ServiceGateway {
 		return nil
 	}
 	if m.s3Any() && !m.s3Complete() {

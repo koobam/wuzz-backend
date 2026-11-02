@@ -61,6 +61,8 @@ type ServiceView struct {
 	DiscountType string // percentage | fixed | ""
 	Icon         string
 	Image        string
+	// IconURL is the icon as an uploaded picture, when the service has one; the app draws it instead of Icon.
+	IconURL string
 }
 
 const (

@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/koobam/wuzz-backend/internal/pkg/apperr"
 )
 
@@ -207,8 +209,13 @@ type ServiceItem struct {
 	Price  int64
 	Active bool
 	// CategoryID is the category it is listed under; 0 = none.
-	CategoryID  int64
-	Icon        string
+	CategoryID int64
+	Icon       string
+	// IconMediaID and IconURL are the icon as an uploaded picture (its media id and address), both or neither. SetIcon says an update
+	// writes them: false keeps the stored icon picture.
+	IconMediaID string
+	IconURL     string
+	SetIcon     bool
 	Description string
 	// TaxType is how tax is added to the price: TaxNone or TaxPPN. The rate is not stored; the checkout reads it from configuration.
 	TaxType string
@@ -238,6 +245,9 @@ type ServiceItem struct {
 }
 
 func (s *ServiceItem) Validate() error {
+	if err := s.validateIcon(); err != nil {
+		return err
+	}
 	s.Name = strings.TrimSpace(s.Name)
 	if s.Name == "" {
 		return apperr.Invalid("A service name is required")
@@ -264,4 +274,23 @@ func (s *ServiceItem) Validate() error {
 		return err
 	}
 	return validateLinks(s.ModifierGroupIDs, "modifier")
+}
+
+// validateIcon checks the icon picture: a media id (a UUID) with an http(s) address, or neither.
+func (s *ServiceItem) validateIcon() error {
+	s.IconMediaID = strings.ToLower(strings.TrimSpace(s.IconMediaID))
+	s.IconURL = strings.TrimSpace(s.IconURL)
+	if (s.IconMediaID == "") != (s.IconURL == "") {
+		return apperr.Invalid("An icon picture needs both its media id and its address")
+	}
+	if s.IconMediaID == "" {
+		return nil
+	}
+	if _, err := uuid.Parse(s.IconMediaID); err != nil {
+		return apperr.Invalid("icon_media_id is not a media id")
+	}
+	if u, err := url.Parse(s.IconURL); err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" || len(s.IconURL) > 2048 {
+		return apperr.Invalid("The icon picture's address is not a web address")
+	}
+	return nil
 }

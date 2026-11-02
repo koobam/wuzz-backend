@@ -70,7 +70,7 @@ func Upstream(err error) error {
 	if !ok {
 		return apperr.Internal("Something went wrong").WithCause(err)
 	}
-	return apperr.FromGRPCCode(st.Code(), st.Message()).WithCause(err)
+	return apperr.FromGRPCStatus(st).WithCause(err)
 }
 
 // IntQuery reads a query parameter as an int, falling back when it is absent

@@ -155,6 +155,19 @@ services:
       db-init:
         condition: service_completed_successfully
 
+  migrate-media:
+    build:
+      context: .
+      args: {SERVICE: migrate}
+    entrypoint: ["/app/service"]
+    environment:
+      <<: *service-env
+      MIGRATE_SERVICE: media
+      POSTGRES_DSN: postgres://wuzz:wuzz@postgres:5432/wuzz_media?sslmode=disable
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+
   migrate-gateway:
     build:
       context: .
@@ -177,7 +190,7 @@ services:
       - sh
       - -c
       - |
-        for db in wuzz_catalog wuzz_transaction wuzz_gateway; do
+        for db in wuzz_catalog wuzz_transaction wuzz_gateway wuzz_media; do
           psql -h postgres -U wuzz -tc "select 1 from pg_database where datname='$$db'" | grep -q 1 || psql -h postgres -U wuzz -c "create database $$db"
         done
     depends_on:
@@ -210,6 +223,19 @@ services:
       migrate-transaction:
         condition: service_completed_successfully
 
+  # Pictures. No bucket and no disk directory here, so uploads answer 503 in this stack; set MEDIA_* (see .env.example) to turn
+  # them on.
+  media:
+    build:
+      context: .
+      args: {SERVICE: media}
+    environment:
+      <<: *service-env
+      POSTGRES_DSN: postgres://wuzz:wuzz@postgres:5432/wuzz_media?sslmode=disable
+    depends_on:
+      migrate-media:
+        condition: service_completed_successfully
+
   gateway:
     build:
       context: .
@@ -219,6 +245,7 @@ services:
       USER_ADDR: user:9090
       CATALOG_ADDR: catalog:9090
       TRANSACTION_ADDR: transaction:9090
+      MEDIA_ADDR: media:9090
       # The activity log.
       POSTGRES_DSN: postgres://wuzz:wuzz@postgres:5432/wuzz_gateway?sslmode=disable
       CORS_ORIGINS: http://localhost:5174
@@ -230,6 +257,7 @@ services:
       user: {condition: service_started}
       catalog: {condition: service_started}
       transaction: {condition: service_started}
+      media: {condition: service_started}
       migrate-gateway: {condition: service_completed_successfully}
 
 volumes:

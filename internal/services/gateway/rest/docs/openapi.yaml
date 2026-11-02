@@ -59,6 +59,9 @@ components:
         size: { type: integer, description: Bytes as stored }
         width: { type: integer }
         height: { type: integer }
+        id: { type: string, format: uuid, description: "The media id: store this where a picture is referred to (a service's icon_media_id)" }
+        folder: { type: string, enum: [outlets, banners, vouchers, services] }
+        created_at: { type: string, format: date-time }
     Phone:
       type: object
       required: [phone]
@@ -170,6 +173,7 @@ components:
         category_id: { type: integer, format: int64, description: "the category it is listed under; leave out to keep it, 0 for none" }
         variant_group_ids: { type: array, maxItems: 20, items: { type: integer, format: int64 }, description: "the variant groups the service offers, in order; leave out to keep them, [] to remove them all" }
         modifier_group_ids: { type: array, maxItems: 20, items: { type: integer, format: int64 }, description: "the modifier groups the service carries, in order; leave out to keep them, [] to remove them all" }
+        icon_media_id: { type: string, format: uuid, description: "the icon as an uploaded picture: an id from POST /backoffice/v1/uploads (folder services). Leave out to keep the stored one, \"\" to remove it (the app draws `icon` again). The answer carries it back with its `icon_url`; the customer menu (GET /app/v1/services) carries `icon_url`." }
     VariantGroupBody:
       type: object
       required: [name, options]
@@ -781,8 +785,9 @@ paths:
       description: |
         Send one JPEG, PNG, WebP or AVIF picture as multipart/form-data in the field `file` (at most 5 MB, 8000 pixels on a side, 25 megapixels;
         the type is decided by the bytes, never by the file name or the declared type). JPEG and PNG are re-encoded without their metadata;
-        WebP and AVIF are stored as sent. `folder` is optional and must be one of: outlets (the default), banners, vouchers. The answer is the address the
-        picture is now served from (`url`) and its random `key`; put the `url` in an outlet's `images`.
+        WebP and AVIF are stored as sent. `folder` is optional and must be one of: outlets (the default), banners, vouchers, services. The
+        media service stores and records the picture; the answer is its media `id`, the address it is now served from (`url`) and its random
+        `key`. Put the `url` in an outlet's `images`, and the `id` in a service's `icon_media_id`.
         413 when over the size limit, 415 when it is not one of the four types, 400 for a damaged or oversized picture, 503 when uploads
         are not configured or the store is down.
       security: [{ bearer: [] }]
@@ -795,7 +800,7 @@ paths:
               required: [file]
               properties:
                 file: { type: string, format: binary }
-                folder: { type: string, enum: [outlets, banners, vouchers], default: outlets }
+                folder: { type: string, enum: [outlets, banners, vouchers, services], default: outlets }
       responses:
         "201":
           description: The stored picture, in the envelope's `data`
@@ -811,6 +816,41 @@ paths:
         "413": { $ref: "#/components/responses/Ok" }
         "415": { $ref: "#/components/responses/Ok" }
         "503": { $ref: "#/components/responses/Ok" }
+  /backoffice/v1/media:
+    get:
+      tags: [Backoffice]
+      summary: The picture library, newest first
+      security: [{ bearer: [] }]
+      parameters:
+        - { name: folder, in: query, schema: { type: string, enum: [outlets, banners, vouchers, services] } }
+        - { name: limit, in: query, schema: { type: integer, default: 40, maximum: 200 } }
+        - { name: offset, in: query, schema: { type: integer, default: 0 } }
+      responses:
+        "200":
+          description: "`data` is `{items: Upload[], total}`"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  data:
+                    type: object
+                    properties:
+                      items: { type: array, items: { $ref: "#/components/schemas/Upload" } }
+                      total: { type: integer }
+        "400": { $ref: "#/components/responses/Ok" }
+  /backoffice/v1/media/{id}:
+    delete:
+      tags: [Backoffice]
+      summary: Delete a picture
+      description: Removes the record and the stored object. Whatever still shows the picture keeps a dead address, so delete only what nothing uses.
+      security: [{ bearer: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "404": { $ref: "#/components/responses/Ok" }
   /backoffice/v1/outlets:
     get:
       tags: [Backoffice]
